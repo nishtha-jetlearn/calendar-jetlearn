@@ -34,6 +34,7 @@ import {
   getDayName,
   getCurrentWeekStart,
   formatDisplayDate,
+  getCurrentMonthRange,
 } from "./utils/dateUtils";
 
 const TIME_SLOTS = Array.from(
@@ -173,6 +174,12 @@ function App() {
   const [currentWeekStart, setCurrentWeekStart] = useState(
     getCurrentWeekStart()
   );
+
+  const [monthRange, setMonthRange] = useState({
+    startOfMonth: "",
+    endOfMonth: "",
+  });
+
   const [schedule, setSchedule] = useState(() => {
     const initialSchedule = {};
     return initialSchedule;
@@ -909,9 +916,19 @@ function App() {
         data: null,
       });
 
-      const weekDates = getWeekDates(currentWeekStart);
-      const startDate = formatDate(weekDates[0]);
-      const endDate = formatDate(weekDates[6]);
+      const output = selectedTimezone.replace(
+        /(.*\)) (.+)/,
+        (match, prefix, tz) => {
+          return `${prefix} ${tz.replace(/ /g, "_")}`;
+        }
+      );
+      console.log(output);
+      const range = getCurrentMonthRange();
+      setMonthRange(range);
+      console.log("getCurrentMonthRange", getCurrentMonthRange());
+
+      const startDate = range.startOfMonth;
+      const endDate = range.endOfMonth;
 
       const formData = new URLSearchParams();
       formData.append("start_date", startDate);
@@ -2208,7 +2225,7 @@ function App() {
                 {availabilityAPI.success && availabilityAPI.response && (
                   <div className="space-y-3">
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg">
-                                              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2">
+                      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2">
                         <p className="text-sm sm:text-base text-white font-medium">
                           Showing:{" "}
                           <span className="font-bold">
@@ -2372,7 +2389,7 @@ function App() {
                 {bookingApiResponse.success && bookingApiResponse.data && (
                   <div className="space-y-3">
                     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg">
-                                              <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-3 py-2">
+                      <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-3 py-2">
                         <p className="text-sm sm:text-base text-white font-medium">
                           Showing:{" "}
                           <span className="font-bold">

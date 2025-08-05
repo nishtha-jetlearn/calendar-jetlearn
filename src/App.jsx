@@ -2804,7 +2804,7 @@ function App() {
                   }
                 >
                   <FaList size={12} className="sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">List View</span>
+                  <span className="hidden sm:inline text-blue-200">List View</span>
                   <span className="sm:hidden">List</span>
                 </button>
                 <button

@@ -356,12 +356,12 @@ const UnifiedModalComponent = function UnifiedModal({
         </div>
 
         <div className="overflow-y-auto max-h-[calc(90vh-90px)] p-3">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* Left Column - Teachers */}
-            <div className="space-y-3">
+            {/* <div className="space-y-3"> */}
               {/* Available Teachers */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+              {/* <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200"> */}
+                {/* <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                   <div className="p-0.5 bg-green-100 rounded">
                     <FaUsers size={14} className="text-green-600" />
                   </div>
@@ -369,9 +369,9 @@ const UnifiedModalComponent = function UnifiedModal({
                   <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
                     {availableTeachers.length}
                   </span>
-                </h3>
+                </h3> */}
 
-                <div className="space-y-1.5 max-h-28 overflow-y-auto mb-2">
+                {/* <div className="space-y-1.5 max-h-28 overflow-y-auto mb-2">
                   {availableTeachers.map(t => (
                     <div key={t.id} className="bg-white rounded p-2 border border-green-200 shadow-sm hover:shadow-md transition-all duration-200">
                       <div className="flex justify-between items-center gap-1.5">
@@ -396,10 +396,10 @@ const UnifiedModalComponent = function UnifiedModal({
                       </div>
                     </div>
                   ))}
-                </div>
+                </div> */}
 
                 {/* Add Teacher Section */}
-                <div className="space-y-1.5">
+                {/* <div className="space-y-1.5">
                   <div className="relative">
                     <FaSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -437,11 +437,11 @@ const UnifiedModalComponent = function UnifiedModal({
                       )}
                     </div>
                   )}
-                </div>
-              </div>
+                </div> */}
+              {/* </div> */}
 
               {/* Booked Students */}
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
+              {/* <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                   <div className="p-0.5 bg-amber-100 rounded">
                     <FaClock size={14} className="text-amber-600" />
@@ -489,8 +489,8 @@ const UnifiedModalComponent = function UnifiedModal({
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
+              </div> */}
+            {/* </div> */}
 
             {/* Middle Column - Schedule and Students */}
             <div className="space-y-3">
@@ -623,7 +623,7 @@ const UnifiedModalComponent = function UnifiedModal({
                   </div>
 
                   {/* Manual Student Entry */}
-                  <div>
+                  {/* <div>
                     <label className="block text-xs font-medium text-gray-700 mb-0.5">Manual Entry</label>
                     <input
                       type="text"
@@ -632,7 +632,7 @@ const UnifiedModalComponent = function UnifiedModal({
                       placeholder="Enter learner name manually"
                       className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-purple-500 focus:border-transparent"
                     />
-                  </div>
+                  </div> */}
 
                   {/* Selected Students List */}
                   <div className="space-y-1.5 max-h-32 overflow-y-auto">
@@ -799,7 +799,7 @@ const UnifiedModalComponent = function UnifiedModal({
                   )}
 
                   {/* Teacher Selection */}
-                  <select
+                  {/* <select
                     value={selectedTeacher}
                     onChange={(e) => setSelectedTeacher(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500"
@@ -808,7 +808,7 @@ const UnifiedModalComponent = function UnifiedModal({
                     {availableTeachers.map(t => (
                       <option key={t.id} value={t.id}>{t.full_name}-{t.uid}</option>
                     ))}
-                  </select>
+                  </select> */}
 
                   <button
                     onClick={handleBookStudent}

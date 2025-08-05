@@ -20,6 +20,7 @@ import {
   FaList,
   FaCalendarWeek,
   FaBars,
+  FaInfoCircle,
 } from "react-icons/fa";
 import UnifiedModal from "./components/UnifiedModal";
 import TeacherDetails from "./components/TeacherDetails";
@@ -212,6 +213,18 @@ function App() {
     data: null,
     date: null,
     time: null,
+  });
+
+  // New state for cancel popup
+  const [cancelPopup, setCancelPopup] = useState({
+    isOpen: false,
+    type: null, // 'availability' or 'booking'
+    data: null,
+    date: null,
+    time: null,
+    reason: '',
+    studentDetails: null,
+    teacherDetails: null,
   });
 
   // State for booking API response
@@ -1752,9 +1765,9 @@ function App() {
   };
 
   // Handle cancel availability
-  const handleCancelAvailability = async (date, time, teacherId = null) => {
+  const handleCancelAvailability = async (date, time, teacherId = null, reason = '') => {
     try {
-      console.log("🚀 Canceling availability for:", { date, time, teacherId });
+      console.log("🚀 Canceling availability for:", { date, time, teacherId, reason });
       
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
@@ -1780,7 +1793,8 @@ function App() {
           date: dateObj.toISOString().split('T')[0], // YYYY-MM-DD format
           time: time,
           teacherId: teacherId,
-          timezone: selectedTimezone
+          timezone: selectedTimezone,
+          reason: reason
         }),
       });
       
@@ -1804,9 +1818,9 @@ function App() {
   };
 
   // Handle cancel booking
-  const handleCancelBooking = async (date, time, bookingData) => {
+  const handleCancelBooking = async (date, time, bookingData, reason = '') => {
     try {
-      console.log("🚀 Canceling booking for:", { date, time, bookingData });
+      console.log("🚀 Canceling booking for:", { date, time, bookingData, reason });
       
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
@@ -1821,7 +1835,8 @@ function App() {
           date: dateObj.toISOString().split('T')[0], // YYYY-MM-DD format
           time: time,
           bookingData: bookingData,
-          timezone: selectedTimezone
+          timezone: selectedTimezone,
+          reason: reason
         }),
       });
       
@@ -2661,6 +2676,190 @@ function App() {
     );
   };
 
+  // Cancel Popup Component
+  const CancelPopup = () => {
+    console.log('CancelPopup render - isOpen:', cancelPopup.isOpen, 'reason:', cancelPopup.reason);
+    if (!cancelPopup.isOpen) return null;
+
+    const handleCancelConfirm = async () => {
+      try {
+        if (cancelPopup.type === 'availability') {
+          await handleCancelAvailability(
+            cancelPopup.date, 
+            cancelPopup.time, 
+            cancelPopup.teacherDetails?.uid,
+            cancelPopup.reason
+          );
+        } else if (cancelPopup.type === 'booking') {
+          await handleCancelBooking(
+            cancelPopup.date, 
+            cancelPopup.time, 
+            cancelPopup.data,
+            cancelPopup.reason
+          );
+        }
+        
+        // Close the popup
+        setCancelPopup({
+          isOpen: false,
+          type: null,
+          data: null,
+          date: null,
+          time: null,
+          reason: '',
+          studentDetails: null,
+          teacherDetails: null,
+        });
+      } catch (error) {
+        console.error('Error canceling:', error);
+      }
+    };
+
+    const handleCancelClose = () => {
+      setCancelPopup({
+        isOpen: false,
+        type: null,
+        data: null,
+        date: null,
+        time: null,
+        reason: '',
+        studentDetails: null,
+        teacherDetails: null,
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[60vh] overflow-hidden border border-gray-100 backdrop-blur-lg">
+          {/* Header */}
+          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-red-100 border-b border-gray-200">
+            <div className="flex-1">
+              <h2 className="text-base font-bold text-red-800 flex items-center gap-2">
+                <FaExclamationTriangle size={16} />
+                Cancel {cancelPopup.type === 'availability' ? 'Availability' : 'Booking'}
+              </h2>
+              <p className="text-xs text-red-600 mt-1">
+                Review details and select cancellation reason
+              </p>
+            </div>
+            <button
+              onClick={handleCancelClose}
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-3 flex-shrink-0 p-1 rounded-full hover:scale-110"
+            >
+              <FaTimes size={16} />
+            </button>
+          </div>
+
+          <div className="p-2 h-[280px] overflow-y-auto">
+            {/* Session Information */}
+            <div className="mb-3 p-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 shadow-sm">
+              <h3 className="font-bold text-gray-900 mb-1 text-sm flex items-center gap-2">
+                <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
+                Session Information
+              </h3>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div className="bg-white p-1.5 rounded border border-gray-100">
+                  <span className="text-gray-600">Date: </span>
+                  <span className="font-bold text-gray-900 bg-yellow-50 px-1 py-0.5 rounded text-xs">
+                    {formatDateDDMMMYYYY(cancelPopup.date)}
+                  </span>
+                </div>
+                <div className="bg-white p-1.5 rounded border border-gray-100">
+                  <span className="text-gray-600">Time: </span>
+                  <span className="font-bold text-gray-900 bg-blue-50 px-1 py-0.5 rounded text-xs">
+                    {addHoursToTimeRange(cancelPopup.time, 1)} {selectedTimezone}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+
+
+
+
+            {/* Summary Information */}
+            {cancelPopup.data && cancelPopup.data.summary && (
+              <div className="mb-3 p-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200 shadow-sm">
+                <h3 className="font-bold text-green-900 mb-1 text-sm flex items-center gap-2">
+                  <FaInfoCircle size={14} />
+                  Summary
+                </h3>
+                <div className="bg-white p-1.5 rounded border border-green-100">
+                  <div className="text-xs text-green-800 font-medium">
+                    {cancelPopup.data.summary}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reason Input */}
+            <div className="mb-3 p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200 shadow-sm">
+              <h3 className="font-bold text-orange-900 mb-1 text-sm flex items-center gap-2">
+                <FaPaperPlane size={14} />
+                Cancellation Reason
+              </h3>
+              <div className="bg-white p-1.5 rounded border border-orange-100">
+                <select
+                  value={cancelPopup.reason}
+                  onChange={(e) => {
+                    const newReason = e.target.value;
+                    console.log('Dropdown selection changed:', newReason);
+                    setCancelPopup(prev => {
+                      console.log('Previous state:', prev);
+                      const newState = {
+                        ...prev,
+                        reason: newReason
+                      };
+                      console.log('New state:', newState);
+                      return newState;
+                    });
+                  }}
+                  onBlur={(e) => {
+                    console.log('Dropdown lost focus');
+                  }}
+                  onFocus={(e) => {
+                    console.log('Dropdown gained focus');
+                  }}
+                  className="w-full p-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-xs"
+                  required
+                >
+                  <option value="">Select a cancellation reason...</option>
+                  <option value="B&R">Break and Return</option>
+                  <option value="CBT/PL">Cancelled by Teacher - Planned leave - Prior 48 hours</option>
+                  <option value="CBT/UL">Cancelled by Teacher - Unplanned leave - within 48 hours</option>
+                  <option value="CBP/PL">Cancelled by Parent - Planned leave - Prior 48 hours</option>
+                  <option value="CBP/UL">Cancelled by Parent - Unplanned leave - within 48 hours</option>
+                  <option value="CBO">Cancelled by Ops</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Please select the appropriate reason for cancellation
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-3 flex flex-col sm:flex-row gap-2 justify-end">
+              <button
+                onClick={handleCancelClose}
+                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors duration-200 font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCancelConfirm}
+                disabled={!cancelPopup.reason.trim()}
+                className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 font-medium flex items-center gap-1 text-sm"
+              >
+                <FaTimes size={12} />
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const currentSlot = selectedSlot
     ? getScheduleForDate(selectedSlot.date)[selectedSlot.time]
     : null;
@@ -3286,7 +3485,7 @@ function App() {
                                                 .toLowerCase()
                                                 .includes("hours"))
                                               ? "bg-green-500"
-                                              : "bg-blue-500"
+                                              : "bg-red-500"
                                           }`}
                                         ></div>
                                         <div className="flex-1">
@@ -3408,8 +3607,17 @@ function App() {
                                                     timeSlot = "09:00";
                                                   }
                                                   
-                                                  // Call the cancel availability function
-                                                  handleCancelAvailability(bookingDate, timeSlot);
+                                                  // Open cancel popup for availability
+                                                  setCancelPopup({
+                                                    isOpen: true,
+                                                    type: 'availability',
+                                                    data: extractedData,
+                                                    date: bookingDate,
+                                                    time: timeSlot,
+                                                    reason: '',
+                                                    studentDetails: null,
+                                                    teacherDetails: getTeacherByTeacherId(extractedData.teacherid) || selectedTeacher,
+                                                  });
                                                 }}
                                                 className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
                                                 title="Click to cancel availability for this time slot"
@@ -3454,8 +3662,22 @@ function App() {
                                                     timeSlot = "09:00";
                                                   }
                                                   
-                                                  // Call the cancel booking function
-                                                  handleCancelBooking(bookingDate, timeSlot, extractedData);
+                                                  // Open cancel popup for booking
+                                                  setCancelPopup({
+                                                    isOpen: true,
+                                                    type: 'booking',
+                                                    data: extractedData,
+                                                    date: bookingDate,
+                                                    time: timeSlot,
+                                                    reason: '',
+                                                    studentDetails: {
+                                                      learner_name: extractedData.learner_name,
+                                                      jlid: extractedData.jlid,
+                                                      name: extractedData.learner_name,
+                                                      jetlearner_id: extractedData.jlid,
+                                                    },
+                                                    teacherDetails: getTeacherByTeacherId(extractedData.teacherid) || selectedTeacher,
+                                                  });
                                                 }}
                                                 className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
                                                 title="Click to cancel this booking"
@@ -3816,6 +4038,7 @@ function App() {
       </Suspense>
 
       <DetailsPopup />
+      <CancelPopup />
     </div>
   );
 }

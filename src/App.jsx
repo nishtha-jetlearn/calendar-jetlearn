@@ -699,11 +699,25 @@ function App() {
 
     // Fallback to local schedule
     const localSlot = getScheduleForDate(date)[time];
-    const firstTeacher = localSlot.teachers[0];
+    
+    // Add null check for localSlot
+    if (!localSlot) {
+      return {
+        available: 0,
+        booked: 0,
+        teacherid: null,
+        teacherDetails: null,
+        apiData: null,
+        isFromAPI: false,
+        uid: null,
+      };
+    }
+    
+    const firstTeacher = localSlot.teachers?.[0];
 
     return {
-      available: localSlot.teachers.length,
-      booked: localSlot.students.length,
+      available: localSlot.teachers?.length || 0,
+      booked: localSlot.students?.length || 0,
       teacherid: firstTeacher?.uid || null, // local teacherid (hidden)
       teacherDetails: firstTeacher || null,
       apiData: null,
@@ -1734,6 +1748,131 @@ function App() {
       }
     } catch (error) {
       console.error("Failed to fetch booking data:", error);
+    }
+  };
+
+  // Handle cancel availability
+  const handleCancelAvailability = async (date, time, teacherId = null) => {
+    try {
+      console.log("🚀 Canceling availability for:", { date, time, teacherId });
+      
+      // Ensure date is a Date object
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // Get teacher ID if not provided
+      if (!teacherId) {
+        const slotData = getSlotCounts(dateObj, time);
+        teacherId = slotData.teacherid || selectedTeacher?.uid;
+      }
+      
+      if (!teacherId) {
+        console.error("❌ No teacher ID available for canceling availability");
+        return;
+      }
+      
+      // Call API to cancel availability
+      const response = await fetch("/api/cancel-availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: dateObj.toISOString().split('T')[0], // YYYY-MM-DD format
+          time: time,
+          teacherId: teacherId,
+          timezone: selectedTimezone
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("✅ Availability canceled successfully:", result);
+      
+      // Refresh the data after canceling
+      await fetchListViewBookingDetails();
+      
+      // Show success message (you can implement a toast notification here)
+      // alert("Availability canceled successfully!");
+      
+    } catch (error) {
+      console.error("❌ Error canceling availability:", error);
+      // alert("Failed to cancel availability. Please try again.");
+    }
+  };
+
+  // Handle cancel booking
+  const handleCancelBooking = async (date, time, bookingData) => {
+    try {
+      console.log("🚀 Canceling booking for:", { date, time, bookingData });
+      
+      // Ensure date is a Date object
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // Call API to cancel booking
+      const response = await fetch("/api/cancel-booking", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: dateObj.toISOString().split('T')[0], // YYYY-MM-DD format
+          time: time,
+          bookingData: bookingData,
+          timezone: selectedTimezone
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("✅ Booking canceled successfully:", result);
+      
+      // Refresh the data after canceling
+      await fetchListViewBookingDetails();
+      
+      // Show success message
+      // alert("Booking canceled successfully!");
+      
+    } catch (error) {
+      console.error("❌ Error canceling booking:", error);
+      // alert("Failed to cancel booking. Please try again.");
+    }
+  };
+
+  // Handle reschedule booking
+  const handleRescheduleBooking = async (date, time, bookingData) => {
+    try {
+      console.log("🚀 Rescheduling booking for:", { date, time, bookingData });
+      
+      // Ensure date is a Date object
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // For now, we'll just show a message that reschedule functionality is coming
+      // You can implement the actual reschedule logic here
+      // alert("Reschedule functionality is coming soon!");
+      
+      // TODO: Implement reschedule API call
+      // const response = await fetch("/api/reschedule-booking", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     date: dateObj.toISOString().split('T')[0],
+      //     time: time,
+      //     bookingData: bookingData,
+      //     timezone: selectedTimezone
+      //   }),
+      // });
+      
+    } catch (error) {
+      console.error("❌ Error rescheduling booking:", error);
+      // alert("Failed to reschedule booking. Please try again.");
     }
   };
 
@@ -3146,11 +3285,11 @@ function App() {
                                               extractedData.summary
                                                 .toLowerCase()
                                                 .includes("hours"))
-                                              ? "bg-green-200"
-                                              : "bg-red-200"
+                                              ? "bg-green-500"
+                                              : "bg-red-500"
                                           }`}
                                         ></div>
-                                        <div>
+                                        <div className="flex-1">
                                           <div className="text-sm font-medium text-gray-900">
                                             {formatDisplayDate(bookingDate)}
                                           </div>
@@ -3178,8 +3317,190 @@ function App() {
                                     </td>
 
                                     <td className="px-6 py-4">
-                                      <div className="text-sm text-gray-900 break-words">
-                                        {extractedData.summary || "N/A"}
+                                      <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-900 break-words">
+                                          {extractedData.summary || "N/A"}
+                                        </div>
+                                        {extractedData.summary &&
+                                        (extractedData.summary
+                                          .toLowerCase()
+                                          .includes("availability") ||
+                                          extractedData.summary
+                                            .toLowerCase()
+                                            .includes("hours")) && (
+                                              <div className="flex items-center gap-2 ml-3">
+                                                <button
+                                                onClick={() => {
+                                                  // Open UnifiedModal for this time slot
+                                                  let timeSlot = "00:00";
+                                                  
+                                                  // Try to extract time from summary
+                                                  if (extractedData.summary) {
+                                                    const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                    if (timeMatch) {
+                                                      timeSlot = timeMatch[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If no time found in summary, try to extract from start_time
+                                                  if (timeSlot === "00:00" && extractedData.start_time) {
+                                                    const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                    if (timeFromStart) {
+                                                      timeSlot = timeFromStart[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If still no time found, use a default time
+                                                  if (timeSlot === "00:00") {
+                                                    console.warn("Could not extract time from data, using default 09:00");
+                                                    timeSlot = "09:00";
+                                                  }
+                                                  
+                                                  console.log("Opening UnifiedModal for:", {
+                                                    date: bookingDate,
+                                                    time: timeSlot,
+                                                    summary: extractedData.summary,
+                                                    start_time: extractedData.start_time
+                                                  });
+                                                  
+                                                  // Get slot data for this specific time
+                                                  const slotData = getSlotCounts(bookingDate, timeSlot);
+                                                  
+                                                  setSelectedSlot({
+                                                    date: bookingDate,
+                                                    time: timeSlot,
+                                                    teacherid: slotData.teacherid || extractedData.teacherid || null,
+                                                    teacherDetails: slotData.teacherDetails,
+                                                    isFromAPI: slotData.isFromAPI || true,
+                                                  });
+                                                  setModalOpen(true);
+                                                }}
+                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                title="Click to manage teachers and students for this time slot"
+                                              >
+                                                <FaUsers size={8} className="sm:w-3 sm:h-3" />
+                                                <span className="hidden sm:inline">Manage</span>
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  // Extract time from the booking data
+                                                  let timeSlot = "00:00";
+                                                  
+                                                  // Try to extract time from summary
+                                                  if (extractedData.summary) {
+                                                    const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                    if (timeMatch) {
+                                                      timeSlot = timeMatch[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If no time found in summary, try to extract from start_time
+                                                  if (timeSlot === "00:00" && extractedData.start_time) {
+                                                    const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                    if (timeFromStart) {
+                                                      timeSlot = timeFromStart[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If still no time found, use a default time
+                                                  if (timeSlot === "00:00") {
+                                                    console.warn("Could not extract time from data, using default 09:00");
+                                                    timeSlot = "09:00";
+                                                  }
+                                                  
+                                                  // Call the cancel availability function
+                                                  handleCancelAvailability(bookingDate, timeSlot);
+                                                }}
+                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                title="Click to cancel availability for this time slot"
+                                              >
+                                                <FaTimes size={8} className="sm:w-3 sm:h-3" />
+                                                <span className="hidden sm:inline">Cancel Availability</span>
+                                              </button>
+                                            </div>
+                                        )}
+                                        {extractedData.summary &&
+                                        !(extractedData.summary
+                                          .toLowerCase()
+                                          .includes("availability") ||
+                                          extractedData.summary
+                                            .toLowerCase()
+                                            .includes("hours")) && (
+                                              <div className="flex items-center gap-2 ml-3">
+                                                <button
+                                                onClick={() => {
+                                                  // Extract time from the booking data
+                                                  let timeSlot = "00:00";
+                                                  
+                                                  // Try to extract time from summary
+                                                  if (extractedData.summary) {
+                                                    const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                    if (timeMatch) {
+                                                      timeSlot = timeMatch[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If no time found in summary, try to extract from start_time
+                                                  if (timeSlot === "00:00" && extractedData.start_time) {
+                                                    const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                    if (timeFromStart) {
+                                                      timeSlot = timeFromStart[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If still no time found, use a default time
+                                                  if (timeSlot === "00:00") {
+                                                    console.warn("Could not extract time from data, using default 09:00");
+                                                    timeSlot = "09:00";
+                                                  }
+                                                  
+                                                  // Call the cancel booking function
+                                                  handleCancelBooking(bookingDate, timeSlot, extractedData);
+                                                }}
+                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                title="Click to cancel this booking"
+                                              >
+                                                <FaTimes size={8} className="sm:w-3 sm:h-3" />
+                                                <span className="hidden sm:inline">Cancel</span>
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  // Extract time from the booking data
+                                                  let timeSlot = "00:00";
+                                                  
+                                                  // Try to extract time from summary
+                                                  if (extractedData.summary) {
+                                                    const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                    if (timeMatch) {
+                                                      timeSlot = timeMatch[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If no time found in summary, try to extract from start_time
+                                                  if (timeSlot === "00:00" && extractedData.start_time) {
+                                                    const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                    if (timeFromStart) {
+                                                      timeSlot = timeFromStart[1];
+                                                    }
+                                                  }
+                                                  
+                                                  // If still no time found, use a default time
+                                                  if (timeSlot === "00:00") {
+                                                    console.warn("Could not extract time from data, using default 09:00");
+                                                    timeSlot = "09:00";
+                                                  }
+                                                  
+                                                  // Call the reschedule booking function
+                                                  handleRescheduleBooking(bookingDate, timeSlot, extractedData);
+                                                }}
+                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                title="Click to reschedule this booking"
+                                              >
+                                                <FaCalendarAlt size={8} className="sm:w-3 sm:h-3" />
+                                                <span className="hidden sm:inline">Reschedule</span>
+                                              </button>
+                                            </div>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
@@ -3475,7 +3796,7 @@ function App() {
       </div>
 
       <Suspense fallback={<div>Loading...</div>}>
-        {currentSlot && (
+        {modalOpen && (
           <UnifiedModal
             isOpen={modalOpen}
             onClose={() => setModalOpen(false)}
@@ -3483,8 +3804,8 @@ function App() {
             time={selectedSlot?.time}
             timezone={selectedTimezone}
             availableStudents={allAvailableStudents}
-            availableTeachers={currentSlot.teachers}
-            bookedStudents={currentSlot.students}
+            availableTeachers={currentSlot?.teachers || []}
+            bookedStudents={currentSlot?.students || []}
             allTeachers={teachers}
             onAddTeacher={handleAddTeacher}
             onRemoveTeacher={handleRemoveTeacher}

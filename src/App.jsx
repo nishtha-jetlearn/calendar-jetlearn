@@ -3286,7 +3286,7 @@ function App() {
                                                 .toLowerCase()
                                                 .includes("hours"))
                                               ? "bg-green-500"
-                                              : "bg-red-500"
+                                              : "bg-blue-500"
                                           }`}
                                         ></div>
                                         <div className="flex-1">

@@ -1125,8 +1125,8 @@ function App() {
   // Updated getCellColor to work with counts
   const getCellColor = (available, booked) => {
     if (available === 0 && booked === 0) return "bg-gray-200";
-    if (available === 0 && booked > 0) return "bg-green-200";
-    if (available > 0 && booked >= available) return "bg-red-200";
+    if (available === 0 && booked > 0) return "bg-red-200";
+    if (booked >= available) return "bg-red-200";
     if (available > 0 && booked < available) return "bg-green-200";
     return "bg-gray-200";
   };
@@ -2998,7 +2998,7 @@ function App() {
                               }
                             </div>
                             <div className="text-xs text-blue-600">
-                              Total Bookings
+                              Total Availability & Bookings
                               {(() => {
                                 const parsedBookings = parseBookingDetails(
                                   listViewBookingDetails.data

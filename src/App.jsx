@@ -2657,7 +2657,7 @@ function App() {
                   !bookingApiResponse.error && (
                     <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-300">
                       <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <div className="w-6 h-6 bg-green-500 rounded-full"></div>
+                        <div className="w-6 h-6 bg-green-600 rounded-full"></div>
                       </div>
                       <p className="text-gray-500 text-sm font-medium">
                         Click to load booking data for{" "}
@@ -2754,7 +2754,7 @@ function App() {
             </button>
           </div>
 
-          <div className="p-2 h-[280px] overflow-y-auto">
+          <div className="p-2 h-[325px] overflow-y-auto">
             {/* Session Information */}
             <div className="mb-3 p-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-1 text-sm flex items-center gap-2">
@@ -3496,6 +3496,14 @@ function App() {
                                                   .toLowerCase()
                                                   .includes("hours"))
                                               ? "bg-green-500"
+                                              : extractedData.summary &&
+                                                (extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("week off") ||
+                                                  extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("off"))
+                                              ? "bg-yellow-500"
                                               : "bg-red-500"
                                             }`}
                                         ></div>
@@ -3537,7 +3545,13 @@ function App() {
                                             .includes("availability") ||
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("hours")) && (
+                                              .includes("hours")) &&
+                                          !(extractedData.summary
+                                            .toLowerCase()
+                                            .includes("week off") ||
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("off")) && (
                                             <div className="flex items-center gap-2 ml-3">
                                               <button
                                                 onClick={() => {
@@ -3654,19 +3668,19 @@ function App() {
                                                   }
 
                                                   // Open cancel popup for availability
-                                                  setCancelPopup({
-                                                    isOpen: true,
-                                                    type: "availability",
-                                                    data: extractedData,
-                                                    date: bookingDate,
-                                                    time: timeSlot,
-                                                    reason: "",
-                                                    studentDetails: null,
-                                                    teacherDetails:
-                                                      getTeacherByTeacherId(
-                                                        extractedData.teacherid
-                                                      ) || selectedTeacher,
-                                                  });
+                                                  // setCancelPopup({
+                                                  //   isOpen: true,
+                                                  //   type: "availability",
+                                                  //   data: extractedData,
+                                                  //   date: bookingDate,
+                                                  //   time: timeSlot,
+                                                  //   reason: "",
+                                                  //   studentDetails: null,
+                                                  //   teacherDetails:
+                                                  //     getTeacherByTeacherId(
+                                                  //       extractedData.teacherid
+                                                  //     ) || selectedTeacher,
+                                                  // });
                                                 }}
                                                 className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
                                                 title="Click to cancel availability for this time slot"
@@ -3687,7 +3701,13 @@ function App() {
                                             .includes("availability") ||
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("hours")) && (
+                                              .includes("hours")) &&
+                                          !(extractedData.summary
+                                            .toLowerCase()
+                                            .includes("week off") ||
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("off")) && (
                                             <div className="flex items-center gap-2 ml-3">
                                               <button
                                                 onClick={() => {

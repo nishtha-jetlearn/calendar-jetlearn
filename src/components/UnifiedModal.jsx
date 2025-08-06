@@ -589,7 +589,7 @@ const UnifiedModalComponent = function UnifiedModal({
                   </div>
                   Selected Learners
                   <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                    {selectedStudents.length}/9
+                    {selectedStudents.length}/10
                   </span>
                 </h3>
 

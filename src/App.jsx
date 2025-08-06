@@ -2758,9 +2758,6 @@ function App() {
                   ? "Availability"
                   : "Booking"}
               </h2>
-              <p className="text-xs text-red-600 mt-1">
-                Review details and select cancellation reason
-              </p>
             </div>
             <button
               onClick={handleCancelClose}
@@ -2777,16 +2774,11 @@ function App() {
                 <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
                 Session Information
               </h3>
-              <div className="grid grid-cols-2 gap-1 text-xs">
+              <div className="flex flex-col grid grid-cols-4 gap-1 text-xs">
                 <div className="bg-white p-1.5 rounded border border-gray-100">
-                  <span className="text-gray-600">Date: </span>
+                  <span className="text-gray-600">Date & Time : </span>
                   <span className="font-bold text-gray-900 bg-yellow-50 px-1 py-0.5 rounded text-xs">
-                    {formatDateDDMMMYYYY(cancelPopup.date)}
-                  </span>
-                </div>
-                <div className="bg-white p-1.5 rounded border border-gray-100">
-                  <span className="text-gray-600">Time: </span>
-                  <span className="font-bold text-gray-900 bg-blue-50 px-1 py-0.5 rounded text-xs">
+                    {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
                     {addHoursToTimeRange(cancelPopup.time, 1)}{" "}
                     {selectedTimezone}
                   </span>
@@ -2856,9 +2848,6 @@ function App() {
                   </option>
                   <option value="CBO">Cancelled by Ops</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Please select the appropriate reason for cancellation
-                </p>
               </div>
             </div>
 

@@ -814,7 +814,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
@@ -1052,7 +1052,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
@@ -1249,7 +1249,7 @@ function App() {
       (s) =>
         (s.deal_name &&
           s.deal_name.trim().toLowerCase() ===
-            studentName.trim().toLowerCase()) ||
+          studentName.trim().toLowerCase()) ||
         (s.name &&
           s.name.trim().toLowerCase() === studentName.trim().toLowerCase())
     );
@@ -1772,12 +1772,7 @@ function App() {
     reason = ""
   ) => {
     try {
-      console.log("🚀 Canceling availability for:", {
-        date,
-        time,
-        teacherId,
-        reason,
-      });
+      console.log("🚀 Canceling availability for:", { date, time, teacherId, reason });
 
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
@@ -1829,12 +1824,7 @@ function App() {
   // Handle cancel booking
   const handleCancelBooking = async (date, time, bookingData, reason = "") => {
     try {
-      console.log("🚀 Canceling booking for:", {
-        date,
-        time,
-        bookingData,
-        reason,
-      });
+      console.log("🚀 Canceling booking for:", { date, time, bookingData, reason });
 
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
@@ -2170,11 +2160,10 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`${buttonClass} ${
-            currentPage === 1
+          className={`${buttonClass} ${currentPage === 1
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
+            }`}
         >
           <FaChevronLeft size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2187,13 +2176,12 @@ function App() {
               typeof page === "number" ? onPageChange(page) : null
             }
             disabled={page === "..."}
-            className={`${buttonClass} ${
-              page === currentPage
+            className={`${buttonClass} ${page === currentPage
                 ? "bg-blue-600 text-white"
                 : page === "..."
-                ? "bg-transparent text-gray-500 cursor-default"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+                  ? "bg-transparent text-gray-500 cursor-default"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+              }`}
           >
             {page}
           </button>
@@ -2203,11 +2191,10 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`${buttonClass} ${
-            currentPage === totalPages
+          className={`${buttonClass} ${currentPage === totalPages
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
+            }`}
         >
           <FaChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2233,44 +2220,44 @@ function App() {
     // Filter data by the specific time slot, respecting grid counts
     const filteredAvailabilityData = availabilityAPI.response
       ? filterDataByTime(
-          availabilityAPI.response,
-          detailsPopup.time,
-          gridAvailableCount
-        )
+        availabilityAPI.response,
+        detailsPopup.time,
+        gridAvailableCount
+      )
       : [];
 
     const filteredBookingData = bookingApiResponse.data
       ? filterDataByTime(
-          bookingApiResponse.data,
-          detailsPopup.time,
-          gridBookedCount
-        )
+        bookingApiResponse.data,
+        detailsPopup.time,
+        gridBookedCount
+      )
       : [];
 
     // Get paginated data for current popup
     const currentData =
       detailsPopup.type === "availability"
         ? getPaginatedData(
-            filteredAvailabilityData,
-            popupPagination.currentPage,
-            popupPagination.itemsPerPage
-          )
+          filteredAvailabilityData,
+          popupPagination.currentPage,
+          popupPagination.itemsPerPage
+        )
         : getPaginatedData(
-            filteredBookingData,
-            popupPagination.currentPage,
-            popupPagination.itemsPerPage
-          );
+          filteredBookingData,
+          popupPagination.currentPage,
+          popupPagination.itemsPerPage
+        );
 
     const totalPages =
       detailsPopup.type === "availability"
         ? getTotalPages(
-            filteredAvailabilityData.length,
-            popupPagination.itemsPerPage
-          )
+          filteredAvailabilityData.length,
+          popupPagination.itemsPerPage
+        )
         : getTotalPages(
-            filteredBookingData.length,
-            popupPagination.itemsPerPage
-          );
+          filteredBookingData.length,
+          popupPagination.itemsPerPage
+        );
 
     // Debug logging
     console.log("🔍 Popup Debug Info:", {
@@ -2670,7 +2657,7 @@ function App() {
                   !bookingApiResponse.error && (
                     <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-300">
                       <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <div className="w-6 h-6 bg-green-500 rounded-full"></div>
+                        <div className="w-6 h-6 bg-green-600 rounded-full"></div>
                       </div>
                       <p className="text-gray-500 text-sm font-medium">
                         Click to load booking data for{" "}
@@ -2767,15 +2754,17 @@ function App() {
             </button>
           </div>
 
-          <div className="p-2 h-[280px] overflow-y-auto">
+          <div className="p-2 h-[325px] overflow-y-auto">
             {/* Session Information */}
             <div className="mb-3 p-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-1 text-sm flex items-center gap-2">
                 <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
                 Session Information
               </h3>
-              <div className="flex flex-col  gap-1 text-xs">
-                <div className="bg-gray-100 p-1.5 rounded border border-gray-100">
+
+              {/* Changed layout to column */}
+              <div className="flex flex-col gap-2 text-xs">
+                <div className="bg-white p-1.5 rounded border border-gray-100">
                   <span className="text-gray-600">Date & Time : </span>
                   <span className="font-bold text-gray-900 bg-yellow-50 px-1 py-0.5 rounded text-xs">
                     {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
@@ -2783,6 +2772,7 @@ function App() {
                     {selectedTimezone}
                   </span>
                 </div>
+                {/* Add more items below similarly if needed */}
               </div>
             </div>
 
@@ -3142,13 +3132,12 @@ function App() {
                     }
                   }}
                   disabled={!selectedTeacher && !selectedStudent}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
-                    !selectedTeacher && !selectedStudent
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${!selectedTeacher && !selectedStudent
                       ? "opacity-50 cursor-not-allowed text-gray-400"
                       : currentView === "list"
-                      ? "bg-blue-500 text-white shadow-md"
-                      : "text-blue-100 hover:text-white"
-                  }`}
+                        ? "bg-blue-500 text-white shadow-md"
+                        : "text-blue-100 hover:text-white"
+                    }`}
                   title={
                     !selectedTeacher && !selectedStudent
                       ? "Select a Teacher or Student to enable List View"
@@ -3197,11 +3186,10 @@ function App() {
                       });
                     }
                   }}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
-                    currentView === "week"
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${currentView === "week"
                       ? "bg-blue-500 text-white shadow-md"
                       : "text-blue-100 hover:text-white"
-                  }`}
+                    }`}
                 >
                   <FaCalendarWeek size={12} className="sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Week View</span>
@@ -3500,17 +3488,24 @@ function App() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
                                         <div
-                                          className={`w-3 h-3 rounded-full mr-3 ${
-                                            extractedData.summary &&
-                                            (extractedData.summary
-                                              .toLowerCase()
-                                              .includes("availability") ||
-                                              extractedData.summary
+                                          className={`w-3 h-3 rounded-full mr-3 ${extractedData.summary &&
+                                              (extractedData.summary
                                                 .toLowerCase()
-                                                .includes("hours"))
+                                                .includes("availability") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("hours"))
                                               ? "bg-green-500"
+                                              : extractedData.summary &&
+                                                (extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("week off") ||
+                                                  extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("off"))
+                                              ? "bg-yellow-500"
                                               : "bg-red-500"
-                                          }`}
+                                            }`}
                                         ></div>
                                         <div className="flex-1">
                                           <div className="text-sm font-medium text-gray-900">
@@ -3550,7 +3545,13 @@ function App() {
                                             .includes("availability") ||
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("hours")) && (
+                                              .includes("hours")) &&
+                                          !(extractedData.summary
+                                            .toLowerCase()
+                                            .includes("week off") ||
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("off")) && (
                                             <div className="flex items-center gap-2 ml-3">
                                               <button
                                                 onClick={() => {
@@ -3591,24 +3592,15 @@ function App() {
                                                     timeSlot = "09:00";
                                                   }
 
-                                                  console.log(
-                                                    "Opening UnifiedModal for:",
-                                                    {
-                                                      date: bookingDate,
-                                                      time: timeSlot,
-                                                      summary:
-                                                        extractedData.summary,
-                                                      start_time:
-                                                        extractedData.start_time,
-                                                    }
-                                                  );
+                                                  console.log("Opening UnifiedModal for:", {
+                                                    date: bookingDate,
+                                                    time: timeSlot,
+                                                    summary: extractedData.summary,
+                                                    start_time: extractedData.start_time
+                                                  });
 
                                                   // Get slot data for this specific time
-                                                  const slotData =
-                                                    getSlotCounts(
-                                                      bookingDate,
-                                                      timeSlot
-                                                    );
+                                                  const slotData = getSlotCounts(bookingDate, timeSlot);
 
                                                   setSelectedSlot({
                                                     date: bookingDate,
@@ -3676,19 +3668,19 @@ function App() {
                                                   }
 
                                                   // Open cancel popup for availability
-                                                  setCancelPopup({
-                                                    isOpen: true,
-                                                    type: "availability",
-                                                    data: extractedData,
-                                                    date: bookingDate,
-                                                    time: timeSlot,
-                                                    reason: "",
-                                                    studentDetails: null,
-                                                    teacherDetails:
-                                                      getTeacherByTeacherId(
-                                                        extractedData.teacherid
-                                                      ) || selectedTeacher,
-                                                  });
+                                                  // setCancelPopup({
+                                                  //   isOpen: true,
+                                                  //   type: "availability",
+                                                  //   data: extractedData,
+                                                  //   date: bookingDate,
+                                                  //   time: timeSlot,
+                                                  //   reason: "",
+                                                  //   studentDetails: null,
+                                                  //   teacherDetails:
+                                                  //     getTeacherByTeacherId(
+                                                  //       extractedData.teacherid
+                                                  //     ) || selectedTeacher,
+                                                  // });
                                                 }}
                                                 className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
                                                 title="Click to cancel availability for this time slot"
@@ -3704,14 +3696,18 @@ function App() {
                                             </div>
                                           )}
                                         {extractedData.summary &&
-                                          !(
+                                          !(extractedData.summary
+                                            .toLowerCase()
+                                            .includes("availability") ||
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("availability") ||
+                                              .includes("hours")) &&
+                                          !(extractedData.summary
+                                            .toLowerCase()
+                                            .includes("week off") ||
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("hours")
-                                          ) && (
+                                              .includes("off")) && (
                                             <div className="flex items-center gap-2 ml-3">
                                               <button
                                                 onClick={() => {
@@ -3877,7 +3873,7 @@ function App() {
                                 -{" "}
                                 {Math.min(
                                   pagination.currentPage *
-                                    pagination.itemsPerPage,
+                                  pagination.itemsPerPage,
                                   parsedBookings.length
                                 )}{" "}
                                 of {parsedBookings.length} bookings
@@ -4054,11 +4050,10 @@ function App() {
                           className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor}`}
                         >
                           <div
-                            className={`font-medium text-gray-800 ${
-                              available > 0
+                            className={`font-medium text-gray-800 ${available > 0
                                 ? "cursor-pointer hover:text-blue-600 hover:underline"
                                 : ""
-                            }`}
+                              }`}
                             onClick={() => {
                               console.log("🖱️ Availability div clicked:", {
                                 available,
@@ -4081,11 +4076,10 @@ function App() {
                           </div>
 
                           <div
-                            className={`font-medium text-gray-800 ${
-                              booked > 0
+                            className={`font-medium text-gray-800 ${booked > 0
                                 ? "cursor-pointer hover:text-green-600 hover:underline"
                                 : ""
-                            }`}
+                              }`}
                             onClick={() => {
                               console.log("🖱️ Booking div clicked:", {
                                 booked,

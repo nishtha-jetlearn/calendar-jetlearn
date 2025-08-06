@@ -712,7 +712,7 @@ function App() {
 
     // Fallback to local schedule
     const localSlot = getScheduleForDate(date)[time];
-    
+
     // Add null check for localSlot
     if (!localSlot) {
       return {
@@ -725,7 +725,7 @@ function App() {
         uid: null,
       };
     }
-    
+
     const firstTeacher = localSlot.teachers?.[0];
 
     return {
@@ -814,7 +814,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
@@ -1052,7 +1052,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
@@ -1249,7 +1249,7 @@ function App() {
       (s) =>
         (s.deal_name &&
           s.deal_name.trim().toLowerCase() ===
-            studentName.trim().toLowerCase()) ||
+          studentName.trim().toLowerCase()) ||
         (s.name &&
           s.name.trim().toLowerCase() === studentName.trim().toLowerCase())
     );
@@ -1768,21 +1768,21 @@ function App() {
   const handleCancelAvailability = async (date, time, teacherId = null, reason = '') => {
     try {
       console.log("🚀 Canceling availability for:", { date, time, teacherId, reason });
-      
+
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
-      
+
       // Get teacher ID if not provided
       if (!teacherId) {
         const slotData = getSlotCounts(dateObj, time);
         teacherId = slotData.teacherid || selectedTeacher?.uid;
       }
-      
+
       if (!teacherId) {
         console.error("❌ No teacher ID available for canceling availability");
         return;
       }
-      
+
       // Call API to cancel availability
       const response = await fetch("/api/cancel-availability", {
         method: "POST",
@@ -1797,20 +1797,20 @@ function App() {
           reason: reason
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log("✅ Availability canceled successfully:", result);
-      
+
       // Refresh the data after canceling
       await fetchListViewBookingDetails();
-      
+
       // Show success message (you can implement a toast notification here)
       // alert("Availability canceled successfully!");
-      
+
     } catch (error) {
       console.error("❌ Error canceling availability:", error);
       // alert("Failed to cancel availability. Please try again.");
@@ -1821,10 +1821,10 @@ function App() {
   const handleCancelBooking = async (date, time, bookingData, reason = '') => {
     try {
       console.log("🚀 Canceling booking for:", { date, time, bookingData, reason });
-      
+
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
-      
+
       // Call API to cancel booking
       const response = await fetch("/api/cancel-booking", {
         method: "POST",
@@ -1839,20 +1839,20 @@ function App() {
           reason: reason
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log("✅ Booking canceled successfully:", result);
-      
+
       // Refresh the data after canceling
       await fetchListViewBookingDetails();
-      
+
       // Show success message
       // alert("Booking canceled successfully!");
-      
+
     } catch (error) {
       console.error("❌ Error canceling booking:", error);
       // alert("Failed to cancel booking. Please try again.");
@@ -1863,14 +1863,14 @@ function App() {
   const handleRescheduleBooking = async (date, time, bookingData) => {
     try {
       console.log("🚀 Rescheduling booking for:", { date, time, bookingData });
-      
+
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
-      
+
       // For now, we'll just show a message that reschedule functionality is coming
       // You can implement the actual reschedule logic here
       // alert("Reschedule functionality is coming soon!");
-      
+
       // TODO: Implement reschedule API call
       // const response = await fetch("/api/reschedule-booking", {
       //   method: "POST",
@@ -1884,7 +1884,7 @@ function App() {
       //     timezone: selectedTimezone
       //   }),
       // });
-      
+
     } catch (error) {
       console.error("❌ Error rescheduling booking:", error);
       // alert("Failed to reschedule booking. Please try again.");
@@ -2158,11 +2158,10 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`${buttonClass} ${
-            currentPage === 1
+          className={`${buttonClass} ${currentPage === 1
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
+            }`}
         >
           <FaChevronLeft size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2175,13 +2174,12 @@ function App() {
               typeof page === "number" ? onPageChange(page) : null
             }
             disabled={page === "..."}
-            className={`${buttonClass} ${
-              page === currentPage
+            className={`${buttonClass} ${page === currentPage
                 ? "bg-blue-600 text-white"
                 : page === "..."
-                ? "bg-transparent text-gray-500 cursor-default"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+                  ? "bg-transparent text-gray-500 cursor-default"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+              }`}
           >
             {page}
           </button>
@@ -2191,11 +2189,10 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`${buttonClass} ${
-            currentPage === totalPages
+          className={`${buttonClass} ${currentPage === totalPages
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
+            }`}
         >
           <FaChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2221,44 +2218,44 @@ function App() {
     // Filter data by the specific time slot, respecting grid counts
     const filteredAvailabilityData = availabilityAPI.response
       ? filterDataByTime(
-          availabilityAPI.response,
-          detailsPopup.time,
-          gridAvailableCount
-        )
+        availabilityAPI.response,
+        detailsPopup.time,
+        gridAvailableCount
+      )
       : [];
 
     const filteredBookingData = bookingApiResponse.data
       ? filterDataByTime(
-          bookingApiResponse.data,
-          detailsPopup.time,
-          gridBookedCount
-        )
+        bookingApiResponse.data,
+        detailsPopup.time,
+        gridBookedCount
+      )
       : [];
 
     // Get paginated data for current popup
     const currentData =
       detailsPopup.type === "availability"
         ? getPaginatedData(
-            filteredAvailabilityData,
-            popupPagination.currentPage,
-            popupPagination.itemsPerPage
-          )
+          filteredAvailabilityData,
+          popupPagination.currentPage,
+          popupPagination.itemsPerPage
+        )
         : getPaginatedData(
-            filteredBookingData,
-            popupPagination.currentPage,
-            popupPagination.itemsPerPage
-          );
+          filteredBookingData,
+          popupPagination.currentPage,
+          popupPagination.itemsPerPage
+        );
 
     const totalPages =
       detailsPopup.type === "availability"
         ? getTotalPages(
-            filteredAvailabilityData.length,
-            popupPagination.itemsPerPage
-          )
+          filteredAvailabilityData.length,
+          popupPagination.itemsPerPage
+        )
         : getTotalPages(
-            filteredBookingData.length,
-            popupPagination.itemsPerPage
-          );
+          filteredBookingData.length,
+          popupPagination.itemsPerPage
+        );
 
     // Debug logging
     console.log("🔍 Popup Debug Info:", {
@@ -2685,20 +2682,20 @@ function App() {
       try {
         if (cancelPopup.type === 'availability') {
           await handleCancelAvailability(
-            cancelPopup.date, 
-            cancelPopup.time, 
+            cancelPopup.date,
+            cancelPopup.time,
             cancelPopup.teacherDetails?.uid,
             cancelPopup.reason
           );
         } else if (cancelPopup.type === 'booking') {
           await handleCancelBooking(
-            cancelPopup.date, 
-            cancelPopup.time, 
+            cancelPopup.date,
+            cancelPopup.time,
             cancelPopup.data,
             cancelPopup.reason
           );
         }
-        
+
         // Close the popup
         setCancelPopup({
           isOpen: false,
@@ -2757,19 +2754,18 @@ function App() {
                 <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
                 Session Information
               </h3>
-              <div className="grid grid-cols-2 gap-1 text-xs">
+
+              {/* Changed layout to column */}
+              <div className="flex flex-col gap-2 text-xs">
                 <div className="bg-white p-1.5 rounded border border-gray-100">
-                  <span className="text-gray-600">Date: </span>
+                  <span className="text-gray-600">Date & Time : </span>
                   <span className="font-bold text-gray-900 bg-yellow-50 px-1 py-0.5 rounded text-xs">
-                    {formatDateDDMMMYYYY(cancelPopup.date)}
+                    {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
+                    {addHoursToTimeRange(cancelPopup.time, 1)}{" "}
+                    {selectedTimezone}
                   </span>
                 </div>
-                <div className="bg-white p-1.5 rounded border border-gray-100">
-                  <span className="text-gray-600">Time: </span>
-                  <span className="font-bold text-gray-900 bg-blue-50 px-1 py-0.5 rounded text-xs">
-                    {addHoursToTimeRange(cancelPopup.time, 1)} {selectedTimezone}
-                  </span>
-                </div>
+                {/* Add more items below similarly if needed */}
               </div>
             </div>
 
@@ -3128,13 +3124,12 @@ function App() {
                     }
                   }}
                   disabled={!selectedTeacher && !selectedStudent}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
-                    !selectedTeacher && !selectedStudent
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${!selectedTeacher && !selectedStudent
                       ? "opacity-50 cursor-not-allowed text-gray-400"
                       : currentView === "list"
-                      ? "bg-blue-500 text-white shadow-md"
-                      : "text-blue-100 hover:text-white"
-                  }`}
+                        ? "bg-blue-500 text-white shadow-md"
+                        : "text-blue-100 hover:text-white"
+                    }`}
                   title={
                     !selectedTeacher && !selectedStudent
                       ? "Select a Teacher or Student to enable List View"
@@ -3183,11 +3178,10 @@ function App() {
                       });
                     }
                   }}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
-                    currentView === "week"
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${currentView === "week"
                       ? "bg-blue-500 text-white shadow-md"
                       : "text-blue-100 hover:text-white"
-                  }`}
+                    }`}
                 >
                   <FaCalendarWeek size={12} className="sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Week View</span>
@@ -3476,17 +3470,16 @@ function App() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
                                         <div
-                                          className={`w-3 h-3 rounded-full mr-3 ${
-                                            extractedData.summary &&
-                                            (extractedData.summary
-                                              .toLowerCase()
-                                              .includes("availability") ||
-                                              extractedData.summary
+                                          className={`w-3 h-3 rounded-full mr-3 ${extractedData.summary &&
+                                              (extractedData.summary
                                                 .toLowerCase()
-                                                .includes("hours"))
+                                                .includes("availability") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("hours"))
                                               ? "bg-green-500"
                                               : "bg-red-500"
-                                          }`}
+                                            }`}
                                         ></div>
                                         <div className="flex-1">
                                           <div className="text-sm font-medium text-gray-900">
@@ -3521,18 +3514,18 @@ function App() {
                                           {extractedData.summary || "N/A"}
                                         </div>
                                         {extractedData.summary &&
-                                        (extractedData.summary
-                                          .toLowerCase()
-                                          .includes("availability") ||
-                                          extractedData.summary
+                                          (extractedData.summary
                                             .toLowerCase()
-                                            .includes("hours")) && (
-                                              <div className="flex items-center gap-2 ml-3">
-                                                <button
+                                            .includes("availability") ||
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("hours")) && (
+                                            <div className="flex items-center gap-2 ml-3">
+                                              <button
                                                 onClick={() => {
                                                   // Open UnifiedModal for this time slot
                                                   let timeSlot = "00:00";
-                                                  
+
                                                   // Try to extract time from summary
                                                   if (extractedData.summary) {
                                                     const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
@@ -3540,7 +3533,7 @@ function App() {
                                                       timeSlot = timeMatch[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If no time found in summary, try to extract from start_time
                                                   if (timeSlot === "00:00" && extractedData.start_time) {
                                                     const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
@@ -3548,23 +3541,23 @@ function App() {
                                                       timeSlot = timeFromStart[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If still no time found, use a default time
                                                   if (timeSlot === "00:00") {
                                                     console.warn("Could not extract time from data, using default 09:00");
                                                     timeSlot = "09:00";
                                                   }
-                                                  
+
                                                   console.log("Opening UnifiedModal for:", {
                                                     date: bookingDate,
                                                     time: timeSlot,
                                                     summary: extractedData.summary,
                                                     start_time: extractedData.start_time
                                                   });
-                                                  
+
                                                   // Get slot data for this specific time
                                                   const slotData = getSlotCounts(bookingDate, timeSlot);
-                                                  
+
                                                   setSelectedSlot({
                                                     date: bookingDate,
                                                     time: timeSlot,
@@ -3584,7 +3577,7 @@ function App() {
                                                 onClick={() => {
                                                   // Extract time from the booking data
                                                   let timeSlot = "00:00";
-                                                  
+
                                                   // Try to extract time from summary
                                                   if (extractedData.summary) {
                                                     const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
@@ -3592,7 +3585,7 @@ function App() {
                                                       timeSlot = timeMatch[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If no time found in summary, try to extract from start_time
                                                   if (timeSlot === "00:00" && extractedData.start_time) {
                                                     const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
@@ -3600,13 +3593,13 @@ function App() {
                                                       timeSlot = timeFromStart[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If still no time found, use a default time
                                                   if (timeSlot === "00:00") {
                                                     console.warn("Could not extract time from data, using default 09:00");
                                                     timeSlot = "09:00";
                                                   }
-                                                  
+
                                                   // Open cancel popup for availability
                                                   setCancelPopup({
                                                     isOpen: true,
@@ -3626,20 +3619,20 @@ function App() {
                                                 <span className="hidden sm:inline">Cancel Availability</span>
                                               </button>
                                             </div>
-                                        )}
+                                          )}
                                         {extractedData.summary &&
-                                        !(extractedData.summary
-                                          .toLowerCase()
-                                          .includes("availability") ||
-                                          extractedData.summary
+                                          !(extractedData.summary
                                             .toLowerCase()
-                                            .includes("hours")) && (
-                                              <div className="flex items-center gap-2 ml-3">
-                                                <button
+                                            .includes("availability") ||
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("hours")) && (
+                                            <div className="flex items-center gap-2 ml-3">
+                                              <button
                                                 onClick={() => {
                                                   // Extract time from the booking data
                                                   let timeSlot = "00:00";
-                                                  
+
                                                   // Try to extract time from summary
                                                   if (extractedData.summary) {
                                                     const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
@@ -3647,7 +3640,7 @@ function App() {
                                                       timeSlot = timeMatch[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If no time found in summary, try to extract from start_time
                                                   if (timeSlot === "00:00" && extractedData.start_time) {
                                                     const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
@@ -3655,13 +3648,13 @@ function App() {
                                                       timeSlot = timeFromStart[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If still no time found, use a default time
                                                   if (timeSlot === "00:00") {
                                                     console.warn("Could not extract time from data, using default 09:00");
                                                     timeSlot = "09:00";
                                                   }
-                                                  
+
                                                   // Open cancel popup for booking
                                                   setCancelPopup({
                                                     isOpen: true,
@@ -3689,7 +3682,7 @@ function App() {
                                                 onClick={() => {
                                                   // Extract time from the booking data
                                                   let timeSlot = "00:00";
-                                                  
+
                                                   // Try to extract time from summary
                                                   if (extractedData.summary) {
                                                     const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
@@ -3697,7 +3690,7 @@ function App() {
                                                       timeSlot = timeMatch[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If no time found in summary, try to extract from start_time
                                                   if (timeSlot === "00:00" && extractedData.start_time) {
                                                     const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
@@ -3705,13 +3698,13 @@ function App() {
                                                       timeSlot = timeFromStart[1];
                                                     }
                                                   }
-                                                  
+
                                                   // If still no time found, use a default time
                                                   if (timeSlot === "00:00") {
                                                     console.warn("Could not extract time from data, using default 09:00");
                                                     timeSlot = "09:00";
                                                   }
-                                                  
+
                                                   // Call the reschedule booking function
                                                   handleRescheduleBooking(bookingDate, timeSlot, extractedData);
                                                 }}
@@ -3722,7 +3715,7 @@ function App() {
                                                 <span className="hidden sm:inline">Reschedule</span>
                                               </button>
                                             </div>
-                                        )}
+                                          )}
                                       </div>
                                     </td>
                                   </tr>
@@ -3756,7 +3749,7 @@ function App() {
                                 -{" "}
                                 {Math.min(
                                   pagination.currentPage *
-                                    pagination.itemsPerPage,
+                                  pagination.itemsPerPage,
                                   parsedBookings.length
                                 )}{" "}
                                 of {parsedBookings.length} bookings
@@ -3933,11 +3926,10 @@ function App() {
                           className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor}`}
                         >
                           <div
-                            className={`font-medium text-gray-800 ${
-                              available > 0
+                            className={`font-medium text-gray-800 ${available > 0
                                 ? "cursor-pointer hover:text-blue-600 hover:underline"
                                 : ""
-                            }`}
+                              }`}
                             onClick={() => {
                               console.log("🖱️ Availability div clicked:", {
                                 available,
@@ -3960,11 +3952,10 @@ function App() {
                           </div>
 
                           <div
-                            className={`font-medium text-gray-800 ${
-                              booked > 0
+                            className={`font-medium text-gray-800 ${booked > 0
                                 ? "cursor-pointer hover:text-green-600 hover:underline"
                                 : ""
-                            }`}
+                              }`}
                             onClick={() => {
                               console.log("🖱️ Booking div clicked:", {
                                 booked,

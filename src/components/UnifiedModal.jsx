@@ -139,6 +139,12 @@ const UnifiedModalComponent = function UnifiedModal({
       return;
     }
 
+    // Check maximum schedule entries
+    if (scheduleEntries.length >= 3) {
+      alert('Maximum 3 schedule entries can be added.');
+      return;
+    }
+
     // Validate past date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -172,6 +178,10 @@ const UnifiedModalComponent = function UnifiedModal({
     const studentId = student.jetlearner_id || student.id;
     
     if (!selectedStudents.some(s => s.id === studentId)) {
+      if (selectedStudents.length >= 10) {
+        alert('Maximum 10 learners can be selected.');
+        return;
+      }
       setSelectedStudents([...selectedStudents, {
         id: studentId,
         name: studentName,
@@ -502,7 +512,7 @@ const UnifiedModalComponent = function UnifiedModal({
                   </div>
                   Schedule
                   <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                    {scheduleEntries.length}
+                    {scheduleEntries.length}/3
                   </span>
                 </h3>
 
@@ -536,11 +546,11 @@ const UnifiedModalComponent = function UnifiedModal({
 
                   <button
                     onClick={addScheduleEntry}
-                    disabled={!selectedScheduleDate || !selectedScheduleTime}
+                    disabled={!selectedScheduleDate || !selectedScheduleTime || scheduleEntries.length >= 3}
                     className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-2 rounded hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
                   >
                     <FaPlus size={12} />
-                    Add Schedule Entry
+                    Add Schedule Entry {scheduleEntries.length}/3
                   </button>
 
                   {/* Schedule Entries List */}
@@ -579,7 +589,7 @@ const UnifiedModalComponent = function UnifiedModal({
                   </div>
                   Selected Learners
                   <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                    {selectedStudents.length}
+                    {selectedStudents.length}/9
                   </span>
                 </h3>
 

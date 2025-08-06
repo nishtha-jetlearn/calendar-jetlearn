@@ -2774,8 +2774,8 @@ function App() {
                 <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
                 Session Information
               </h3>
-              <div className="flex flex-col grid grid-cols-4 gap-1 text-xs">
-                <div className="bg-white p-1.5 rounded border border-gray-100">
+              <div className="flex flex-col  gap-1 text-xs">
+                <div className="bg-gray-100 p-1.5 rounded border border-gray-100">
                   <span className="text-gray-600">Date & Time : </span>
                   <span className="font-bold text-gray-900 bg-yellow-50 px-1 py-0.5 rounded text-xs">
                     {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
@@ -3336,32 +3336,42 @@ function App() {
                           <div>
                             <h4 className="font-semibold text-blue-800 flex items-center gap-2">
                               <FaCalendarAlt size={16} />
-                              Details of the Availability and the Booking
+                              Details of the Availability and Bookings
                             </h4>
                             <p className="text-sm text-blue-600 mt-1">
-                              Showing all bookings for the selected week
+                              Showing all bookings for Current Month
                             </p>
                           </div>
                           <div className="text-right">
                             <div className="text-lg font-bold text-blue-800">
+                              Total Events :{" "}
                               {
                                 parseBookingDetails(listViewBookingDetails.data)
                                   .length
                               }
                             </div>
-                            <div className="text-xs text-blue-600">
-                              Total Availability & Bookings
+                            <div className="text-xs font-bold text-blue-600">
                               {(() => {
                                 const parsedBookings = parseBookingDetails(
                                   listViewBookingDetails.data
                                 );
-                                const totalPages = getTotalPages(
-                                  parsedBookings.length,
-                                  pagination.itemsPerPage
-                                );
-                                return totalPages > 1
-                                  ? ` (Page ${pagination.currentPage} of ${totalPages})`
-                                  : "";
+                                // Count availability and jetlearn bookings
+                                const availabilityCount = parsedBookings.filter(
+                                  (booking) =>
+                                    booking.summary &&
+                                    booking.summary
+                                      .toLowerCase()
+                                      .includes("availability hour")
+                                ).length;
+
+                                const bookingCount = parsedBookings.filter(
+                                  (booking) =>
+                                    booking.summary &&
+                                    booking.summary
+                                      .toLowerCase()
+                                      .includes("jetlearn")
+                                ).length;
+                                return ` (Availability ${availabilityCount}, Bookinhgs ${bookingCount})`;
                               })()}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">

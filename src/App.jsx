@@ -1185,17 +1185,17 @@ function App() {
   };
 
   // Enhanced slot click handler with teacherid
-  const handleSlotClick = (date, time) => {
-    const slotData = getSlotCounts(date, time);
-    setSelectedSlot({
-      date,
-      time,
-      teacherid: slotData.teacherid,
-      teacherDetails: slotData.teacherDetails,
-      isFromAPI: slotData.isFromAPI,
-    });
-    setModalOpen(true);
-  };
+  // const handleSlotClick = (date, time) => {
+  //   const slotData = getSlotCounts(date, time);
+  //   setSelectedSlot({
+  //     date,
+  //     time,
+  //     teacherid: slotData.teacherid,
+  //     teacherDetails: slotData.teacherDetails,
+  //     isFromAPI: slotData.isFromAPI,
+  //   });
+  //   setModalOpen(true);
+  // };
 
   const handleAddTeacher = (teacherId) => {
     if (!selectedSlot) return;
@@ -1317,16 +1317,16 @@ function App() {
         console.log("📤 Sending booking to API:", apiPayload);
 
         // TODO: Implement actual API call to https://live.jetlearn.com/api/book-class
-        const response = await fetch(
-          "https://live.jetlearn.com/api/book-class/",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(apiPayload),
-          }
-        );
+        // const response = await fetch(
+        //   "https://live.jetlearn.com/api/book-class/",
+        //   {
+        //     method: "POST",
+        //     headers: {
+        //       "Content-Type": "application/json",
+        //     },
+        //     body: JSON.stringify(apiPayload),
+        //   }
+        // );
 
         if (!response.ok) {
           throw new Error(`API call failed: ${response.status}`);
@@ -1845,7 +1845,8 @@ function App() {
           },
           body: JSON.stringify({
             cancellation_datetime: formatted, // YYYY-MM-DD format
-            jl_uid: jl_id,
+            //jl_uid: jl_id,
+            jluid: jl_id,
             tlid: tl_id[0],
             summary: bookingData.summary,
             cancellation_type: reason,
@@ -2779,7 +2780,9 @@ function App() {
               <div className="space-y-1">
                 <div className="bg-white p-1.5 rounded border border-gray-100">
                   <div className="flex flex-col gap-1">
-                    <span className="text-gray-600 text-xs font-medium">Date & Time:</span>
+                    <span className="text-gray-600 text-xs font-medium">
+                      Date & Time:
+                    </span>
                     <span className="font-bold text-gray-900 bg-yellow-50 px-1.5 py-0.5 rounded text-xs break-words">
                       {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
                       {addHoursToTimeRange(cancelPopup.time, 1)}{" "}
@@ -2908,12 +2911,18 @@ function App() {
       {/* Mobile Header */}
       <div className="lg:hidden bg-blue-600 p-3 sm:p-4 border-b-2 border-black">
         <div className="flex items-center justify-between">
-          <h1 className="text-base sm:text-lg font-bold text-white truncate">Jetlearn Calendar</h1>
+          <h1 className="text-base sm:text-lg font-bold text-white truncate">
+            Jetlearn Calendar
+          </h1>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="text-white p-1.5 sm:p-2 hover:bg-white/10 rounded transition-colors duration-200"
           >
-            {sidebarOpen ? <FaTimes size={18} className="sm:w-5 sm:h-5" /> : <FaBars size={18} className="sm:w-5 sm:h-5" />}
+            {sidebarOpen ? (
+              <FaTimes size={18} className="sm:w-5 sm:h-5" />
+            ) : (
+              <FaBars size={18} className="sm:w-5 sm:h-5" />
+            )}
           </button>
         </div>
       </div>
@@ -2978,7 +2987,10 @@ function App() {
 
                 {selectedStudent && (
                   <div className="bg-purple-50 border border-purple-200 rounded px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-2">
-                    <FaUserGraduate className="text-purple-600 flex-shrink-0" size={12} />
+                    <FaUserGraduate
+                      className="text-purple-600 flex-shrink-0"
+                      size={12}
+                    />
                     <div className="text-xs sm:text-sm min-w-0 flex-1">
                       <span className="text-gray-600">Student:</span>
                       <span className="ml-1 font-medium text-purple-900 truncate">
@@ -3039,9 +3051,13 @@ function App() {
               <FaSearch size={14} className="flex-shrink-0" />
               <span className="truncate">Teacher Search</span>
               {teachersLoading && (
-                <span className="text-orange-200 text-xs sm:text-sm">(Loading...)</span>
+                <span className="text-orange-200 text-xs sm:text-sm">
+                  (Loading...)
+                </span>
               )}
-              {teachersError && <span className="text-red-200 text-xs sm:text-sm">(Error)</span>}
+              {teachersError && (
+                <span className="text-red-200 text-xs sm:text-sm">(Error)</span>
+              )}
             </h2>
             <EnhancedTeacherSearch
               teachers={teachers}
@@ -3058,9 +3074,13 @@ function App() {
               <FaGraduationCap size={14} className="flex-shrink-0" />
               <span className="truncate">Learner Search</span>
               {studentsLoading && (
-                <span className="text-orange-200 text-xs sm:text-sm">(Loading...)</span>
+                <span className="text-orange-200 text-xs sm:text-sm">
+                  (Loading...)
+                </span>
               )}
-              {studentsError && <span className="text-red-200 text-xs sm:text-sm">(Error)</span>}
+              {studentsError && (
+                <span className="text-red-200 text-xs sm:text-sm">(Error)</span>
+              )}
             </h2>
             <EnhancedStudentSearch
               students={allAvailableStudents}
@@ -4009,90 +4029,92 @@ function App() {
 
               <div className="overflow-x-auto">
                 <div className="grid grid-cols-[50px_repeat(7,minmax(60px,1fr))] sm:grid-cols-[60px_repeat(7,minmax(80px,1fr))] md:grid-cols-[80px_repeat(7,minmax(120px,1fr))] min-w-[500px] sm:min-w-[600px] md:min-w-[800px] h-full">
-                <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm">
-                  Time
-                </div>
-                {weekDates.map((date) => (
-                  <div
-                    key={formatDate(date)}
-                    className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300"
-                  >
-                    <div className="text-xs sm:text-sm">{getDayName(date)}</div>
-                    <div className="text-xs text-gray-500 font-bold">
-                      {formatShortDate(date)}
-                    </div>
+                  <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm">
+                    Time
                   </div>
-                ))}
-                {getPaginatedTimeSlots().map((time) => (
-                  <React.Fragment key={time}>
-                    <div className="bg-gray-50 p-1 sm:p-2 lg:p-4 font-medium text-gray-600 text-center border-b border-r border-gray-300 text-xs sm:text-sm">
-                      {time}
+                  {weekDates.map((date) => (
+                    <div
+                      key={formatDate(date)}
+                      className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300"
+                    >
+                      <div className="text-xs sm:text-sm">
+                        {getDayName(date)}
+                      </div>
+                      <div className="text-xs text-gray-500 font-bold">
+                        {formatShortDate(date)}
+                      </div>
                     </div>
-                    {weekDates.map((date) => {
-                      const dateSchedule = getScheduleForDate(date);
-                      const slot = dateSchedule[time];
-                      const { available, booked, teacherid, apiData } =
-                        getSlotCounts(date, time);
-                      const cellColor = getCellColor(available, booked);
-                      return (
-                        <div
-                          key={`${formatDate(date)}-${time}`}
-                          className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor}`}
-                        >
+                  ))}
+                  {getPaginatedTimeSlots().map((time) => (
+                    <React.Fragment key={time}>
+                      <div className="bg-gray-50 p-1 sm:p-2 lg:p-4 font-medium text-gray-600 text-center border-b border-r border-gray-300 text-xs sm:text-sm">
+                        {time}
+                      </div>
+                      {weekDates.map((date) => {
+                        const dateSchedule = getScheduleForDate(date);
+                        const slot = dateSchedule[time];
+                        const { available, booked, teacherid, apiData } =
+                          getSlotCounts(date, time);
+                        const cellColor = getCellColor(available, booked);
+                        return (
                           <div
-                            className={`font-medium text-gray-800 ${
-                              available > 0
-                                ? "cursor-pointer hover:text-blue-600 hover:underline"
-                                : ""
-                            }`}
-                            onClick={() => {
-                              console.log("🖱️ Availability div clicked:", {
-                                available,
-                                date,
-                                time,
-                              });
-                              if (available > 0) {
-                                handleAvailabilityClick(
+                            key={`${formatDate(date)}-${time}`}
+                            className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor}`}
+                          >
+                            <div
+                              className={`font-medium text-gray-800 ${
+                                available > 0
+                                  ? "cursor-pointer hover:text-blue-600 hover:underline"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                console.log("🖱️ Availability div clicked:", {
+                                  available,
                                   date,
                                   time,
-                                  slot.teachers
-                                );
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">
-                              Available: {" "}
-                            </span>
-                            <span className="sm:hidden">A: </span>
-                            {available}
-                          </div>
+                                });
+                                if (available > 0) {
+                                  handleAvailabilityClick(
+                                    date,
+                                    time,
+                                    slot.teachers
+                                  );
+                                }
+                              }}
+                            >
+                              <span className="hidden sm:inline">
+                                Available:{" "}
+                              </span>
+                              <span className="sm:hidden">A: </span>
+                              {available}
+                            </div>
 
-                          <div
-                            className={`font-medium text-gray-800 ${
-                              booked > 0
-                                ? "cursor-pointer hover:text-green-600 hover:underline"
-                                : ""
-                            }`}
-                            onClick={() => {
-                              console.log("🖱️ Booking div clicked:", {
-                                booked,
-                                date,
-                                time,
-                              });
-                              if (booked > 0) {
-                                handleBookingClick(date, time, slot.students);
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">Booked: </span>
-                            <span className="sm:hidden">B: </span>
-                            {booked}
-                          </div>
+                            <div
+                              className={`font-medium text-gray-800 ${
+                                booked > 0
+                                  ? "cursor-pointer hover:text-green-600 hover:underline"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                console.log("🖱️ Booking div clicked:", {
+                                  booked,
+                                  date,
+                                  time,
+                                });
+                                if (booked > 0) {
+                                  handleBookingClick(date, time, slot.students);
+                                }
+                              }}
+                            >
+                              <span className="hidden sm:inline">Booked: </span>
+                              <span className="sm:hidden">B: </span>
+                              {booked}
+                            </div>
 
-                          {/* <div className="text-xs text-gray-600 mt-1 hidden sm:block">
+                            {/* <div className="text-xs text-gray-600 mt-1 hidden sm:block">
                             {formatTimeInTimezone(date, time, selectedTimezone)}
                           </div> */}
-                          {/* <div className="flex gap-1 mt-1 sm:mt-2 flex-wrap">
+                            {/* <div className="flex gap-1 mt-1 sm:mt-2 flex-wrap">
                             <button
                               onClick={() => handleSlotClick(date, time)}
                               className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded"
@@ -4101,11 +4123,11 @@ function App() {
                               <span className="hidden sm:inline">Manage</span>
                             </button>
                           </div> */}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
             </div>

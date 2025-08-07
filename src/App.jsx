@@ -3999,28 +3999,32 @@ function App() {
             <div className="bg-white rounded-lg shadow-lg overflow-hidden min-h-screen">
               {/* color of slots */}
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 m-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-200 rounded"></div>
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2 md:gap-4 m-2">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-green-200 rounded"></div>
                   <span className="text-xs sm:text-sm text-gray-700">
-                    Available
+                    <span className="hidden sm:inline">Available</span>
+                    <span className="sm:hidden">Avail</span>
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-red-200 rounded"></div>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-red-200 rounded"></div>
                   <span className="text-xs sm:text-sm text-gray-700">
-                    Booked
+                    <span className="hidden sm:inline">Booked</span>
+                    <span className="sm:hidden">Book</span>
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-200 rounded"></div>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-gray-200 rounded"></div>
                   <span className="text-xs sm:text-sm text-gray-700">
-                    No Availability
+                    <span className="hidden sm:inline">No Availability</span>
+                    <span className="sm:hidden">None</span>
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-[60px_repeat(7,minmax(80px,1fr))] sm:grid-cols-[80px_repeat(7,minmax(120px,1fr))] min-w-[600px] sm:min-w-[800px] h-full">
+              <div className="overflow-x-auto">
+                <div className="grid grid-cols-[50px_repeat(7,minmax(60px,1fr))] sm:grid-cols-[60px_repeat(7,minmax(80px,1fr))] md:grid-cols-[80px_repeat(7,minmax(120px,1fr))] min-w-[500px] sm:min-w-[600px] md:min-w-[800px] h-full">
                 <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm">
                   Time
                 </div>
@@ -4072,8 +4076,9 @@ function App() {
                             }}
                           >
                             <span className="hidden sm:inline">
-                              Available:{" "}
+                              Available: {" "}
                             </span>
+                            <span className="sm:hidden">A: </span>
                             {available}
                           </div>
 
@@ -4094,6 +4099,7 @@ function App() {
                             }}
                           >
                             <span className="hidden sm:inline">Booked: </span>
+                            <span className="sm:hidden">B: </span>
                             {booked}
                           </div>
 
@@ -4114,6 +4120,7 @@ function App() {
                     })}
                   </React.Fragment>
                 ))}
+                </div>
               </div>
             </div>
           )}

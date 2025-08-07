@@ -1,39 +1,56 @@
-import React, { useState, useMemo } from 'react';
-import { FaTimes, FaUsers, FaGraduationCap, FaClock, FaPlus, FaTrash, FaUserCheck, FaBook, FaSearch, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
-import { formatDisplayDate } from '../utils/dateUtils';
-import { useDebounce } from '../hooks/useDebounce';
+import React, { useState, useMemo } from "react";
+import {
+  FaTimes,
+  FaUsers,
+  FaGraduationCap,
+  FaClock,
+  FaPlus,
+  FaTrash,
+  FaUserCheck,
+  FaBook,
+  FaSearch,
+  FaCalendarAlt,
+  FaExclamationTriangle,
+} from "react-icons/fa";
+import { formatDisplayDate } from "../utils/dateUtils";
+import { useDebounce } from "../hooks/useDebounce";
 
 const SUBJECTS = [
-  { value: 'maths', label: 'Maths' },
-  { value: 'coding', label: 'Coding' },
-  { value: 'gcse', label: 'GCSE' },
-  { value: 'dutch', label: 'Dutch' }
+  { value: "maths", label: "Maths" },
+  { value: "coding", label: "Coding" },
+  { value: "gcse", label: "GCSE" },
+  { value: "dutch", label: "Dutch" },
 ];
 
 const CLASS_TYPES = [
-  { value: '1:1', label: '1:1' },
-  { value: '1:2', label: '1:2' },
-  { value: 'batch', label: 'Batch' }
+  { value: "1:1", label: "1:1" },
+  { value: "1:2", label: "1:2" },
+  { value: "batch", label: "Batch" },
 ];
 
 const CLASS_COUNTS = [
-  { value: '1', label: '1 ' },
-  { value: '2', label: '2 ' },
-  { value: '3', label: '3 ' },
-  { value: '4', label: '4 ' },
-  { value: '5', label: '5 ' },
-  { value: '8', label: '8 ' },
-  { value: '10', label: '10 ' },
-  { value: '12', label: '12 ' },
-  { value: '16', label: '16 ' },
-  { value: '20', label: '20 ' }
+  { value: "1", label: "1 " },
+  { value: "2", label: "2 " },
+  { value: "3", label: "3 " },
+  { value: "4", label: "4 " },
+  { value: "5", label: "5 " },
+  { value: "8", label: "8 " },
+  { value: "10", label: "10 " },
+  { value: "12", label: "12 " },
+  { value: "16", label: "16 " },
+  { value: "20", label: "20 " },
 ];
 
 const RECORDING_OPTIONS = [
-  { value: 'record', label: 'Record' },
-  { value: 'do-not-record', label: 'Do not Record' }
+  { value: "record", label: "Record" },
+  { value: "do-not-record", label: "Do not Record" },
 ];
 
+export const formatDate = (date) => {
+  // Ensure date is a Date object
+  const dateObj = date instanceof Date ? date : new Date(date);
+  return dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
+};
 const UnifiedModalComponent = function UnifiedModal({
   isOpen,
   onClose,
@@ -47,61 +64,75 @@ const UnifiedModalComponent = function UnifiedModal({
   onAddTeacher,
   onRemoveTeacher,
   onBookStudent,
-  onRemoveStudent
+  onRemoveStudent,
 }) {
-  const [studentName, setStudentName] = useState('');
-  const [selectedTeacher, setSelectedTeacher] = useState('');
-  const [newTeacherId, setNewTeacherId] = useState('');
-  const [bookingType, setBookingType] = useState('trial');
+  const cleanedTimeRange = time.replace(/\s+/g, ""); // Remove all spaces
+  const startTime = cleanedTimeRange.split("-")[0];
+  // console.log(startTime); // "8:00"
+  const [studentName, setStudentName] = useState("");
+  const [selectedTeacher, setSelectedTeacher] = useState(availableTeachers);
+  const [newTeacherId, setNewTeacherId] = useState("");
+  const [bookingType, setBookingType] = useState("trial");
 
   // Search states
-  const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
-  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
+  const [studentSearchTerm, setStudentSearchTerm] = useState("");
 
   // New paid booking options
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedClassType, setSelectedClassType] = useState('');
-  const [selectedClassCount, setSelectedClassCount] = useState('');
-  const [selectedRecording, setSelectedRecording] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedClassType, setSelectedClassType] = useState("");
+  const [selectedClassCount, setSelectedClassCount] = useState("");
+  const [selectedRecording, setSelectedRecording] = useState("");
 
   // Enhanced booking form fields
-  const [platformCredentials, setPlatformCredentials] = useState('');
-  const [attendees, setAttendees] = useState('');
-  const [selectedScheduleDate, setSelectedScheduleDate] = useState('');
-  const [selectedScheduleTime, setSelectedScheduleTime] = useState('');
+  const [platformCredentials, setPlatformCredentials] = useState("");
+  const [attendees, setAttendees] = useState("");
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState(
+    formatDate(date)
+  );
+  const [selectedScheduleTime, setSelectedScheduleTime] = useState(startTime);
 
   // New Schedule section states
   const [scheduleEntries, setScheduleEntries] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
-  const [attendeesError, setAttendeesError] = useState('');
+  const [attendeesError, setAttendeesError] = useState("");
 
   const debouncedTeacherSearch = useDebounce(teacherSearchTerm, 300);
   const debouncedStudentSearch = useDebounce(studentSearchTerm, 300);
 
-  const allTeacherIds = availableTeachers.map(t => String(t.id));
-  const unassignedTeachers = allTeachers.filter(t => !allTeacherIds.includes(String(t.id)));
+  // const allTeacherIds = availableTeachers.map((t) => String(t.id));
+  // const unassignedTeachers = allTeachers.filter(
+  //   (t) => !allTeacherIds.includes(String(t.id))
+  // );
 
   // Filter teachers based on search
-  const filteredUnassignedTeachers = useMemo(() => {
-    return unassignedTeachers.filter(teacher =>
-      teacher.full_name.toLowerCase().includes(debouncedTeacherSearch.toLowerCase()) ||
-      teacher.uid.toLowerCase().includes(debouncedTeacherSearch.toLowerCase())
-    );
-  }, [unassignedTeachers, debouncedTeacherSearch]);
+  // const filteredUnassignedTeachers = useMemo(() => {
+  //   return unassignedTeachers.filter(
+  //     (teacher) =>
+  //       teacher.full_name
+  //         .toLowerCase()
+  //         .includes(debouncedTeacherSearch.toLowerCase()) ||
+  //       teacher.uid.toLowerCase().includes(debouncedTeacherSearch.toLowerCase())
+  //   );
+  // }, [unassignedTeachers, debouncedTeacherSearch]);
 
   // Filter students based on search
   const filteredStudents = useMemo(() => {
-    return availableStudents.filter(student => {
+    return availableStudents.filter((student) => {
       const searchLower = debouncedStudentSearch.toLowerCase();
-      return (student.deal_name && student.deal_name.toLowerCase().includes(searchLower)) ||
-        (student.jetlearner_id && student.jetlearner_id.toLowerCase().includes(searchLower)) ||
-        (student.name && student.name.toLowerCase().includes(searchLower));
+      return (
+        (student.deal_name &&
+          student.deal_name.toLowerCase().includes(searchLower)) ||
+        (student.jetlearner_id &&
+          student.jetlearner_id.toLowerCase().includes(searchLower)) ||
+        (student.name && student.name.toLowerCase().includes(searchLower))
+      );
     });
   }, [availableStudents, debouncedStudentSearch]);
 
   const getTeacherNameById = (id) => {
-    const teacher = allTeachers.find(t => String(t.id) === String(id));
-    return teacher ? teacher.full_name : 'Unassigned';
+    const teacher = allTeachers.find((t) => String(t.id) === String(id));
+    return teacher ? teacher.full_name : "Unassigned";
   };
 
   // Email validation function
@@ -112,17 +143,20 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Validate attendees emails
   const validateAttendees = (emails) => {
-    if (!emails.trim()) return { isValid: true, error: '' };
-    
-    const emailList = emails.split(/[,\n]/).map(email => email.trim()).filter(email => email);
-    
+    if (!emails.trim()) return { isValid: true, error: "" };
+
+    const emailList = emails
+      .split(/[,\n]/)
+      .map((email) => email.trim())
+      .filter((email) => email);
+
     for (const email of emailList) {
       if (!validateEmail(email)) {
         return { isValid: false, error: `Invalid email format: ${email}` };
       }
     }
-    
-    return { isValid: true, error: '' };
+
+    return { isValid: true, error: "" };
   };
 
   // Handle attendees change with validation
@@ -135,68 +169,73 @@ const UnifiedModalComponent = function UnifiedModal({
   // Add schedule entry
   const addScheduleEntry = () => {
     if (!selectedScheduleDate || !selectedScheduleTime) {
-      alert('Please select both date and time for the schedule entry.');
+      alert("Please select both date and time for the schedule entry.");
       return;
     }
 
     // Validate past date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [year, month, day] = selectedScheduleDate.split('-');
+    const [year, month, day] = selectedScheduleDate.split("-");
     const scheduleDate = new Date(year, month - 1, day);
-    
+
     if (scheduleDate < today) {
-      alert('Cannot schedule for past dates. Please select a future date.');
+      alert("Cannot schedule for past dates. Please select a future date.");
       return;
     }
 
     const newEntry = {
       id: Date.now(),
       date: selectedScheduleDate,
-      time: selectedScheduleTime
+      time: selectedScheduleTime,
     };
 
     setScheduleEntries([...scheduleEntries, newEntry]);
-    setSelectedScheduleDate('');
-    setSelectedScheduleTime('');
+    setSelectedScheduleDate("");
+    setSelectedScheduleTime("");
   };
 
   // Remove schedule entry
   const removeScheduleEntry = (id) => {
-    setScheduleEntries(scheduleEntries.filter(entry => entry.id !== id));
+    setScheduleEntries(scheduleEntries.filter((entry) => entry.id !== id));
   };
 
   // Add student to selection
   const addStudentToSelection = (student) => {
     const studentName = student.deal_name || student.name;
     const studentId = student.jetlearner_id || student.id;
-    
-    if (!selectedStudents.some(s => s.id === studentId)) {
-      setSelectedStudents([...selectedStudents, {
-        id: studentId,
-        name: studentName,
-        email: student.email || ''
-      }]);
+
+    if (!selectedStudents.some((s) => s.id === studentId)) {
+      setSelectedStudents([
+        ...selectedStudents,
+        {
+          id: studentId,
+          name: studentName,
+          email: student.email || "",
+        },
+      ]);
     }
-    setStudentSearchTerm('');
+    setStudentSearchTerm("");
   };
 
   // Remove student from selection
   const removeStudentFromSelection = (studentId) => {
-    setSelectedStudents(selectedStudents.filter(s => s.id !== studentId));
+    setSelectedStudents(selectedStudents.filter((s) => s.id !== studentId));
   };
 
   const handleAddTeacher = () => {
     if (newTeacherId) {
       // Prevent duplicate add
-      if (availableTeachers.some(t => String(t.id) === String(newTeacherId))) {
-        setNewTeacherId('');
-        setTeacherSearchTerm('');
+      if (
+        availableTeachers.some((t) => String(t.id) === String(newTeacherId))
+      ) {
+        setNewTeacherId("");
+        setTeacherSearchTerm("");
         return;
       }
       onAddTeacher(newTeacherId);
-      setNewTeacherId('');
-      setTeacherSearchTerm('');
+      setNewTeacherId("");
+      setTeacherSearchTerm("");
     }
   };
 
@@ -207,11 +246,13 @@ const UnifiedModalComponent = function UnifiedModal({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [day, month, year] = selectedDate.split('-');
+    const [day, month, year] = selectedDate.split("-");
     const bookingDate = new Date(year, month - 1, day);
 
     if (bookingDate < today) {
-      alert('Booking cannot be done for past dates. Only Cancellation or Reschedule is Allowed.');
+      alert(
+        "Booking cannot be done for past dates. Only Cancellation or Reschedule is Allowed."
+      );
       return false;
     }
     return true;
@@ -219,7 +260,7 @@ const UnifiedModalComponent = function UnifiedModal({
 
   const handleBookStudent = () => {
     if (!studentName.trim() && selectedStudents.length === 0) {
-      alert('Please select at least one student or enter a student name.');
+      alert("Please select at least one student or enter a student name.");
       return;
     }
 
@@ -232,86 +273,92 @@ const UnifiedModalComponent = function UnifiedModal({
 
     // Validate schedule entries
     if (scheduleEntries.length === 0) {
-      alert('Please add at least one schedule entry.');
+      alert("Please add at least one schedule entry.");
       return;
     }
 
     // For paid bookings, validate additional fields
-    if (bookingType === 'paid') {
-      if (!selectedSubject || !selectedClassType || !selectedClassCount || !selectedRecording) {
-        alert('Please fill in all required fields for paid booking.');
+    if (bookingType === "paid") {
+      if (
+        !selectedSubject ||
+        !selectedClassType ||
+        !selectedClassCount ||
+        !selectedRecording
+      ) {
+        alert("Please fill in all required fields for paid booking.");
         return;
       }
     }
 
     // Prepare schedule data from entries
-    const schedule = scheduleEntries.map(entry => [entry.date, entry.time]);
+    const schedule = scheduleEntries.map((entry) => [entry.date, entry.time]);
 
     // Book each selected student
-    const studentsToBook = selectedStudents.length > 0 
-      ? selectedStudents 
-      : [{ id: Date.now().toString(), name: studentName.trim() }];
+    const studentsToBook =
+      selectedStudents.length > 0
+        ? selectedStudents
+        : [{ id: Date.now().toString(), name: studentName.trim() }];
 
-    studentsToBook.forEach(student => {
+    studentsToBook.forEach((student) => {
       // Prepare API payload
       const bookingData = {
         bookingType,
         platformCredentials,
         attendees: attendees.trim(),
         schedule,
-        ...(bookingType === 'paid' && {
+        ...(bookingType === "paid" && {
           subject: selectedSubject,
           classType: selectedClassType,
           classCount: selectedClassCount,
-          recording: selectedRecording
+          recording: selectedRecording,
         }),
-        ...(bookingType === 'trial' && {
-          classType: '1:1',
-          classCount: 1
-        })
+        ...(bookingType === "trial" && {
+          classType: "1:1",
+          classCount: 1,
+        }),
       };
 
-      onBookStudent(student.name, selectedTeacher || 'unassigned', bookingData);
+      onBookStudent(student.name, selectedStudents, bookingData);
     });
 
     // Reset form
-    setStudentName('');
-    setSelectedTeacher('');
-    setBookingType('trial');
-    setSelectedSubject('');
-    setSelectedClassType('');
-    setSelectedClassCount('');
-    setSelectedRecording('');
-    setStudentSearchTerm('');
-    setPlatformCredentials('');
-    setAttendees('');
-    setSelectedScheduleDate('');
-    setSelectedScheduleTime('');
+    setStudentName("");
+    setSelectedTeacher("");
+    setBookingType("trial");
+    setSelectedSubject("");
+    setSelectedClassType("");
+    setSelectedClassCount("");
+    setSelectedRecording("");
+    setStudentSearchTerm("");
+    setPlatformCredentials("");
+    setAttendees("");
+    setSelectedScheduleDate("");
+    setSelectedScheduleTime("");
     setScheduleEntries([]);
     setSelectedStudents([]);
-    setAttendeesError('');
+    setAttendeesError("");
   };
 
   const selectStudentFromSearch = (student) => {
     const studentName = student.deal_name || student.name;
     setStudentName(studentName);
-    setStudentSearchTerm('');
+    setStudentSearchTerm("");
   };
 
   if (!isOpen) return null;
 
-  const displayDate = date ? formatDisplayDate(date) : '';
+  const displayDate = date ? formatDisplayDate(date) : "";
   const formatTimeInTimezone = (time, timezone) => {
     try {
-      const [hours, minutes] = time.split(':');
+      const [hours, minutes] = time.split(":");
       const date = new Date();
       date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      return date.toLocaleTimeString('en-US', {
+      return date.toLocaleTimeString("en-US", {
         timeZone: timezone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
       });
     } catch (error) {
       return time;
@@ -323,7 +370,9 @@ const UnifiedModalComponent = function UnifiedModal({
     const slots = [];
     for (let hour = 8; hour <= 20; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const timeStr = `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
         slots.push(timeStr);
       }
     }
@@ -342,8 +391,10 @@ const UnifiedModalComponent = function UnifiedModal({
               <h2 className="text-base font-bold">Schedule Management</h2>
               <div className="flex items-center gap-2 mt-1 text-sm text-blue-100">
                 <FaClock size={14} />
-                <span>{displayDate} at {time}</span>
-                <span className="text-sm">({formatTimeInTimezone(time, timezone)} {timezone})</span>
+                <span>
+                  {displayDate} at {time}
+                </span>
+                <span className="text-sm">{timezone}</span>
               </div>
             </div>
             <button
@@ -359,9 +410,9 @@ const UnifiedModalComponent = function UnifiedModal({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* Left Column - Teachers */}
             {/* <div className="space-y-3"> */}
-              {/* Available Teachers */}
-              {/* <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200"> */}
-                {/* <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+            {/* Available Teachers */}
+            {/* <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200"> */}
+            {/* <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                   <div className="p-0.5 bg-green-100 rounded">
                     <FaUsers size={14} className="text-green-600" />
                   </div>
@@ -371,7 +422,7 @@ const UnifiedModalComponent = function UnifiedModal({
                   </span>
                 </h3> */}
 
-                {/* <div className="space-y-1.5 max-h-28 overflow-y-auto mb-2">
+            {/* <div className="space-y-1.5 max-h-28 overflow-y-auto mb-2">
                   {availableTeachers.map(t => (
                     <div key={t.id} className="bg-white rounded p-2 border border-green-200 shadow-sm hover:shadow-md transition-all duration-200">
                       <div className="flex justify-between items-center gap-1.5">
@@ -398,8 +449,8 @@ const UnifiedModalComponent = function UnifiedModal({
                   ))}
                 </div> */}
 
-                {/* Add Teacher Section */}
-                {/* <div className="space-y-1.5">
+            {/* Add Teacher Section */}
+            {/* <div className="space-y-1.5">
                   <div className="relative">
                     <FaSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -438,10 +489,10 @@ const UnifiedModalComponent = function UnifiedModal({
                     </div>
                   )}
                 </div> */}
-              {/* </div> */}
+            {/* </div> */}
 
-              {/* Booked Students */}
-              {/* <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
+            {/* Booked Students */}
+            {/* <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                   <div className="p-0.5 bg-amber-100 rounded">
                     <FaClock size={14} className="text-amber-600" />
@@ -510,25 +561,35 @@ const UnifiedModalComponent = function UnifiedModal({
                   {/* Schedule Entry Form */}
                   <div className="grid grid-cols-2 gap-1.5">
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-0.5">Date</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Date
+                      </label>
                       <input
                         type="date"
                         value={selectedScheduleDate}
-                        onChange={(e) => setSelectedScheduleDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) =>
+                          setSelectedScheduleDate(e.target.value)
+                        }
+                        min={new Date().toISOString().split("T")[0]}
                         className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-0.5">Time</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Time
+                      </label>
                       <select
                         value={selectedScheduleTime}
-                        onChange={(e) => setSelectedScheduleTime(e.target.value)}
+                        onChange={(e) =>
+                          setSelectedScheduleTime(e.target.value)
+                        }
                         className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="">Select time...</option>
-                        {timeSlots.map(slot => (
-                          <option key={slot} value={slot}>{slot}</option>
+                        {timeSlots.map((slot) => (
+                          <option key={slot} value={slot}>
+                            {slot}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -545,8 +606,11 @@ const UnifiedModalComponent = function UnifiedModal({
 
                   {/* Schedule Entries List */}
                   <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                    {scheduleEntries.map(entry => (
-                      <div key={entry.id} className="bg-white rounded p-2 border border-blue-200 shadow-sm flex justify-between items-center">
+                    {scheduleEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="bg-white rounded p-2 border border-blue-200 shadow-sm flex justify-between items-center"
+                      >
                         <div className="flex items-center gap-1.5">
                           <FaCalendarAlt size={12} className="text-blue-600" />
                           <span className="text-xs font-medium text-gray-900">
@@ -563,7 +627,10 @@ const UnifiedModalComponent = function UnifiedModal({
                     ))}
                     {scheduleEntries.length === 0 && (
                       <div className="text-center py-2 text-gray-500">
-                        <FaCalendarAlt size={16} className="mx-auto mb-1 text-gray-300" />
+                        <FaCalendarAlt
+                          size={16}
+                          className="mx-auto mb-1 text-gray-300"
+                        />
                         <p className="text-xs">No schedule entries added</p>
                       </div>
                     )}
@@ -587,7 +654,10 @@ const UnifiedModalComponent = function UnifiedModal({
                   {/* Student Search */}
                   <div className="space-y-1.5">
                     <div className="relative">
-                      <FaSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <FaSearch
+                        size={14}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
                       <input
                         type="text"
                         value={studentSearchTerm}
@@ -597,29 +667,34 @@ const UnifiedModalComponent = function UnifiedModal({
                       />
                     </div>
 
-                    {studentSearchTerm.trim() && filteredStudents.length > 0 && (
-                      <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
-                        {filteredStudents.slice(0, 10).map(student => (
-                          <div
-                            key={student.id || student.jetlearner_id}
-                            onClick={() => addStudentToSelection(student)}
-                            className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <FaGraduationCap size={12} className="text-purple-600" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-gray-900 truncate">
-                                  {student.deal_name || student.name}
-                                </p>
-                                <p className="text-[10px] text-gray-500 truncate">
-                                  {student.jetlearner_id}{student.country && `•${student.country}`}
-                                </p>
+                    {studentSearchTerm.trim() &&
+                      filteredStudents.length > 0 && (
+                        <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
+                          {filteredStudents.slice(0, 10).map((student) => (
+                            <div
+                              key={student.id || student.jetlearner_id}
+                              onClick={() => addStudentToSelection(student)}
+                              className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <FaGraduationCap
+                                  size={12}
+                                  className="text-purple-600"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium text-gray-900 truncate">
+                                    {student.deal_name || student.name}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500 truncate">
+                                    {student.jetlearner_id}
+                                    {student.country && `•${student.country}`}
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
                   </div>
 
                   {/* Manual Student Entry */}
@@ -636,10 +711,16 @@ const UnifiedModalComponent = function UnifiedModal({
 
                   {/* Selected Students List */}
                   <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                    {selectedStudents.map(student => (
-                      <div key={student.id} className="bg-white rounded p-2 border border-purple-200 shadow-sm flex justify-between items-center">
+                    {selectedStudents.map((student) => (
+                      <div
+                        key={student.id}
+                        className="bg-white rounded p-2 border border-purple-200 shadow-sm flex justify-between items-center"
+                      >
                         <div className="flex items-center gap-1.5">
-                          <FaGraduationCap size={12} className="text-purple-600" />
+                          <FaGraduationCap
+                            size={12}
+                            className="text-purple-600"
+                          />
                           <span className="text-xs font-medium text-gray-900 truncate">
                             {student.name}
                           </span>
@@ -652,12 +733,16 @@ const UnifiedModalComponent = function UnifiedModal({
                         </button>
                       </div>
                     ))}
-                    {selectedStudents.length === 0 && studentName.trim() === '' && (
-                      <div className="text-center py-2 text-gray-500">
-                        <FaGraduationCap size={16} className="mx-auto mb-1 text-gray-300" />
-                        <p className="text-xs">No learners selected</p>
-                      </div>
-                    )}
+                    {selectedStudents.length === 0 &&
+                      studentName.trim() === "" && (
+                        <div className="text-center py-2 text-gray-500">
+                          <FaGraduationCap
+                            size={16}
+                            className="mx-auto mb-1 text-gray-300"
+                          />
+                          <p className="text-xs">No learners selected</p>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>
@@ -677,25 +762,29 @@ const UnifiedModalComponent = function UnifiedModal({
                 <div className="space-y-2">
                   {/* Booking Type */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Booking Type</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                      Booking Type
+                    </label>
                     <div className="grid grid-cols-2 gap-1.5">
                       <button
                         type="button"
-                        onClick={() => setBookingType('trial')}
-                        className={`p-2 rounded border-2 transition-all duration-200 text-xs font-medium ${bookingType === 'trial'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-blue-300'
-                          }`}
+                        onClick={() => setBookingType("trial")}
+                        className={`p-2 rounded border-2 transition-all duration-200 text-xs font-medium ${
+                          bookingType === "trial"
+                            ? "border-blue-500 bg-blue-50 text-blue-700"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-blue-300"
+                        }`}
                       >
                         Trial
                       </button>
                       <button
                         type="button"
-                        onClick={() => setBookingType('paid')}
-                        className={`p-2 rounded border-2 transition-all duration-200 text-xs font-medium ${bookingType === 'paid'
-                          ? 'border-green-500 bg-green-50 text-green-700'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-green-300'
-                          }`}
+                        onClick={() => setBookingType("paid")}
+                        className={`p-2 rounded border-2 transition-all duration-200 text-xs font-medium ${
+                          bookingType === "paid"
+                            ? "border-green-500 bg-green-50 text-green-700"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-green-300"
+                        }`}
                       >
                         Paid
                       </button>
@@ -704,7 +793,9 @@ const UnifiedModalComponent = function UnifiedModal({
 
                   {/* Platform Credentials */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Credentials / Notes</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                      Credentials / Notes
+                    </label>
                     <textarea
                       value={platformCredentials}
                       onChange={(e) => setPlatformCredentials(e.target.value)}
@@ -716,7 +807,9 @@ const UnifiedModalComponent = function UnifiedModal({
 
                   {/* Attendees with Email Validation */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Attendees (Email ID)</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                      Attendees (Email ID)
+                    </label>
                     <div className="relative">
                       <input
                         type="text"
@@ -724,7 +817,7 @@ const UnifiedModalComponent = function UnifiedModal({
                         onChange={(e) => handleAttendeesChange(e.target.value)}
                         placeholder="Enter email addresses separated by commas or enter"
                         className={`w-full p-2 border rounded text-xs focus:ring-1 focus:ring-green-500 focus:border-transparent ${
-                          attendeesError ? 'border-red-300' : 'border-gray-300'
+                          attendeesError ? "border-red-300" : "border-gray-300"
                         }`}
                       />
                       {attendeesError && (
@@ -737,60 +830,82 @@ const UnifiedModalComponent = function UnifiedModal({
                   </div>
 
                   {/* Paid Booking Options */}
-                  {bookingType === 'paid' && (
+                  {bookingType === "paid" && (
                     <div className="space-y-1.5 bg-green-50 p-2.5 rounded border border-green-200">
-                      <h4 className="font-semibold text-green-800 text-xs">Paid Booking Options</h4>
+                      <h4 className="font-semibold text-green-800 text-xs">
+                        Paid Booking Options
+                      </h4>
 
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Subject</label>
+                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                            Subject
+                          </label>
                           <select
                             value={selectedSubject}
                             onChange={(e) => setSelectedSubject(e.target.value)}
                             className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500"
                           >
                             <option value="">Choose subject...</option>
-                            {SUBJECTS.map(subject => (
-                              <option key={subject.value} value={subject.value}>{subject.label}</option>
+                            {SUBJECTS.map((subject) => (
+                              <option key={subject.value} value={subject.value}>
+                                {subject.label}
+                              </option>
                             ))}
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Class Type</label>
+                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                            Class Type
+                          </label>
                           <select
                             value={selectedClassType}
-                            onChange={(e) => setSelectedClassType(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedClassType(e.target.value)
+                            }
                             className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500"
                           >
                             <option value="">Choose type...</option>
-                            {CLASS_TYPES.map(type => (
-                              <option key={type.value} value={type.value}>{type.label}</option>
+                            {CLASS_TYPES.map((type) => (
+                              <option key={type.value} value={type.value}>
+                                {type.label}
+                              </option>
                             ))}
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Classes</label>
+                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                            Classes
+                          </label>
                           <input
                             type="number"
                             value={selectedClassCount}
-                            onChange={(e) => setSelectedClassCount(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedClassCount(e.target.value)
+                            }
                             placeholder="Enter number of classes"
                             className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500 focus:border-transparent"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">Recording</label>
+                          <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                            Recording
+                          </label>
                           <select
                             value={selectedRecording}
-                            onChange={(e) => setSelectedRecording(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedRecording(e.target.value)
+                            }
                             className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500"
                           >
                             <option value="">Choose option...</option>
-                            {RECORDING_OPTIONS.map(option => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
+                            {RECORDING_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
                             ))}
                           </select>
                         </div>
@@ -812,7 +927,9 @@ const UnifiedModalComponent = function UnifiedModal({
 
                   <button
                     onClick={handleBookStudent}
-                    disabled={!studentName.trim() && selectedStudents.length === 0}
+                    disabled={
+                      !studentName.trim() && selectedStudents.length === 0
+                    }
                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 rounded hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
                   >
                     <FaBook size={14} />
@@ -826,7 +943,7 @@ const UnifiedModalComponent = function UnifiedModal({
       </div>
     </div>
   );
-}
+};
 
 const UnifiedModal = React.memo(UnifiedModalComponent);
 export default UnifiedModal;

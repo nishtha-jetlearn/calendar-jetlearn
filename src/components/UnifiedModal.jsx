@@ -343,30 +343,32 @@ const UnifiedModalComponent = function UnifiedModal({
   const timeSlots = generateTimeSlots();
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-2 sm:px-3 animate-in fade-in duration-200">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-3 md:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl max-h-[85vh] sm:max-h-[80vh] md:max-h-[75vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-base font-bold">Schedule Management</h2>
-              <div className="flex items-center gap-2 mt-1 text-sm text-blue-100">
-                <FaClock size={14} />
-                <span>{displayDate} at {time}</span>
-                <span className="text-sm">({formatTimeInTimezone(time, timezone)} {timezone})</span>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold">Schedule Management</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1 text-sm sm:text-base text-blue-100">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <FaClock size={14} className="flex-shrink-0" />
+                  <span className="break-words">{displayDate} at {time}</span>
+                </div>
+                <span className="text-xs sm:text-sm">({formatTimeInTimezone(time, timezone)} {timezone})</span>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-full transition-all duration-200"
+              className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 sm:p-2 rounded-full transition-all duration-200 flex-shrink-0"
             >
-              <FaTimes size={16} />
+              <FaTimes size={16} className="sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(90vh-90px)] p-3">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             {/* Left Column - Teachers */}
             {/* <div className="space-y-3"> */}
               {/* Available Teachers */}
@@ -589,7 +591,7 @@ const UnifiedModalComponent = function UnifiedModal({
                   </div>
                   Selected Learners
                   <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                    {selectedStudents.length}/10
+                    {selectedStudents.length}/9
                   </span>
                 </h3>
 

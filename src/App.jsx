@@ -2281,12 +2281,12 @@ function App() {
     });
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 animate-in fade-in duration-200">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[70vh] overflow-hidden border border-gray-100 backdrop-blur-lg">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-3 md:p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl max-h-[85vh] sm:max-h-[80vh] md:max-h-[75vh] overflow-hidden border border-gray-100 backdrop-blur-lg animate-in slide-in-from-bottom-4 duration-300">
           {/* Header with gradient background */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+          <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-bold truncate bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold truncate bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 {detailsPopup.type === "availability"
                   ? "Teacher Availability Details"
                   : "Booking Details"}
@@ -2300,10 +2300,10 @@ function App() {
               </span>
             </p> */}
                 {selectedTimezone !== "UTC" && (
-                  <p className="text-sm text-gray-700 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
-                    Time Slot:
-                    <span className="font-semibold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg">
+                  <p className="text-sm sm:text-base text-gray-700 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0"></span>
+                    <span>Time Slot:</span>
+                    <span className="font-semibold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg text-sm sm:text-base break-words">
                       {formatDateDDMMMYYYY(detailsPopup.date)},{" "}
                       {addHoursToTimeRange(selectedTimezoneLocaltime, 1)}{" "}
                       {selectedTimezone}
@@ -2322,13 +2322,13 @@ function App() {
                   time: null,
                 })
               }
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-4 flex-shrink-0 p-2 rounded-full hover:scale-110"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-2 sm:ml-4 flex-shrink-0 p-1.5 sm:p-2 rounded-full hover:scale-110"
             >
-              <FaTimes size={18} />
+              <FaTimes size={18} className="sm:w-5 sm:h-5" />
             </button>
           </div>
 
-          <div className="p-3 max-h-[calc(70vh-80px)] overflow-y-auto">
+          <div className="p-3 sm:p-4 max-h-[calc(85vh-80px)] sm:max-h-[calc(80vh-90px)] md:max-h-[calc(75vh-100px)] overflow-y-auto">
             {/* Session Information Card */}
             {/* <div className="mb-6 p-4 sm:p-5 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm">
           <h3 className="font-bold text-gray-900 mb-3 text-sm sm:text-base flex items-center gap-2">
@@ -2733,58 +2733,60 @@ function App() {
     };
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[60vh] overflow-hidden border border-gray-100 backdrop-blur-lg">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 animate-in fade-in duration-200">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden border border-gray-100 backdrop-blur-lg animate-in slide-in-from-bottom-4 duration-300">
           {/* Header */}
           <div className="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-red-100 border-b border-gray-200">
-            <div className="flex-1">
-              <h2 className="text-base font-bold text-red-800 flex items-center gap-2">
-                <FaExclamationTriangle size={16} />
-                Cancel{" "}
-                {cancelPopup.type === "availability"
-                  ? "Availability"
-                  : "Booking"}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-red-800 flex items-center gap-2">
+                <FaExclamationTriangle size={14} className="flex-shrink-0" />
+                <span className="truncate">
+                  Cancel{" "}
+                  {cancelPopup.type === "availability"
+                    ? "Availability"
+                    : "Booking"}
+                </span>
               </h2>
             </div>
             <button
               onClick={handleCancelClose}
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-3 flex-shrink-0 p-1 rounded-full hover:scale-110"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-2 flex-shrink-0 p-1 rounded-full hover:scale-110"
             >
-              <FaTimes size={16} />
+              <FaTimes size={14} />
             </button>
           </div>
 
-          <div className="p-2 h-[325px] overflow-y-auto">
+          <div className="p-3 max-h-[60vh] overflow-y-auto">
             {/* Session Information */}
-            <div className="mb-3 p-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 shadow-sm">
-              <h3 className="font-bold text-gray-900 mb-1 text-sm flex items-center gap-2">
-                <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full"></div>
+            <div className="mb-3 p-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded border border-gray-200 shadow-sm">
+              <h3 className="font-bold text-gray-900 mb-1 text-xs sm:text-sm flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex-shrink-0"></div>
                 Session Information
               </h3>
 
-              {/* Changed layout to column */}
-              <div className="flex flex-col gap-2 text-xs">
+              <div className="space-y-1">
                 <div className="bg-white p-1.5 rounded border border-gray-100">
-                  <span className="text-gray-600">Date & Time : </span>
-                  <span className="font-bold text-gray-900 bg-yellow-50 px-1 py-0.5 rounded text-xs">
-                    {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
-                    {addHoursToTimeRange(cancelPopup.time, 1)}{" "}
-                    {selectedTimezone}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-gray-600 text-xs font-medium">Date & Time:</span>
+                    <span className="font-bold text-gray-900 bg-yellow-50 px-1.5 py-0.5 rounded text-xs break-words">
+                      {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
+                      {addHoursToTimeRange(cancelPopup.time, 1)}{" "}
+                      {selectedTimezone}
+                    </span>
+                  </div>
                 </div>
-                {/* Add more items below similarly if needed */}
               </div>
             </div>
 
             {/* Summary Information */}
             {cancelPopup.data && cancelPopup.data.summary && (
-              <div className="mb-3 p-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200 shadow-sm">
-                <h3 className="font-bold text-green-900 mb-1 text-sm flex items-center gap-2">
-                  <FaInfoCircle size={14} />
+              <div className="mb-3 p-2 bg-gradient-to-br from-green-50 to-green-100 rounded border border-green-200 shadow-sm">
+                <h3 className="font-bold text-green-900 mb-1 text-xs sm:text-sm flex items-center gap-1">
+                  <FaInfoCircle size={12} className="flex-shrink-0" />
                   Summary
                 </h3>
                 <div className="bg-white p-1.5 rounded border border-green-100">
-                  <div className="text-xs text-green-800 font-medium">
+                  <div className="text-xs text-green-800 font-medium break-words">
                     {cancelPopup.data.summary}
                   </div>
                 </div>
@@ -2792,9 +2794,9 @@ function App() {
             )}
 
             {/* Reason Input */}
-            <div className="mb-3 p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200 shadow-sm">
-              <h3 className="font-bold text-orange-900 mb-1 text-sm flex items-center gap-2">
-                <FaPaperPlane size={14} />
+            <div className="mb-3 p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded border border-orange-200 shadow-sm">
+              <h3 className="font-bold text-orange-900 mb-1 text-xs sm:text-sm flex items-center gap-1">
+                <FaPaperPlane size={12} className="flex-shrink-0" />
                 Cancellation Reason
               </h3>
               <div className="bg-white p-1.5 rounded border border-orange-100">
@@ -2819,7 +2821,7 @@ function App() {
                   onFocus={(e) => {
                     console.log("Dropdown gained focus");
                   }}
-                  className="w-full p-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-xs"
+                  className="w-full p-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 bg-white text-xs"
                   required
                 >
                   <option value="">Select a cancellation reason...</option>
@@ -2845,17 +2847,17 @@ function App() {
             <div className="mt-3 flex flex-col sm:flex-row gap-2 justify-end">
               <button
                 onClick={handleCancelClose}
-                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors duration-200 font-medium text-sm"
+                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors duration-200 font-medium text-xs"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCancelConfirm}
                 disabled={!cancelPopup.reason.trim()}
-                className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 font-medium flex items-center gap-1 text-sm"
+                className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 font-medium flex items-center justify-center gap-1 text-xs"
               >
                 <FaTimes size={12} />
-                Confirm Cancellation
+                <span>Confirm Cancellation</span>
               </button>
             </div>
           </div>
@@ -2892,14 +2894,14 @@ function App() {
   return (
     <div className="min-h-screen bg-blue-600 flex flex-col lg:flex-row">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-blue-600 p-4 border-b-2 border-black">
+      <div className="lg:hidden bg-blue-600 p-3 sm:p-4 border-b-2 border-black">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">Jetlearn Calendar</h1>
+          <h1 className="text-base sm:text-lg font-bold text-white truncate">Jetlearn Calendar</h1>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-white p-2"
+            className="text-white p-1.5 sm:p-2 hover:bg-white/10 rounded transition-colors duration-200"
           >
-            {sidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+            {sidebarOpen ? <FaTimes size={18} className="sm:w-5 sm:h-5" /> : <FaBars size={18} className="sm:w-5 sm:h-5" />}
           </button>
         </div>
       </div>
@@ -2919,7 +2921,7 @@ function App() {
         lg:translate-x-0
         fixed lg:relative
         top-0 left-0
-        w-80 h-full
+        w-72 sm:w-80 h-full
         bg-blue-600 border-r-2 border-black 
         flex flex-col
         z-50
@@ -2927,56 +2929,56 @@ function App() {
         overflow-y-auto
       `}
       >
-        <div className="p-4">
-          <h1 className="text-xl font-bold text-white mb-4 hidden lg:block">
+        <div className="p-3 sm:p-4">
+          <h1 className="text-lg sm:text-xl font-bold text-white mb-4 hidden lg:block">
             Jetlearn Calendar
           </h1>
 
           {/* Active Filters Display */}
           {(selectedTeacher || selectedStudent) && (
-            <div className="mt-4 bg-white rounded-lg p-3 m-4">
-              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-2">
-                <FaFilter className="text-orange-600" />
-                Active Filters
+            <div className="mt-4 bg-white rounded-lg p-3 sm:p-4 m-4">
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-2 mb-2">
+                <FaFilter className="text-orange-600 flex-shrink-0" />
+                <span className="truncate">Active Filters</span>
               </h3>
               <div className="space-y-2">
                 {selectedTeacher && (
-                  <div className="bg-orange-50 border border-orange-200 rounded px-2 py-1 flex items-center gap-2">
+                  <div className="bg-orange-50 border border-orange-200 rounded px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-2">
                     <FaChalkboardTeacher
-                      className="text-orange-600"
+                      className="text-orange-600 flex-shrink-0"
                       size={12}
                     />
-                    <div className="text-xs">
+                    <div className="text-xs sm:text-sm min-w-0 flex-1">
                       <span className="text-gray-600">Teacher:</span>
-                      <span className="ml-1 font-medium text-orange-900">
+                      <span className="ml-1 font-medium text-orange-900 truncate">
                         {selectedTeacher.full_name}
                       </span>
                     </div>
                     <button
                       onClick={clearTeacherFilter}
-                      className="text-orange-600 hover:text-orange-800 ml-auto"
+                      className="text-orange-600 hover:text-orange-800 ml-auto flex-shrink-0 p-1"
                       disabled={apiDataLoading}
                     >
-                      <FaTimes size={10} />
+                      <FaTimes size={10} className="sm:w-3 sm:h-3" />
                     </button>
                   </div>
                 )}
 
                 {selectedStudent && (
-                  <div className="bg-purple-50 border border-purple-200 rounded px-2 py-1 flex items-center gap-2">
-                    <FaUserGraduate className="text-purple-600" size={12} />
-                    <div className="text-xs">
+                  <div className="bg-purple-50 border border-purple-200 rounded px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-2">
+                    <FaUserGraduate className="text-purple-600 flex-shrink-0" size={12} />
+                    <div className="text-xs sm:text-sm min-w-0 flex-1">
                       <span className="text-gray-600">Student:</span>
-                      <span className="ml-1 font-medium text-purple-900">
+                      <span className="ml-1 font-medium text-purple-900 truncate">
                         {selectedStudent.deal_name}
                       </span>
                     </div>
                     <button
                       onClick={clearStudentFilter}
-                      className="text-purple-600 hover:text-purple-800 ml-auto"
+                      className="text-purple-600 hover:text-purple-800 ml-auto flex-shrink-0 p-1"
                       disabled={apiDataLoading}
                     >
-                      <FaTimes size={10} />
+                      <FaTimes size={10} className="sm:w-3 sm:h-3" />
                     </button>
                   </div>
                 )}
@@ -2984,18 +2986,18 @@ function App() {
                 {(selectedTeacher || selectedStudent) && (
                   <button
                     onClick={clearAllFilters}
-                    className="w-full text-xs text-red-600 hover:text-red-800 font-medium flex items-center justify-center gap-1 py-1"
+                    className="w-full text-xs sm:text-sm text-red-600 hover:text-red-800 font-medium flex items-center justify-center gap-1 py-1 sm:py-1.5"
                     disabled={apiDataLoading}
                   >
-                    <FaTimes size={10} />
-                    Clear All Filters
+                    <FaTimes size={10} className="sm:w-3 sm:h-3" />
+                    <span>Clear All Filters</span>
                   </button>
                 )}
 
                 {apiDataLoading && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded px-2 py-1 flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-yellow-600"></div>
-                    <span className="text-xs text-yellow-800">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-yellow-600 flex-shrink-0"></div>
+                    <span className="text-xs sm:text-sm text-yellow-800">
                       Updating view...
                     </span>
                   </div>
@@ -3006,9 +3008,9 @@ function App() {
 
           {/* Enhanced Timezone Search */}
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-              <FaGlobe size={14} />
-              Timezone Search
+            <h2 className="text-sm sm:text-base font-semibold text-white mb-2 flex items-center gap-2">
+              <FaGlobe size={14} className="flex-shrink-0" />
+              <span className="truncate">Timezone Search</span>
             </h2>
             <EnhancedTimezoneSearch
               timezones={timezones}
@@ -3021,13 +3023,13 @@ function App() {
 
           {/* Enhanced Teacher Search */}
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-              <FaSearch size={14} />
-              Teacher Search
+            <h2 className="text-sm sm:text-base font-semibold text-white mb-2 flex items-center gap-2">
+              <FaSearch size={14} className="flex-shrink-0" />
+              <span className="truncate">Teacher Search</span>
               {teachersLoading && (
-                <span className="text-orange-200">(Loading...)</span>
+                <span className="text-orange-200 text-xs sm:text-sm">(Loading...)</span>
               )}
-              {teachersError && <span className="text-red-200">(Error)</span>}
+              {teachersError && <span className="text-red-200 text-xs sm:text-sm">(Error)</span>}
             </h2>
             <EnhancedTeacherSearch
               teachers={teachers}
@@ -3040,13 +3042,13 @@ function App() {
 
           {/* Enhanced Student Search */}
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-              <FaGraduationCap size={14} />
-              Learner Search
+            <h2 className="text-sm sm:text-base font-semibold text-white mb-2 flex items-center gap-2">
+              <FaGraduationCap size={14} className="flex-shrink-0" />
+              <span className="truncate">Learner Search</span>
               {studentsLoading && (
-                <span className="text-orange-200">(Loading...)</span>
+                <span className="text-orange-200 text-xs sm:text-sm">(Loading...)</span>
               )}
-              {studentsError && <span className="text-red-200">(Error)</span>}
+              {studentsError && <span className="text-red-200 text-xs sm:text-sm">(Error)</span>}
             </h2>
             <EnhancedStudentSearch
               students={allAvailableStudents}
@@ -3059,7 +3061,7 @@ function App() {
 
           {/* Teacher and Student Details */}
           <div className="space-y-3">
-            <div className="bg-white rounded border border-orange-300 p-2 text-[10px] leading-snug">
+            <div className="bg-white rounded border border-orange-300 p-2 sm:p-3 text-xs sm:text-sm leading-snug">
               <TeacherDetails
                 teacher={selectedTeacher}
                 teacherStats={
@@ -3067,7 +3069,7 @@ function App() {
                 }
               />
             </div>
-            <div className="bg-white rounded border border-orange-300 p-2 text-[10px] leading-snug">
+            <div className="bg-white rounded border border-orange-300 p-2 sm:p-3 text-xs sm:text-sm leading-snug">
               <StudentDetails
                 student={selectedStudent}
                 schedule={schedule}

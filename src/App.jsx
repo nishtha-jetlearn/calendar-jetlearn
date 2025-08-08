@@ -3173,90 +3173,114 @@ function App() {
       <div className="flex-1 bg-pink-200 border-l-2 border-black flex flex-col min-w-0">
         {/* Blue Header Bar with View Selection */}
         <div className="bg-blue-600 p-2 sm:p-4 border-b-2 border-black">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* First Row: Title and User Info */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <h2 className="text-base sm:text-lg font-bold text-white">
+              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <FaCalendarAlt className="text-white" />
                 Calendar System
               </h2>
-
-              {/* View Selection Buttons */}
-              <div className="flex bg-blue-700 rounded-lg p-1">
-                <button
-                  onClick={() => {
-                    if (selectedTeacher || selectedStudent) {
-                      setCurrentView("list");
-                    }
-                  }}
-                  disabled={!selectedTeacher && !selectedStudent}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
-                    !selectedTeacher && !selectedStudent
-                      ? "opacity-50 cursor-not-allowed text-gray-400"
-                      : currentView === "list"
-                      ? "bg-blue-500 text-white shadow-md"
-                      : "text-blue-100 hover:text-white"
-                  }`}
-                  title={
-                    !selectedTeacher && !selectedStudent
-                      ? "Select a Teacher or Student to enable List View"
-                      : "Switch to List View"
-                  }
-                >
-                  <FaList size={12} className="sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">List View</span>
-                  <span className="sm:hidden">List</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentView("week");
-                    // Call both Summary APIs when switching to Week view
-                    console.log("🔄 Switching to Week view - calling APIs...");
-
-                    // Call availability summary API
-                    fetchWeeklyAvailabilityData(
-                      currentWeekStart,
-                      selectedTeacher?.uid,
-                      selectedStudent?.jetlearner_id,
-                      selectedTimezone
-                    )
-                      .then((data) => {
-                        if (data) {
-                          setWeeklyApiData(data);
-                          console.log(
-                            "✅ Availability summary API called successfully"
-                          );
-                        }
-                      })
-                      .catch((error) => {
-                        console.error(
-                          "❌ Error calling availability summary API:",
-                          error
-                        );
-                      });
-
-                    // Call booking details API if filters are applied
-                    if (selectedTeacher || selectedStudent) {
-                      fetchListViewBookingDetails().catch((error) => {
-                        console.error(
-                          "❌ Error calling booking details API:",
-                          error
-                        );
-                      });
-                    }
-                  }}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
-                    currentView === "week"
-                      ? "bg-blue-500 text-white shadow-md"
-                      : "text-blue-100 hover:text-white"
-                  }`}
-                >
-                  <FaCalendarWeek size={12} className="sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Week View</span>
-                  <span className="sm:hidden">Week</span>
-                </button>
-              </div>
             </div>
 
-            {/* Week Navigation and User Info */}
+            {/* User Info and Logout - Opposite to Calendar System */}
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2 text-white text-xs">
+                <FaUserCheck size={14} className="text-white" />
+                <span className="text-white">Hi,</span>
+                <span className="bg-blue-500 px-2 py-1 rounded-full">
+                  {user?.name || user?.email || 'User'}
+                </span>
+              </div>
+              <button
+                onClick={logout}
+                className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg transition-all duration-200 text-xs sm:text-sm"
+                title="Logout"
+              >
+                <FaSignOutAlt size={12} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Second Row: View Selection and Navigation Controls */}
+          <div className="flex items-center justify-between gap-1 sm:gap-3">
+            {/* View Selection Buttons - Left Side */}
+            <div className="flex bg-blue-700 rounded-lg p-1">
+              <button
+                onClick={() => {
+                  if (selectedTeacher || selectedStudent) {
+                    setCurrentView("list");
+                  }
+                }}
+                disabled={!selectedTeacher && !selectedStudent}
+                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
+                  !selectedTeacher && !selectedStudent
+                    ? "opacity-50 cursor-not-allowed text-gray-400"
+                    : currentView === "list"
+                    ? "bg-blue-500 text-white shadow-md"
+                    : "text-blue-100 hover:text-white"
+                }`}
+                title={
+                  !selectedTeacher && !selectedStudent
+                    ? "Select a Teacher or Student to enable List View"
+                    : "Switch to List View"
+                }
+              >
+                <FaList size={12} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">List View</span>
+                <span className="sm:hidden">List</span>
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentView("week");
+                  // Call both Summary APIs when switching to Week view
+                  console.log("🔄 Switching to Week view - calling APIs...");
+
+                  // Call availability summary API
+                  fetchWeeklyAvailabilityData(
+                    currentWeekStart,
+                    selectedTeacher?.uid,
+                    selectedStudent?.jetlearner_id,
+                    selectedTimezone
+                  )
+                    .then((data) => {
+                      if (data) {
+                        setWeeklyApiData(data);
+                        console.log(
+                          "✅ Availability summary API called successfully"
+                        );
+                      }
+                    })
+                    .catch((error) => {
+                      console.error(
+                        "❌ Error calling availability summary API:",
+                        error
+                      );
+                    });
+
+                  // Call booking details API if filters are applied
+                  if (selectedTeacher || selectedStudent) {
+                    fetchListViewBookingDetails().catch((error) => {
+                      console.error(
+                        "❌ Error calling booking details API:",
+                        error
+                      );
+                    });
+                  }
+                }}
+                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
+                  currentView === "week"
+                    ? "bg-blue-500 text-white shadow-md"
+                    : "text-blue-100 hover:text-white"
+                }`}
+              >
+                <FaCalendarWeek size={12} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Week View</span>
+                <span className="sm:hidden">Week</span>
+              </button>
+            </div>
+
+            {/* Navigation Controls - Right Side */}
             <div className="flex items-center gap-1 sm:gap-3">
               <button
                 onClick={() => navigateWeek(-1)}
@@ -3294,23 +3318,6 @@ function App() {
               >
                 Today
               </button>
-
-              {/* User Info and Logout */}
-              <div className="flex items-center gap-2 ml-2 sm:ml-4">
-                <div className="hidden sm:flex items-center gap-2 text-white text-xs">
-                  <span className="bg-blue-500 px-2 py-1 rounded-full">
-                    {user?.name || user?.email || 'User'}
-                  </span>
-                </div>
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg transition-all duration-200 text-xs sm:text-sm"
-                  title="Logout"
-                >
-                  <FaSignOutAlt size={12} className="sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Logout</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>

@@ -410,13 +410,13 @@ const UnifiedModalComponent = function UnifiedModal({
                   <span className="text-sm">{timezone}</span>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 sm:p-2 rounded-full transition-all duration-200 flex-shrink-0"
-              >
-                <FaTimes size={16} className="sm:w-5 sm:h-5" />
-              </button>
             </div>
+            <button
+              onClick={onClose}
+              className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 sm:p-2 rounded-full transition-all duration-200 flex-shrink-0"
+            >
+              <FaTimes size={16} className="sm:w-5 sm:h-5" />
+            </button>
           </div>
 
           <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
@@ -577,27 +577,27 @@ const UnifiedModalComponent = function UnifiedModal({
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
                           Date
                         </label>
-                        <input
-                          type="date"
-                          value={selectedScheduleDate}
-                          onChange={(e) =>
-                            setSelectedScheduleDate(e.target.value)
-                          }
-                          min={new Date().toISOString().split("T")[0]}
-                          className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        />
+                                                 <input
+                           type="date"
+                           value={selectedScheduleDate}
+                           onChange={(e) =>
+                             setSelectedScheduleDate(e.target.value)
+                           }
+                           min={new Date().toISOString().split("T")[0]}
+                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
                           Time
                         </label>
-                        <select
-                          value={selectedScheduleTime}
-                          onChange={(e) =>
-                            setSelectedScheduleTime(e.target.value)
-                          }
-                          className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        >
+                                                 <select
+                           value={selectedScheduleTime}
+                           onChange={(e) =>
+                             setSelectedScheduleTime(e.target.value)
+                           }
+                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                         >
                           <option value="">Select time...</option>
                           {timeSlots.map((slot) => (
                             <option key={slot} value={slot}>
@@ -678,13 +678,13 @@ const UnifiedModalComponent = function UnifiedModal({
                           size={14}
                           className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
                         />
-                        <input
-                          type="text"
-                          value={studentSearchTerm}
-                          onChange={(e) => setStudentSearchTerm(e.target.value)}
-                          placeholder="Search Learners..."
-                          className="w-full pl-8 pr-2.5 py-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-purple-500 focus:border-transparent"
-                        />
+                                                 <input
+                           type="text"
+                           value={studentSearchTerm}
+                           onChange={(e) => setStudentSearchTerm(e.target.value)}
+                           placeholder="Search Learners..."
+                           className="w-full pl-8 pr-2.5 py-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-purple-500 focus:border-transparent"
+                         />
                       </div>
 
                       {studentSearchTerm.trim() &&
@@ -818,13 +818,13 @@ const UnifiedModalComponent = function UnifiedModal({
                       <label className="block text-xs font-medium text-gray-700 mb-0.5">
                         Credentials / Notes
                       </label>
-                      <textarea
-                        value={platformCredentials}
-                        onChange={(e) => setPlatformCredentials(e.target.value)}
-                        placeholder="Enter platform credentials, notes, or any additional information..."
-                        rows={3}
-                        className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500 focus:border-transparent resize-none"
-                      />
+                                             <textarea
+                         value={platformCredentials}
+                         onChange={(e) => setPlatformCredentials(e.target.value)}
+                         placeholder="Enter platform credentials, notes, or any additional information..."
+                         rows={3}
+                         className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent resize-none"
+                       />
                     </div>
 
                     {/* Attendees with Email Validation */}
@@ -833,19 +833,19 @@ const UnifiedModalComponent = function UnifiedModal({
                         Attendees (Email ID)
                       </label>
                       <div className="relative">
-                        <input
-                          type="text"
-                          value={attendees}
-                          onChange={(e) =>
-                            handleAttendeesChange(e.target.value)
-                          }
-                          placeholder="Enter email addresses separated by commas or enter"
-                          className={`w-full p-2 border rounded text-xs focus:ring-1 focus:ring-green-500 focus:border-transparent ${
-                            attendeesError
-                              ? "border-red-300"
-                              : "border-gray-300"
-                          }`}
-                        />
+                                                 <input
+                           type="text"
+                           value={attendees}
+                           onChange={(e) =>
+                             handleAttendeesChange(e.target.value)
+                           }
+                           placeholder="Enter email addresses separated by commas or enter"
+                           className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
+                             attendeesError
+                               ? "border-red-300"
+                               : "border-gray-300"
+                           }`}
+                         />
                         {attendeesError && (
                           <div className="flex items-center gap-1 mt-1 text-red-600">
                             <FaExclamationTriangle size={10} />
@@ -867,13 +867,13 @@ const UnifiedModalComponent = function UnifiedModal({
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Subject
                             </label>
-                            <select
-                              value={selectedSubject}
-                              onChange={(e) =>
-                                setSelectedSubject(e.target.value)
-                              }
-                              className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500"
-                            >
+                                                         <select
+                               value={selectedSubject}
+                               onChange={(e) =>
+                                 setSelectedSubject(e.target.value)
+                               }
+                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
+                             >
                               <option value="">Choose subject...</option>
                               {SUBJECTS.map((subject) => (
                                 <option
@@ -890,13 +890,13 @@ const UnifiedModalComponent = function UnifiedModal({
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Class Type
                             </label>
-                            <select
-                              value={selectedClassType}
-                              onChange={(e) =>
-                                setSelectedClassType(e.target.value)
-                              }
-                              className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500"
-                            >
+                                                         <select
+                               value={selectedClassType}
+                               onChange={(e) =>
+                                 setSelectedClassType(e.target.value)
+                               }
+                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
+                             >
                               <option value="">Choose type...</option>
                               {CLASS_TYPES.map((type) => (
                                 <option key={type.value} value={type.value}>
@@ -910,28 +910,28 @@ const UnifiedModalComponent = function UnifiedModal({
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Classes
                             </label>
-                            <input
-                              type="number"
-                              value={selectedClassCount}
-                              onChange={(e) =>
-                                setSelectedClassCount(e.target.value)
-                              }
-                              placeholder="Enter number of classes"
-                              className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500 focus:border-transparent"
-                            />
+                                                         <input
+                               type="number"
+                               value={selectedClassCount}
+                               onChange={(e) =>
+                                 setSelectedClassCount(e.target.value)
+                               }
+                               placeholder="Enter number of classes"
+                               className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent"
+                             />
                           </div>
 
                           <div>
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Recording
                             </label>
-                            <select
-                              value={selectedRecording}
-                              onChange={(e) =>
-                                setSelectedRecording(e.target.value)
-                              }
-                              className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500"
-                            >
+                                                         <select
+                               value={selectedRecording}
+                               onChange={(e) =>
+                                 setSelectedRecording(e.target.value)
+                               }
+                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
+                             >
                               <option value="">Choose option...</option>
                               {RECORDING_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>

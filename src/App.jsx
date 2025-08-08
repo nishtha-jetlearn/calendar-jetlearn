@@ -2876,6 +2876,8 @@ function App() {
                     Cancelled by Parent - Unplanned leave - within 48 hours
                   </option>
                   <option value="CBO">Cancelled by Ops</option>
+                  <option value="NO SHOW - LR">NO SHOW - LR	No show by Learner</option>
+                  <option value="NO SHOW - TR">NO SHOW - TR	No show by Teacher</option>
                 </select>
               </div>
             </div>
@@ -3172,40 +3174,40 @@ function App() {
       {/* Right Main Content - Pink Panel */}
       <div className="flex-1 bg-pink-200 border-l-2 border-black flex flex-col min-w-0">
         {/* Blue Header Bar with View Selection */}
-        <div className="bg-blue-600 p-2 sm:p-4 border-b-2 border-black">
+        <div className="bg-blue-600 p-1 sm:p-2 border-b border-black">
           {/* First Row: Title and User Info */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <FaCalendarAlt className="text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-1">
+                <FaCalendarAlt className="text-white text-xs sm:text-sm" />
                 Calendar System
               </h2>
             </div>
 
             {/* User Info and Logout - Opposite to Calendar System */}
             <div className="flex flex-col items-center gap-1">
-              <div className="flex items-center gap-2 text-white text-xs">
-                <FaUserCheck size={14} className="text-white" />
+              <div className="flex items-center gap-1 text-white text-xs">
+                <FaUserCheck size={10} className="text-white" />
                 <span className="text-white">Hi,</span>
-                <span className="bg-blue-500 px-2 py-1 rounded-full">
+                <span className="bg-blue-500 px-1 py-0.5 rounded text-xs">
                   {user?.name || user?.email || 'User'}
                 </span>
-              </div>
               <button
                 onClick={logout}
-                className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg transition-all duration-200 text-xs sm:text-sm"
+                className="flex items-center gap-1 px-1 sm:px-2 py-0.5 sm:py-1 bg-red-500 hover:bg-red-400 text-white rounded text-xs transition-all duration-200"
                 title="Logout"
               >
-                <FaSignOutAlt size={12} className="sm:w-4 sm:h-4" />
+                <FaSignOutAlt size={10} />
                 <span className="hidden sm:inline">Logout</span>
               </button>
+              </div>
             </div>
           </div>
 
           {/* Second Row: View Selection and Navigation Controls */}
-          <div className="flex items-center justify-between gap-1 sm:gap-3">
+          <div className="flex items-center justify-between gap-1">
             {/* View Selection Buttons - Left Side */}
-            <div className="flex bg-blue-700 rounded-lg p-1">
+            <div className="flex bg-blue-700 rounded p-0.5">
               <button
                 onClick={() => {
                   if (selectedTeacher || selectedStudent) {
@@ -3213,11 +3215,11 @@ function App() {
                   }
                 }}
                 disabled={!selectedTeacher && !selectedStudent}
-                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
+                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   !selectedTeacher && !selectedStudent
                     ? "opacity-50 cursor-not-allowed text-gray-400"
                     : currentView === "list"
-                    ? "bg-blue-500 text-white shadow-md"
+                    ? "bg-blue-500 text-white shadow-sm"
                     : "text-blue-100 hover:text-white"
                 }`}
                 title={
@@ -3226,7 +3228,7 @@ function App() {
                     : "Switch to List View"
                 }
               >
-                <FaList size={12} className="sm:w-4 sm:h-4" />
+                <FaList size={10} />
                 <span className="hidden sm:inline">List View</span>
                 <span className="sm:hidden">List</span>
               </button>
@@ -3268,31 +3270,31 @@ function App() {
                     });
                   }
                 }}
-                className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
+                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
                   currentView === "week"
-                    ? "bg-blue-500 text-white shadow-md"
+                    ? "bg-blue-500 text-white shadow-sm"
                     : "text-blue-100 hover:text-white"
                 }`}
               >
-                <FaCalendarWeek size={12} className="sm:w-4 sm:h-4" />
+                <FaCalendarWeek size={10} />
                 <span className="hidden sm:inline">Week View</span>
                 <span className="sm:hidden">Week</span>
               </button>
             </div>
 
             {/* Navigation Controls - Right Side */}
-            <div className="flex items-center gap-1 sm:gap-3">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => navigateWeek(-1)}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg transition-all duration-200 text-xs sm:text-sm"
+                className="flex items-center gap-1 px-1 sm:px-2 py-0.5 sm:py-1 bg-blue-500 hover:bg-blue-400 text-white rounded text-xs transition-all duration-200"
               >
-                <FaChevronLeft size={12} className="sm:w-4 sm:h-4" />
+                <FaChevronLeft size={10} />
                 <span className="hidden sm:inline">Previous</span>
               </button>
 
-              <div className="flex items-center gap-1 sm:gap-2 text-white">
-                <FaCalendarAlt size={12} className="sm:w-4 sm:h-4" />
-                <span className="text-xs sm:text-sm font-medium">
+              <div className="flex items-center gap-1 text-white">
+                <FaCalendarAlt size={10} />
+                <span className="text-xs font-medium">
                   <span className="hidden sm:inline">
                     {formatDisplayDate(weekDates[0])} -{" "}
                     {formatDisplayDate(weekDates[6])}
@@ -3306,15 +3308,15 @@ function App() {
 
               <button
                 onClick={() => navigateWeek(1)}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg transition-all duration-200 text-xs sm:text-sm"
+                className="flex items-center gap-1 px-1 sm:px-2 py-0.5 sm:py-1 bg-blue-500 hover:bg-blue-400 text-white rounded text-xs transition-all duration-200"
               >
                 <span className="hidden sm:inline">Next</span>
-                <FaChevronRight size={12} className="sm:w-4 sm:h-4" />
+                <FaChevronRight size={10} />
               </button>
 
               <button
                 onClick={goToCurrentWeek}
-                className="px-2 sm:px-3 py-1 sm:py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg transition-all duration-200 text-xs sm:text-sm"
+                className="px-1 sm:px-2 py-0.5 sm:py-1 bg-blue-500 hover:bg-blue-400 text-white rounded text-xs transition-all duration-200"
               >
                 Today
               </button>
@@ -3323,14 +3325,14 @@ function App() {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 p-2 sm:p-4 overflow-auto bg-white">
+        <div className="flex-1 p-1 sm:p-2 overflow-auto bg-white">
           {currentView === "list" && (selectedTeacher || selectedStudent) ? (
             /* List View Content */
-            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+            <div className="bg-white rounded-lg shadow-lg p-2 sm:p-3">
               {/* <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">List View</h3> */}
 
               {/* Filter Status */}
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
                 {/* <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-semibold text-blue-800">Active Filters:</h4>
                   <div className="flex gap-2">
@@ -3354,19 +3356,19 @@ function App() {
                     )}
                   </div>
                 </div> */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1">
                   {selectedTeacher && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    <span className="px-1 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
                       Teacher: {selectedTeacher.full_name}
                     </span>
                   )}
                   {selectedStudent && (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                    <span className="px-1 py-0.5 bg-green-100 text-green-800 text-xs rounded">
                       Student: {selectedStudent.deal_name}
                     </span>
                   )}
                   {!selectedTeacher && !selectedStudent && (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    <span className="px-1 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
                       No filters applied - showing all data
                     </span>
                   )}
@@ -3380,7 +3382,7 @@ function App() {
               </div>
 
               {/* List View Data */}
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {listViewBookingDetails.isLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -3401,7 +3403,7 @@ function App() {
                   <div className="space-y-4">
                     {/* Booking Details List */}
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="bg-blue-50 px-4 py-3 border-b border-gray-200">
+                      <div className="bg-blue-50 px-2 py-2 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="font-semibold text-blue-800 flex items-center gap-2">
@@ -3587,6 +3589,28 @@ function App() {
                                                     .toLowerCase()
                                                     .includes("off"))
                                               ? "bg-yellow-500"
+                                              : extractedData.summary &&
+                                                (extractedData.summary.trim() === "B&R" ||
+                                                  extractedData.summary.trim() === "CBT/PL" ||
+                                                  extractedData.summary.trim() === "CBT/UL" ||
+                                                  extractedData.summary.trim() === "CBP/PL" ||
+                                                  extractedData.summary.trim() === "CBP/UL" ||
+                                                  extractedData.summary.trim() === "CBO" ||
+                                                  extractedData.summary.trim() === "NO SHOW - LR" ||
+                                                  extractedData.summary.trim() === "NO SHOW - TR" ||
+                                                  extractedData.summary.trim() === "MAKE UP" ||
+                                                  extractedData.summary.trim() === "MAKE UP - S" ||
+                                                  extractedData.summary.includes("B&R") ||
+                                                  extractedData.summary.includes("CBT/PL") ||
+                                                  extractedData.summary.includes("CBT/UL") ||
+                                                  extractedData.summary.includes("CBP/PL") ||
+                                                  extractedData.summary.includes("CBP/UL") ||
+                                                  extractedData.summary.includes("CBO") ||
+                                                  extractedData.summary.includes("NO SHOW - LR") ||
+                                                  extractedData.summary.includes("NO SHOW - TR") ||
+                                                  extractedData.summary.includes("MAKE UP") ||
+                                                  extractedData.summary.includes("MAKE UP - S"))
+                                              ? "bg-black"
                                               : "bg-red-500"
                                           }`}
                                         ></div>
@@ -3773,78 +3797,104 @@ function App() {
                                               .includes("off")
                                           ) && (
                                             <div className="flex items-center gap-2 ml-3">
-                                              <button
-                                                onClick={() => {
-                                                  // Extract time from the booking data
-                                                  let timeSlot = "00:00";
+                                              {/* Cancel/No show button - only show for non-black-dot statuses */}
+                                              {!(
+                                                extractedData.summary.trim() === "B&R" ||
+                                                extractedData.summary.trim() === "CBT/PL" ||
+                                                extractedData.summary.trim() === "CBT/UL" ||
+                                                extractedData.summary.trim() === "CBP/PL" ||
+                                                extractedData.summary.trim() === "CBP/UL" ||
+                                                extractedData.summary.trim() === "CBO" ||
+                                                extractedData.summary.trim() === "NO SHOW - LR" ||
+                                                extractedData.summary.trim() === "NO SHOW - TR" ||
+                                                extractedData.summary.trim() === "MAKE UP" ||
+                                                extractedData.summary.trim() === "MAKE UP - S" ||
+                                                extractedData.summary.includes("B&R") ||
+                                                extractedData.summary.includes("CBT/PL") ||
+                                                extractedData.summary.includes("CBT/UL") ||
+                                                extractedData.summary.includes("CBP/PL") ||
+                                                extractedData.summary.includes("CBP/UL") ||
+                                                extractedData.summary.includes("CBO") ||
+                                                extractedData.summary.includes("NO SHOW - LR") ||
+                                                extractedData.summary.includes("NO SHOW - TR") ||
+                                                extractedData.summary.includes("MAKE UP") ||
+                                                extractedData.summary.includes("MAKE UP - S")
+                                              ) && (
+                                                <button
+                                                  onClick={() => {
+                                                    // Extract time from the booking data
+                                                    let timeSlot = "00:00";
 
-                                                  // Try to extract time from summary
-                                                  if (extractedData.summary) {
-                                                    const timeMatch =
-                                                      extractedData.summary.match(
-                                                        /(\d{1,2}:\d{2})/
-                                                      );
-                                                    if (timeMatch) {
-                                                      timeSlot = timeMatch[1];
+                                                    // Try to extract time from summary
+                                                    if (extractedData.summary) {
+                                                      const timeMatch =
+                                                        extractedData.summary.match(
+                                                          /(\d{1,2}:\d{2})/
+                                                        );
+                                                      if (timeMatch) {
+                                                        timeSlot = timeMatch[1];
+                                                      }
                                                     }
-                                                  }
 
-                                                  // If no time found in summary, try to extract from start_time
-                                                  if (
-                                                    timeSlot === "00:00" &&
-                                                    extractedData.start_time
-                                                  ) {
-                                                    const timeFromStart =
-                                                      extractedData.start_time.match(
-                                                        /(\d{2}:\d{2})/
-                                                      );
-                                                    if (timeFromStart) {
-                                                      timeSlot =
-                                                        timeFromStart[1];
+                                                    // If no time found in summary, try to extract from start_time
+                                                    if (
+                                                      timeSlot === "00:00" &&
+                                                      extractedData.start_time
+                                                    ) {
+                                                      const timeFromStart =
+                                                        extractedData.start_time.match(
+                                                          /(\d{2}:\d{2})/
+                                                        );
+                                                      if (timeFromStart) {
+                                                        timeSlot =
+                                                          timeFromStart[1];
+                                                      }
                                                     }
-                                                  }
 
-                                                  // If still no time found, use a default time
-                                                  if (timeSlot === "00:00") {
-                                                    console.warn(
-                                                      "Could not extract time from data, using default 09:00"
-                                                    );
-                                                    timeSlot = "09:00";
-                                                  }
+                                                    // If still no time found, use a default time
+                                                    if (timeSlot === "00:00") {
+                                                      console.warn(
+                                                        "Could not extract time from data, using default 09:00"
+                                                      );
+                                                      timeSlot = "09:00";
+                                                    }
 
-                                                  // Open cancel popup for booking
-                                                  setCancelPopup({
-                                                    isOpen: true,
-                                                    type: "booking",
-                                                    data: extractedData,
-                                                    date: bookingDate,
-                                                    time: timeSlot,
-                                                    reason: "",
-                                                    studentDetails: {
-                                                      learner_name:
-                                                        extractedData.learner_name,
-                                                      jlid: extractedData.jlid,
-                                                      name: extractedData.learner_name,
-                                                      jetlearner_id:
-                                                        extractedData.jlid,
-                                                    },
-                                                    teacherDetails:
-                                                      getTeacherByTeacherId(
-                                                        extractedData.teacherid
-                                                      ) || selectedTeacher,
-                                                  });
-                                                }}
-                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                title="Click to cancel this booking"
-                                              >
-                                                <FaTimes
-                                                  size={8}
-                                                  className="sm:w-3 sm:h-3"
-                                                />
-                                                <span className="hidden sm:inline">
-                                                  Cancel
-                                                </span>
-                                              </button>
+                                                    // Open cancel popup for booking
+                                                    setCancelPopup({
+                                                      isOpen: true,
+                                                      type: "booking",
+                                                      data: extractedData,
+                                                      date: bookingDate,
+                                                      time: timeSlot,
+                                                      reason: "",
+                                                      studentDetails: {
+                                                        learner_name:
+                                                          extractedData.learner_name,
+                                                        jlid: extractedData.jlid,
+                                                        name: extractedData.learner_name,
+                                                        jetlearner_id:
+                                                          extractedData.jlid,
+                                                      },
+                                                      teacherDetails:
+                                                        getTeacherByTeacherId(
+                                                          extractedData.teacherid
+                                                        ) || selectedTeacher,
+                                                    });
+                                                  }}
+                                                  className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                  title="Click to cancel this booking"
+                                                >
+                                                  <FaTimes
+                                                    size={8}
+                                                    className="sm:w-3 sm:h-3"
+                                                  />
+                                                  <span className="hidden sm:inline">
+                                                  Cancel/No show
+                                                  </span>
+                                                </button>
+                                              )}
+                                              
+                                              {/* Reschedule button - show for all statuses */}
                                               <button
                                                 onClick={() => {
                                                   // Extract time from the booking data

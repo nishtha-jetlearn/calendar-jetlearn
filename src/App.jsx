@@ -814,7 +814,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch { }
+        } catch {}
         throw new Error(errorMsg);
       }
 
@@ -1025,75 +1025,75 @@ function App() {
   };
 
   // Send student session info to backend via PUT
-  const sendStudentSessionToAPI = async (student, teacher, type) => {
-    try {
-      const payload = {
-        name: student.name,
-        jetlearner_id: student.jetlearner_id,
-        teacher_name: teacher.full_name,
-        teacher_id: teacher.id,
-        type: type,
-        timezone: selectedTimezone,
-      };
+  // const sendStudentSessionToAPI = async (student, teacher, type) => {
+  //   try {
+  //     const payload = {
+  //       name: student.name,
+  //       jetlearner_id: student.jetlearner_id,
+  //       teacher_name: teacher.full_name,
+  //       teacher_id: teacher.id,
+  //       type: type,
+  //       timezone: selectedTimezone,
+  //     };
 
-      const response = await fetch(
-        "https://live.jetlearn.com/events/get-bookings-availability-summary/",
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+  //     const response = await fetch(
+  //       "https://live.jetlearn.com/events/get-bookings-availability-summary/",
+  //       {
+  //         method: "PUT",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify(payload),
+  //       }
+  //     );
 
-      if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errJson = await response.json();
-          if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch { }
-        throw new Error(errorMsg);
-      }
+  //     if (!response.ok) {
+  //       let errorMsg = `HTTP error! status: ${response.status}`;
+  //       try {
+  //         const errJson = await response.json();
+  //         if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
+  //       } catch {}
+  //       throw new Error(errorMsg);
+  //     }
 
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      throw error;
-    }
-  };
+  //     const result = await response.json();
+  //     return result;
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // };
 
   // Get all booked students from the schedule
-  const getAllBookedStudents = useMemo(() => {
-    const bookedStudents = [];
-    Object.keys(schedule).forEach((dateStr) => {
-      const dateSchedule = schedule[dateStr];
-      TIME_SLOTS.forEach((time) => {
-        const slot = dateSchedule[time];
-        if (slot && slot.students) {
-          slot.students.forEach((student) => {
-            const exists = bookedStudents.find(
-              (s) => s.name.toLowerCase() === student.name.toLowerCase()
-            );
-            if (!exists) {
-              bookedStudents.push({
-                id: student.id,
-                name: student.name,
-                email: student.email || "",
-                isBookedStudent: true,
-              });
-            }
-          });
-        }
-      });
-    });
-    return bookedStudents;
-  }, [schedule]);
+  // const getAllBookedStudents = useMemo(() => {
+  //   const bookedStudents = [];
+  //   Object.keys(schedule).forEach((dateStr) => {
+  //     const dateSchedule = schedule[dateStr];
+  //     TIME_SLOTS.forEach((time) => {
+  //       const slot = dateSchedule[time];
+  //       if (slot && slot.students) {
+  //         slot.students.forEach((student) => {
+  //           const exists = bookedStudents.find(
+  //             (s) => s.name.toLowerCase() === student.name.toLowerCase()
+  //           );
+  //           if (!exists) {
+  //             bookedStudents.push({
+  //               id: student.id,
+  //               name: student.name,
+  //               email: student.email || "",
+  //               isBookedStudent: true,
+  //             });
+  //           }
+  //         });
+  //       }
+  //     });
+  //   });
+  //   return bookedStudents;
+  // }, [schedule]);
 
   // Combine API students with booked students
   const allAvailableStudents = useMemo(() => {
-    return [...students, ...getAllBookedStudents];
-  }, [students, getAllBookedStudents]);
+    return [...students];
+  }, [students]);
 
   // Initialize schedule for current week dates if not exists
   const getScheduleForDate = (date) => {
@@ -1185,17 +1185,17 @@ function App() {
   };
 
   // Enhanced slot click handler with teacherid
-  const handleSlotClick = (date, time) => {
-    const slotData = getSlotCounts(date, time);
-    setSelectedSlot({
-      date,
-      time,
-      teacherid: slotData.teacherid,
-      teacherDetails: slotData.teacherDetails,
-      isFromAPI: slotData.isFromAPI,
-    });
-    setModalOpen(true);
-  };
+  // const handleSlotClick = (date, time) => {
+  //   const slotData = getSlotCounts(date, time);
+  //   setSelectedSlot({
+  //     date,
+  //     time,
+  //     teacherid: slotData.teacherid,
+  //     teacherDetails: slotData.teacherDetails,
+  //     isFromAPI: slotData.isFromAPI,
+  //   });
+  //   setModalOpen(true);
+  // };
 
   const handleAddTeacher = (teacherId) => {
     if (!selectedSlot) return;
@@ -1237,120 +1237,103 @@ function App() {
     });
   };
 
-  const handleBookStudent = async (studentName, teacherId, bookingData) => {
+  const handleBookStudent = async (
+    studentName,
+    selectedStudents,
+    bookingData
+  ) => {
     if (!selectedSlot) return;
     const dateStr = formatDate(selectedSlot.date);
-
+    console.log("selectedStudent" + selectedStudents);
+    console.log("Booking Data " + JSON.stringify(bookingData, null, 2));
     // Find teacher and student details
-    const teacher = teachers.find(
-      (t) => t.id.toString() === teacherId.toString()
-    );
-    const student = allAvailableStudents.find(
-      (s) =>
-        (s.deal_name &&
-          s.deal_name.trim().toLowerCase() ===
-          studentName.trim().toLowerCase()) ||
-        (s.name &&
-          s.name.trim().toLowerCase() === studentName.trim().toLowerCase())
-    );
-
+    const teacher = selectedTeacher?.uid;
+    const student = selectedStudents.map((item) => item.id);
+    console.log(student);
     if (!teacher) {
       alert("Teacher not found");
       return;
     }
 
-    // Update local schedule
-    setSchedule((prev) => {
-      const newSchedule = { ...prev };
-      if (!newSchedule[dateStr]) {
-        newSchedule[dateStr] = {};
-        TIME_SLOTS.forEach((time) => {
-          newSchedule[dateStr][time] = { time, teachers: [], students: [] };
-        });
-      }
-
-      const slot = newSchedule[dateStr][selectedSlot.time];
-      const isDuplicate = slot.students.some(
-        (s) => s.name.trim().toLowerCase() === studentName.trim().toLowerCase()
-      );
-
-      if (isDuplicate) {
-        alert("This student is already booked for this slot.");
-        return prev;
-      }
-
-      const newStudent = {
-        id: Date.now().toString(),
-        name: studentName,
-        teacherId,
-        teacherName: teacher.full_name,
-        bookingType: bookingData.bookingType || "trial",
-        email: student?.email || "",
-        jetlearner_id: student?.jetlearner_id || "",
-        platformCredentials: bookingData.platformCredentials || "",
-        attendees: bookingData.attendees || "",
-        schedule: bookingData.schedule || [],
-        ...(bookingData.bookingType === "paid" && {
-          subject: bookingData.subject,
-          classType: bookingData.classType,
-          classCount: bookingData.classCount,
-          recording: bookingData.recording,
-        }),
-        ...(bookingData.bookingType === "trial" && {
-          classType: "1:1",
-          classCount: 1,
-        }),
-      };
-
-      slot.students = [...slot.students, newStudent];
-      return newSchedule;
-    });
+    const newStudent = {
+      id: Date.now().toString(),
+      name: studentName,
+      teacher,
+      teacherName: teacher.full_name,
+      booking_type: bookingData.bookingType || "trial",
+      email: student?.email || "",
+      jetlearner_id: student?.jetlearner_id || "",
+      platformCredentials: bookingData.platformCredentials || "",
+      attendees: bookingData.attendees || "",
+      schedule: bookingData.schedule || [],
+      ...(bookingData.bookingType === "paid" && {
+        subject: bookingData.subject,
+        classType: bookingData.classType,
+        classCount: bookingData.classCount,
+        recording: bookingData.recording,
+      }),
+      ...(bookingData.bookingType === "trial" && {
+        classType: "1:1",
+        classCount: 1,
+      }),
+    };
 
     // Send booking to API if we have the required data
     if (
-      student?.jetlearner_id &&
-      teacher?.uid &&
+      student.length &&
+      teacher &&
       bookingData.schedule &&
       bookingData.schedule.length > 0
     ) {
       try {
+        const attendeeslist = bookingData.attendees.split(",");
+        console.log(attendeeslist);
+        let recording = "";
+        if (bookingData.recording == "do-not-record") {
+          recording = "DNREC";
+        }
+
         const apiPayload = {
-          jl_uid: student.jetlearner_id,
-          teacher_uid: teacher.uid,
+          jl_uid: student,
+          teacher_uid: teacher,
           platform_credentials: bookingData.platformCredentials || "",
           class_count:
             bookingData.bookingType === "trial"
               ? 1
               : parseInt(bookingData.classCount) || 1,
           schedule: bookingData.schedule,
+          attendees: attendeeslist,
           class_type:
             bookingData.bookingType === "trial"
               ? "1:1"
               : bookingData.classType || "1:1",
           booking_type: bookingData.bookingType === "trial" ? "Trial" : "Paid",
           ...(bookingData.bookingType === "paid" && {
-            subject: bookingData.subject,
-            recording: bookingData.recording,
+            course: bookingData.subject,
+            recording: recording,
           }),
         };
 
         console.log("📤 Sending booking to API:", apiPayload);
 
         // TODO: Implement actual API call to https://live.jetlearn.com/api/book-class
-        // const response = await fetch('https://live.jetlearn.com/api/book-class', {
-        //   method: 'POST',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //   },
-        //   body: JSON.stringify(apiPayload),
-        // });
+        // const response = await fetch(
+        //   "https://live.jetlearn.com/api/book-class/",
+        //   {
+        //     method: "POST",
+        //     headers: {
+        //       "Content-Type": "application/json",
+        //     },
+        //     body: JSON.stringify(apiPayload),
+        //   }
+        // );
 
-        // if (!response.ok) {
-        //   throw new Error(`API call failed: ${response.status}`);
-        // }
+        if (!response.ok) {
+          throw new Error(`API call failed: ${response.status}`);
+        }
 
-        // const result = await response.json();
-        // console.log("✅ Booking API response:", result);
+        const result = await response.json();
+        console.log("✅ Booking API response:", result);
       } catch (error) {
         console.error("❌ Error sending booking to API:", error);
         alert("Failed to send booking to API. Please try again.");
@@ -1772,7 +1755,12 @@ function App() {
     reason = ""
   ) => {
     try {
-      console.log("🚀 Canceling availability for:", { date, time, teacherId, reason });
+      console.log("🚀 Canceling availability for:", {
+        date,
+        time,
+        teacherId,
+        reason,
+      });
 
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
@@ -1789,7 +1777,7 @@ function App() {
       }
 
       // Call API to cancel availability
-      const response = await fetch("/api/cancel-availability", {
+      const response = await fetch("/api/cancel-availability/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1824,25 +1812,47 @@ function App() {
   // Handle cancel booking
   const handleCancelBooking = async (date, time, bookingData, reason = "") => {
     try {
-      console.log("🚀 Canceling booking for:", { date, time, bookingData, reason });
+      console.log("🚀 Canceling booking for:", {
+        date,
+        time,
+        bookingData,
+        reason,
+      });
 
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
+      console.log(dateObj);
+      const day = String(dateObj.getUTCDate()).padStart(2, "0");
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+      const year = dateObj.getUTCFullYear();
+      const hours = String(dateObj.getUTCHours()).padStart(2, "0");
+      const minutes = String(dateObj.getUTCMinutes()).padStart(2, "0");
 
+      const formatted = `${day}-${month}-${year} ${hours}:${minutes}`;
+      console.log(formatted); // "31-07-2025 09:15"
+      const text = bookingData.summary;
+      const jl_id = text.match(/\b(JL)[A-Za-z0-9]+\b/g);
+      console.log(jl_id);
+      const tl_id = text.match(/\b(TJL)[A-Za-z0-9]+\b/g);
+      console.log(tl_id);
       // Call API to cancel booking
-      const response = await fetch("/api/cancel-booking", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: dateObj.toISOString().split("T")[0], // YYYY-MM-DD format
-          time: time,
-          bookingData: bookingData,
-          timezone: selectedTimezone,
-          reason: reason,
-        }),
-      });
+      const response = await fetch(
+        "https://live.jetlearn.com/api/cancel-class/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cancellation_datetime: formatted, // YYYY-MM-DD format
+            //jl_uid: jl_id,
+            jluid: jl_id,
+            tlid: tl_id[0],
+            summary: bookingData.summary,
+            cancellation_type: reason,
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -2160,10 +2170,11 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`${buttonClass} ${currentPage === 1
+          className={`${buttonClass} ${
+            currentPage === 1
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+          }`}
         >
           <FaChevronLeft size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2176,12 +2187,13 @@ function App() {
               typeof page === "number" ? onPageChange(page) : null
             }
             disabled={page === "..."}
-            className={`${buttonClass} ${page === currentPage
+            className={`${buttonClass} ${
+              page === currentPage
                 ? "bg-blue-600 text-white"
                 : page === "..."
-                  ? "bg-transparent text-gray-500 cursor-default"
-                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-              }`}
+                ? "bg-transparent text-gray-500 cursor-default"
+                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+            }`}
           >
             {page}
           </button>
@@ -2191,10 +2203,11 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`${buttonClass} ${currentPage === totalPages
+          className={`${buttonClass} ${
+            currentPage === totalPages
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+          }`}
         >
           <FaChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2220,44 +2233,44 @@ function App() {
     // Filter data by the specific time slot, respecting grid counts
     const filteredAvailabilityData = availabilityAPI.response
       ? filterDataByTime(
-        availabilityAPI.response,
-        detailsPopup.time,
-        gridAvailableCount
-      )
+          availabilityAPI.response,
+          detailsPopup.time,
+          gridAvailableCount
+        )
       : [];
 
     const filteredBookingData = bookingApiResponse.data
       ? filterDataByTime(
-        bookingApiResponse.data,
-        detailsPopup.time,
-        gridBookedCount
-      )
+          bookingApiResponse.data,
+          detailsPopup.time,
+          gridBookedCount
+        )
       : [];
 
     // Get paginated data for current popup
     const currentData =
       detailsPopup.type === "availability"
         ? getPaginatedData(
-          filteredAvailabilityData,
-          popupPagination.currentPage,
-          popupPagination.itemsPerPage
-        )
+            filteredAvailabilityData,
+            popupPagination.currentPage,
+            popupPagination.itemsPerPage
+          )
         : getPaginatedData(
-          filteredBookingData,
-          popupPagination.currentPage,
-          popupPagination.itemsPerPage
-        );
+            filteredBookingData,
+            popupPagination.currentPage,
+            popupPagination.itemsPerPage
+          );
 
     const totalPages =
       detailsPopup.type === "availability"
         ? getTotalPages(
-          filteredAvailabilityData.length,
-          popupPagination.itemsPerPage
-        )
+            filteredAvailabilityData.length,
+            popupPagination.itemsPerPage
+          )
         : getTotalPages(
-          filteredBookingData.length,
-          popupPagination.itemsPerPage
-        );
+            filteredBookingData.length,
+            popupPagination.itemsPerPage
+          );
 
     // Debug logging
     console.log("🔍 Popup Debug Info:", {
@@ -2677,12 +2690,12 @@ function App() {
 
   // Cancel Popup Component
   const CancelPopup = () => {
-    console.log(
-      "CancelPopup render - isOpen:",
-      cancelPopup.isOpen,
-      "reason:",
-      cancelPopup.reason
-    );
+    // console.log(
+    //   "CancelPopup render - isOpen:",
+    //   cancelPopup.isOpen,
+    //   "reason:",
+    //   cancelPopup.reason
+    // );
     if (!cancelPopup.isOpen) return null;
 
     const handleCancelConfirm = async () => {
@@ -2767,7 +2780,9 @@ function App() {
               <div className="space-y-1">
                 <div className="bg-white p-1.5 rounded border border-gray-100">
                   <div className="flex flex-col gap-1">
-                    <span className="text-gray-600 text-xs font-medium">Date & Time:</span>
+                    <span className="text-gray-600 text-xs font-medium">
+                      Date & Time:
+                    </span>
                     <span className="font-bold text-gray-900 bg-yellow-50 px-1.5 py-0.5 rounded text-xs break-words">
                       {formatDateDDMMMYYYY(cancelPopup.date)}{" "}
                       {addHoursToTimeRange(cancelPopup.time, 1)}{" "}
@@ -2896,12 +2911,18 @@ function App() {
       {/* Mobile Header */}
       <div className="lg:hidden bg-blue-600 p-3 sm:p-4 border-b-2 border-black">
         <div className="flex items-center justify-between">
-          <h1 className="text-base sm:text-lg font-bold text-white truncate">Jetlearn Calendar</h1>
+          <h1 className="text-base sm:text-lg font-bold text-white truncate">
+            Jetlearn Calendar
+          </h1>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="text-white p-1.5 sm:p-2 hover:bg-white/10 rounded transition-colors duration-200"
           >
-            {sidebarOpen ? <FaTimes size={18} className="sm:w-5 sm:h-5" /> : <FaBars size={18} className="sm:w-5 sm:h-5" />}
+            {sidebarOpen ? (
+              <FaTimes size={18} className="sm:w-5 sm:h-5" />
+            ) : (
+              <FaBars size={18} className="sm:w-5 sm:h-5" />
+            )}
           </button>
         </div>
       </div>
@@ -2966,7 +2987,10 @@ function App() {
 
                 {selectedStudent && (
                   <div className="bg-purple-50 border border-purple-200 rounded px-2 sm:px-3 py-1 sm:py-1.5 flex items-center gap-2">
-                    <FaUserGraduate className="text-purple-600 flex-shrink-0" size={12} />
+                    <FaUserGraduate
+                      className="text-purple-600 flex-shrink-0"
+                      size={12}
+                    />
                     <div className="text-xs sm:text-sm min-w-0 flex-1">
                       <span className="text-gray-600">Student:</span>
                       <span className="ml-1 font-medium text-purple-900 truncate">
@@ -3027,9 +3051,13 @@ function App() {
               <FaSearch size={14} className="flex-shrink-0" />
               <span className="truncate">Teacher Search</span>
               {teachersLoading && (
-                <span className="text-orange-200 text-xs sm:text-sm">(Loading...)</span>
+                <span className="text-orange-200 text-xs sm:text-sm">
+                  (Loading...)
+                </span>
               )}
-              {teachersError && <span className="text-red-200 text-xs sm:text-sm">(Error)</span>}
+              {teachersError && (
+                <span className="text-red-200 text-xs sm:text-sm">(Error)</span>
+              )}
             </h2>
             <EnhancedTeacherSearch
               teachers={teachers}
@@ -3046,9 +3074,13 @@ function App() {
               <FaGraduationCap size={14} className="flex-shrink-0" />
               <span className="truncate">Learner Search</span>
               {studentsLoading && (
-                <span className="text-orange-200 text-xs sm:text-sm">(Loading...)</span>
+                <span className="text-orange-200 text-xs sm:text-sm">
+                  (Loading...)
+                </span>
               )}
-              {studentsError && <span className="text-red-200 text-xs sm:text-sm">(Error)</span>}
+              {studentsError && (
+                <span className="text-red-200 text-xs sm:text-sm">(Error)</span>
+              )}
             </h2>
             <EnhancedStudentSearch
               students={allAvailableStudents}
@@ -3134,12 +3166,13 @@ function App() {
                     }
                   }}
                   disabled={!selectedTeacher && !selectedStudent}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${!selectedTeacher && !selectedStudent
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
+                    !selectedTeacher && !selectedStudent
                       ? "opacity-50 cursor-not-allowed text-gray-400"
                       : currentView === "list"
-                        ? "bg-blue-500 text-white shadow-md"
-                        : "text-blue-100 hover:text-white"
-                    }`}
+                      ? "bg-blue-500 text-white shadow-md"
+                      : "text-blue-100 hover:text-white"
+                  }`}
                   title={
                     !selectedTeacher && !selectedStudent
                       ? "Select a Teacher or Student to enable List View"
@@ -3188,10 +3221,11 @@ function App() {
                       });
                     }
                   }}
-                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${currentView === "week"
+                  className={`px-2 sm:px-4 py-1 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 ${
+                    currentView === "week"
                       ? "bg-blue-500 text-white shadow-md"
                       : "text-blue-100 hover:text-white"
-                    }`}
+                  }`}
                 >
                   <FaCalendarWeek size={12} className="sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Week View</span>
@@ -3490,13 +3524,14 @@ function App() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
                                         <div
-                                          className={`w-3 h-3 rounded-full mr-3 ${extractedData.summary &&
-                                              (extractedData.summary
+                                          className={`w-3 h-3 rounded-full mr-3 ${
+                                            extractedData.summary &&
+                                            (extractedData.summary
+                                              .toLowerCase()
+                                              .includes("availability") ||
+                                              extractedData.summary
                                                 .toLowerCase()
-                                                .includes("availability") ||
-                                                extractedData.summary
-                                                  .toLowerCase()
-                                                  .includes("hours"))
+                                                .includes("hours"))
                                               ? "bg-green-500"
                                               : extractedData.summary &&
                                                 (extractedData.summary
@@ -3507,7 +3542,7 @@ function App() {
                                                     .includes("off"))
                                               ? "bg-yellow-500"
                                               : "bg-red-500"
-                                            }`}
+                                          }`}
                                         ></div>
                                         <div className="flex-1">
                                           <div className="text-sm font-medium text-gray-900">
@@ -3548,61 +3583,38 @@ function App() {
                                             extractedData.summary
                                               .toLowerCase()
                                               .includes("hours")) &&
-                                          !(extractedData.summary
-                                            .toLowerCase()
-                                            .includes("week off") ||
+                                          !(
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("off")) && (
+                                              .includes("week off") ||
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("off")
+                                          ) && (
                                             <div className="flex items-center gap-2 ml-3">
                                               <button
                                                 onClick={() => {
                                                   // Open UnifiedModal for this time slot
-                                                  let timeSlot = "00:00";
+                                                  let timeSlot = timeRange;
 
-                                                  // Try to extract time from summary
-                                                  if (extractedData.summary) {
-                                                    const timeMatch =
-                                                      extractedData.summary.match(
-                                                        /(\d{1,2}:\d{2})/
-                                                      );
-                                                    if (timeMatch) {
-                                                      timeSlot = timeMatch[1];
+                                                  console.log(
+                                                    "Opening UnifiedModal for:",
+                                                    {
+                                                      date: bookingDate,
+                                                      time: timeSlot,
+                                                      summary:
+                                                        extractedData.summary,
+                                                      start_time:
+                                                        extractedData.start_time,
                                                     }
-                                                  }
-
-                                                  // If no time found in summary, try to extract from start_time
-                                                  if (
-                                                    timeSlot === "00:00" &&
-                                                    extractedData.start_time
-                                                  ) {
-                                                    const timeFromStart =
-                                                      extractedData.start_time.match(
-                                                        /(\d{2}:\d{2})/
-                                                      );
-                                                    if (timeFromStart) {
-                                                      timeSlot =
-                                                        timeFromStart[1];
-                                                    }
-                                                  }
-
-                                                  // If still no time found, use a default time
-                                                  if (timeSlot === "00:00") {
-                                                    console.warn(
-                                                      "Could not extract time from data, using default 09:00"
-                                                    );
-                                                    timeSlot = "09:00";
-                                                  }
-
-                                                  console.log("Opening UnifiedModal for:", {
-                                                    date: bookingDate,
-                                                    time: timeSlot,
-                                                    summary: extractedData.summary,
-                                                    start_time: extractedData.start_time
-                                                  });
+                                                  );
 
                                                   // Get slot data for this specific time
-                                                  const slotData = getSlotCounts(bookingDate, timeSlot);
+                                                  const slotData =
+                                                    getSlotCounts(
+                                                      bookingDate,
+                                                      timeSlot
+                                                    );
 
                                                   setSelectedSlot({
                                                     date: bookingDate,
@@ -3698,18 +3710,22 @@ function App() {
                                             </div>
                                           )}
                                         {extractedData.summary &&
-                                          !(extractedData.summary
-                                            .toLowerCase()
-                                            .includes("availability") ||
+                                          !(
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("hours")) &&
-                                          !(extractedData.summary
-                                            .toLowerCase()
-                                            .includes("week off") ||
+                                              .includes("availability") ||
                                             extractedData.summary
                                               .toLowerCase()
-                                              .includes("off")) && (
+                                              .includes("hours")
+                                          ) &&
+                                          !(
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("week off") ||
+                                            extractedData.summary
+                                              .toLowerCase()
+                                              .includes("off")
+                                          ) && (
                                             <div className="flex items-center gap-2 ml-3">
                                               <button
                                                 onClick={() => {
@@ -3787,18 +3803,6 @@ function App() {
                                                 onClick={() => {
                                                   // Extract time from the booking data
                                                   let timeSlot = "00:00";
-
-                                                  // Try to extract time from summary
-                                                  if (extractedData.summary) {
-                                                    const timeMatch =
-                                                      extractedData.summary.match(
-                                                        /(\d{1,2}:\d{2})/
-                                                      );
-                                                    if (timeMatch) {
-                                                      timeSlot = timeMatch[1];
-                                                    }
-                                                  }
-
                                                   // If no time found in summary, try to extract from start_time
                                                   if (
                                                     timeSlot === "00:00" &&
@@ -3875,7 +3879,7 @@ function App() {
                                 -{" "}
                                 {Math.min(
                                   pagination.currentPage *
-                                  pagination.itemsPerPage,
+                                    pagination.itemsPerPage,
                                   parsedBookings.length
                                 )}{" "}
                                 of {parsedBookings.length} bookings
@@ -4025,88 +4029,92 @@ function App() {
 
               <div className="overflow-x-auto">
                 <div className="grid grid-cols-[50px_repeat(7,minmax(60px,1fr))] sm:grid-cols-[60px_repeat(7,minmax(80px,1fr))] md:grid-cols-[80px_repeat(7,minmax(120px,1fr))] min-w-[500px] sm:min-w-[600px] md:min-w-[800px] h-full">
-                <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm">
-                  Time
-                </div>
-                {weekDates.map((date) => (
-                  <div
-                    key={formatDate(date)}
-                    className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300"
-                  >
-                    <div className="text-xs sm:text-sm">{getDayName(date)}</div>
-                    <div className="text-xs text-gray-500 font-bold">
-                      {formatShortDate(date)}
-                    </div>
+                  <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm">
+                    Time
                   </div>
-                ))}
-                {getPaginatedTimeSlots().map((time) => (
-                  <React.Fragment key={time}>
-                    <div className="bg-gray-50 p-1 sm:p-2 lg:p-4 font-medium text-gray-600 text-center border-b border-r border-gray-300 text-xs sm:text-sm">
-                      {time}
+                  {weekDates.map((date) => (
+                    <div
+                      key={formatDate(date)}
+                      className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300"
+                    >
+                      <div className="text-xs sm:text-sm">
+                        {getDayName(date)}
+                      </div>
+                      <div className="text-xs text-gray-500 font-bold">
+                        {formatShortDate(date)}
+                      </div>
                     </div>
-                    {weekDates.map((date) => {
-                      const dateSchedule = getScheduleForDate(date);
-                      const slot = dateSchedule[time];
-                      const { available, booked, teacherid, apiData } =
-                        getSlotCounts(date, time);
-                      const cellColor = getCellColor(available, booked);
-                      return (
-                        <div
-                          key={`${formatDate(date)}-${time}`}
-                          className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor}`}
-                        >
+                  ))}
+                  {getPaginatedTimeSlots().map((time) => (
+                    <React.Fragment key={time}>
+                      <div className="bg-gray-50 p-1 sm:p-2 lg:p-4 font-medium text-gray-600 text-center border-b border-r border-gray-300 text-xs sm:text-sm">
+                        {time}
+                      </div>
+                      {weekDates.map((date) => {
+                        const dateSchedule = getScheduleForDate(date);
+                        const slot = dateSchedule[time];
+                        const { available, booked, teacherid, apiData } =
+                          getSlotCounts(date, time);
+                        const cellColor = getCellColor(available, booked);
+                        return (
                           <div
-                            className={`font-medium text-gray-800 ${available > 0
-                                ? "cursor-pointer hover:text-blue-600 hover:underline"
-                                : ""
+                            key={`${formatDate(date)}-${time}`}
+                            className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor}`}
+                          >
+                            <div
+                              className={`font-medium text-gray-800 ${
+                                available > 0
+                                  ? "cursor-pointer hover:text-blue-600 hover:underline"
+                                  : ""
                               }`}
-                            onClick={() => {
-                              console.log("🖱️ Availability div clicked:", {
-                                available,
-                                date,
-                                time,
-                              });
-                              if (available > 0) {
-                                handleAvailabilityClick(
+                              onClick={() => {
+                                console.log("🖱️ Availability div clicked:", {
+                                  available,
                                   date,
                                   time,
-                                  slot.teachers
-                                );
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">
-                              Available: {" "}
-                            </span>
-                            <span className="sm:hidden">A: </span>
-                            {available}
-                          </div>
+                                });
+                                if (available > 0) {
+                                  handleAvailabilityClick(
+                                    date,
+                                    time,
+                                    slot.teachers
+                                  );
+                                }
+                              }}
+                            >
+                              <span className="hidden sm:inline">
+                                Available:{" "}
+                              </span>
+                              <span className="sm:hidden">A: </span>
+                              {available}
+                            </div>
 
-                          <div
-                            className={`font-medium text-gray-800 ${booked > 0
-                                ? "cursor-pointer hover:text-green-600 hover:underline"
-                                : ""
+                            <div
+                              className={`font-medium text-gray-800 ${
+                                booked > 0
+                                  ? "cursor-pointer hover:text-green-600 hover:underline"
+                                  : ""
                               }`}
-                            onClick={() => {
-                              console.log("🖱️ Booking div clicked:", {
-                                booked,
-                                date,
-                                time,
-                              });
-                              if (booked > 0) {
-                                handleBookingClick(date, time, slot.students);
-                              }
-                            }}
-                          >
-                            <span className="hidden sm:inline">Booked: </span>
-                            <span className="sm:hidden">B: </span>
-                            {booked}
-                          </div>
+                              onClick={() => {
+                                console.log("🖱️ Booking div clicked:", {
+                                  booked,
+                                  date,
+                                  time,
+                                });
+                                if (booked > 0) {
+                                  handleBookingClick(date, time, slot.students);
+                                }
+                              }}
+                            >
+                              <span className="hidden sm:inline">Booked: </span>
+                              <span className="sm:hidden">B: </span>
+                              {booked}
+                            </div>
 
-                          {/* <div className="text-xs text-gray-600 mt-1 hidden sm:block">
+                            {/* <div className="text-xs text-gray-600 mt-1 hidden sm:block">
                             {formatTimeInTimezone(date, time, selectedTimezone)}
                           </div> */}
-                          {/* <div className="flex gap-1 mt-1 sm:mt-2 flex-wrap">
+                            {/* <div className="flex gap-1 mt-1 sm:mt-2 flex-wrap">
                             <button
                               onClick={() => handleSlotClick(date, time)}
                               className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded"
@@ -4115,11 +4123,11 @@ function App() {
                               <span className="hidden sm:inline">Manage</span>
                             </button>
                           </div> */}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
             </div>
@@ -4150,7 +4158,7 @@ function App() {
             time={selectedSlot?.time}
             timezone={selectedTimezone}
             availableStudents={allAvailableStudents}
-            availableTeachers={currentSlot?.teachers || []}
+            availableTeachers={selectedTeacher.uid || []}
             bookedStudents={currentSlot?.students || []}
             allTeachers={teachers}
             onAddTeacher={handleAddTeacher}

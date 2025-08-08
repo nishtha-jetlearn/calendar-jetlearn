@@ -21,6 +21,7 @@ import {
   FaCalendarWeek,
   FaBars,
   FaInfoCircle,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import UnifiedModal from "./components/UnifiedModal";
 import TeacherDetails from "./components/TeacherDetails";
@@ -28,6 +29,8 @@ import StudentDetails from "./components/StudentDetails";
 import EnhancedTeacherSearch from "./components/EnhancedTeacherSearch";
 import EnhancedStudentSearch from "./components/EnhancedStudentSearch";
 import EnhancedTimezoneSearch from "./components/EnhancedTimezoneSearch";
+import LoginPage from "./pages/LoginPage";
+import { useAuth } from "./contexts/AuthContext";
 import {
   getWeekDates,
   formatDate,
@@ -94,6 +97,25 @@ const safeErrorLog = (message, error) => {
 };
 
 function App() {
+  const { isAuthenticated, isLoading, logout, user } = useAuth();
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
   // Add global error boundary for unhandled promises
 
   useEffect(() => {
@@ -3234,7 +3256,7 @@ function App() {
               </div>
             </div>
 
-            {/* Week Navigation */}
+            {/* Week Navigation and User Info */}
             <div className="flex items-center gap-1 sm:gap-3">
               <button
                 onClick={() => navigateWeek(-1)}
@@ -3272,6 +3294,23 @@ function App() {
               >
                 Today
               </button>
+
+              {/* User Info and Logout */}
+              <div className="flex items-center gap-2 ml-2 sm:ml-4">
+                <div className="hidden sm:flex items-center gap-2 text-white text-xs">
+                  <span className="bg-blue-500 px-2 py-1 rounded-full">
+                    {user?.name || user?.email || 'User'}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-2 bg-red-500 hover:bg-red-400 text-white rounded-lg transition-all duration-200 text-xs sm:text-sm"
+                  title="Logout"
+                >
+                  <FaSignOutAlt size={12} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

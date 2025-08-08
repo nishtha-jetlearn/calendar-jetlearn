@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { AiFillEye, AiFillEyeInvisible } from 'react-icons/ai';
 import jetlearn from '../assets/jetlearn.png';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sessionId, setSessionId] = useState(null);
 
   const { login } = useAuth();
 
@@ -19,7 +21,7 @@ const LoginPage = () => {
     setError('');
     
     // Basic validation
-    if (!email || !password) {
+    if (!username || !email || !password) {
       setError('Please fill in all fields');
       setIsLoading(false);
       return;
@@ -33,23 +35,61 @@ const LoginPage = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    // Validate specific credentials
+    const validUsername = 'nishtha';
+    const validEmail = 'nishtha.gupta@jet-learn.com';
+    const validPassword = 'nishtha123';
+
+    if (username !== validUsername || email !== validEmail || password !== validPassword) {
+      setError('Invalid credentials.');
       setIsLoading(false);
-      
-      // For demo purposes, accept any valid email/password combination
-      // In a real app, you would validate against your backend
-      if (email && password) {
-        login({ 
-          email, 
-          name: email.split('@')[0], // Use email prefix as name
-          id: Date.now().toString(),
-          role: 'admin'
-        });
+      return;
+    }
+
+    try {
+      // Create FormData for the API call
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('password', password);
+
+      // Make API call to JetLearn login endpoint
+      const response = await fetch('https://live.jetlearn.com/sync/login/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Cookie': 'sessionid=3rup33tegtbinw93t9x37wr0mob4drym'
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Check if the API response contains valid user data
+        if (data.session_id) {
+          // Store session_id for logout
+          setSessionId(data.session_id);
+          console.log('Session ID stored:', data.session_id);
+          
+          login({ 
+            email: data.email || username + '@jet-learn.com', 
+            name: data.username || username,
+            id: data.id || Date.now().toString(),
+            role: data.role || 'admin',
+            sessionId: data.session_id
+          });
+        } else {
+          setError('Invalid response from server. Please try again.');
+        }
       } else {
-        setError('Invalid credentials');
+        // Display error message from API
+        setError(data.message || 'Login failed. Please try again.');
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -81,6 +121,21 @@ const LoginPage = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Username */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <FaUser className="text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  required
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder-gray-500 text-sm"
+                />
+              </div>
+
               {/* Email */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -96,6 +151,8 @@ const LoginPage = () => {
                 />
               </div>
 
+
+
               {/* Password */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -107,14 +164,14 @@ const LoginPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
                   required
-                  className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder-gray-500 text-sm"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 placeholder-gray-500 text-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200 z-10"
                 >
-                  {showPassword ? <AiFillEyeInvisible /> : <AiFillEye />}
+                  {showPassword ? <AiFillEyeInvisible size={18} /> : <AiFillEye size={18} />}
                 </button>
               </div>
 
@@ -134,15 +191,17 @@ const LoginPage = () => {
                 )}
               </button>
 
+              
+
               {/* Forgot Password */}
-              <div className="text-center">
+              {/* <div className="text-center">
                 <button
                   type="button"
                   className="text-gray-600 hover:text-blue-600 text-sm"
                 >
                   Forgot Password
                 </button>
-              </div>
+              </div> */}
             </form>
           </div>
         </div>

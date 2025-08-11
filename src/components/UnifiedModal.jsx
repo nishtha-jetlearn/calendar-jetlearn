@@ -18,8 +18,8 @@ import { useDebounce } from "../hooks/useDebounce";
 const SUBJECTS = [
   { value: "maths", label: "Maths" },
   { value: "coding", label: "Coding" },
-  { value: "gcse", label: "GCSE" },
-  { value: "dutch", label: "Dutch" },
+  // { value: "gcse", label: "GCSE" },
+  // { value: "dutch", label: "Dutch" },
 ];
 
 const CLASS_TYPES = [

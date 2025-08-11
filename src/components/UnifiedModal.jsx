@@ -42,10 +42,10 @@ const CLASS_COUNTS = [
 ];
 
 const RECORDING_OPTIONS = [
-  { value: "record", label: "Record" },
-  { value: "do-not-record", label: "Do not Record" },
-  { value: "make-up-class", label: "Make Up Class" },
-  { value: "makeup-substitute", label: "Make Up - Substitute" },
+  { value: "", label: "Record" },
+  { value: "DNREC", label: "Do not Record" },
+  { value: "MAKE UP", label: "Make Up Class" },
+  { value: "MAKE UP - S", label: "Make Up - Substitute" },
 ];
 
 export const formatDate = (date) => {
@@ -220,7 +220,7 @@ const UnifiedModalComponent = function UnifiedModal({
         alert("Maximum 2 learners can be selected for 1:2 class type.");
         return;
       }
-      
+
       if (selectedStudents.length >= 10) {
         alert("Maximum 10 learners can be selected.");
         return;
@@ -313,10 +313,10 @@ const UnifiedModalComponent = function UnifiedModal({
         alert("Please fill in all required fields for paid booking.");
         return;
       }
-      
+
       // Validate batch number for batch class type
       if (selectedClassType === "batch" && !batchNumber.trim()) {
-        alert("Please enter a batch number for batch class type.");
+        alert("Please enter a batch Name for batch class type.");
         return;
       }
     }
@@ -342,7 +342,9 @@ const UnifiedModalComponent = function UnifiedModal({
           classType: selectedClassType,
           classCount: selectedClassCount,
           recording: selectedRecording,
-          ...(selectedClassType === "batch" && { batchNumber: batchNumber.trim() }),
+          ...(selectedClassType === "batch" && {
+            batchNumber: batchNumber.trim(),
+          }),
         }),
         ...(bookingType === "trial" && {
           classType: "1:1",
@@ -600,27 +602,27 @@ const UnifiedModalComponent = function UnifiedModal({
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
                           Date
                         </label>
-                                                 <input
-                           type="date"
-                           value={selectedScheduleDate}
-                           onChange={(e) =>
-                             setSelectedScheduleDate(e.target.value)
-                           }
-                           min={new Date().toISOString().split("T")[0]}
-                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                         />
+                        <input
+                          type="date"
+                          value={selectedScheduleDate}
+                          onChange={(e) =>
+                            setSelectedScheduleDate(e.target.value)
+                          }
+                          min={new Date().toISOString().split("T")[0]}
+                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
                           Time
                         </label>
-                                                 <select
-                           value={selectedScheduleTime}
-                           onChange={(e) =>
-                             setSelectedScheduleTime(e.target.value)
-                           }
-                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                         >
+                        <select
+                          value={selectedScheduleTime}
+                          onChange={(e) =>
+                            setSelectedScheduleTime(e.target.value)
+                          }
+                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        >
                           <option value="">Select time...</option>
                           {timeSlots.map((slot) => (
                             <option key={slot} value={slot}>
@@ -689,7 +691,8 @@ const UnifiedModalComponent = function UnifiedModal({
                     </div>
                     Selected Learners
                     <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                      {selectedStudents.length}/{selectedClassType === "1:2" ? "2" : "10"}
+                      {selectedStudents.length}/
+                      {selectedClassType === "1:2" ? "2" : "10"}
                     </span>
                   </h3>
 
@@ -701,27 +704,29 @@ const UnifiedModalComponent = function UnifiedModal({
                           size={14}
                           className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
                         />
-                                                 <input
-                           type="text"
-                           value={studentSearchTerm}
-                           onChange={(e) => setStudentSearchTerm(e.target.value)}
-                           placeholder="Search Learners..."
-                           className="w-full pl-8 pr-2.5 py-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-purple-500 focus:border-transparent"
-                         />
+                        <input
+                          type="text"
+                          value={studentSearchTerm}
+                          onChange={(e) => setStudentSearchTerm(e.target.value)}
+                          placeholder="Search Learners..."
+                          className="w-full pl-8 pr-2.5 py-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-purple-500 focus:border-transparent"
+                        />
                       </div>
 
                       {studentSearchTerm.trim() &&
                         filteredStudents.length > 0 && (
                           <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
                             {filteredStudents.slice(0, 10).map((student) => {
-                              const isLimitReached = selectedClassType === "1:2" && selectedStudents.length >= 2;
+                              const isLimitReached =
+                                selectedClassType === "1:2" &&
+                                selectedStudents.length >= 2;
                               return (
                                 <div
                                   key={student.id || student.jetlearner_id}
                                   onClick={() => addStudentToSelection(student)}
                                   className={`p-2 border-b border-gray-100 last:border-b-0 ${
-                                    isLimitReached 
-                                      ? "bg-gray-100 cursor-not-allowed opacity-60" 
+                                    isLimitReached
+                                      ? "bg-gray-100 cursor-not-allowed opacity-60"
                                       : "hover:bg-gray-50 cursor-pointer"
                                   }`}
                                 >
@@ -736,23 +741,29 @@ const UnifiedModalComponent = function UnifiedModal({
                                       </p>
                                       <p className="text-[10px] text-gray-500 truncate">
                                         {student.jetlearner_id}
-                                        {student.country && `•${student.country}`}
+                                        {student.country &&
+                                          `•${student.country}`}
                                       </p>
                                     </div>
                                     {isLimitReached && (
-                                      <FaExclamationTriangle size={10} className="text-amber-600" />
+                                      <FaExclamationTriangle
+                                        size={10}
+                                        className="text-amber-600"
+                                      />
                                     )}
                                   </div>
                                 </div>
                               );
                             })}
-                            {selectedClassType === "1:2" && selectedStudents.length >= 2 && (
-                              <div className="p-2 bg-amber-50 border-t border-amber-200">
-                                <p className="text-xs text-amber-800 text-center">
-                                  Maximum 2 learners reached for 1:2 class type
-                                </p>
-                              </div>
-                            )}
+                            {selectedClassType === "1:2" &&
+                              selectedStudents.length >= 2 && (
+                                <div className="p-2 bg-amber-50 border-t border-amber-200">
+                                  <p className="text-xs text-amber-800 text-center">
+                                    Maximum 2 learners reached for 1:2 class
+                                    type
+                                  </p>
+                                </div>
+                              )}
                           </div>
                         )}
                     </div>
@@ -806,18 +817,22 @@ const UnifiedModalComponent = function UnifiedModal({
                           </div>
                         )}
                     </div>
-                    
+
                     {/* Class Type Limit Warning */}
-                    {selectedClassType === "1:2" && selectedStudents.length >= 2 && (
-                      <div className="bg-amber-50 border border-amber-200 rounded p-2">
-                        <div className="flex items-center gap-1.5">
-                          <FaExclamationTriangle size={12} className="text-amber-600" />
-                          <span className="text-xs text-amber-800 font-medium">
-                            Maximum 2 learners allowed for 1:2 class type
-                          </span>
+                    {selectedClassType === "1:2" &&
+                      selectedStudents.length >= 2 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded p-2">
+                          <div className="flex items-center gap-1.5">
+                            <FaExclamationTriangle
+                              size={12}
+                              className="text-amber-600"
+                            />
+                            <span className="text-xs text-amber-800 font-medium">
+                              Maximum 2 learners allowed for 1:2 class type
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 </div>
               </div>
@@ -870,13 +885,13 @@ const UnifiedModalComponent = function UnifiedModal({
                       <label className="block text-xs font-medium text-gray-700 mb-0.5">
                         Credentials / Notes
                       </label>
-                                             <textarea
-                         value={platformCredentials}
-                         onChange={(e) => setPlatformCredentials(e.target.value)}
-                         placeholder="Enter platform credentials, notes, or any additional information..."
-                         rows={3}
-                         className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent resize-none"
-                       />
+                      <textarea
+                        value={platformCredentials}
+                        onChange={(e) => setPlatformCredentials(e.target.value)}
+                        placeholder="Enter platform credentials, notes, or any additional information..."
+                        rows={3}
+                        className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent resize-none"
+                      />
                     </div>
 
                     {/* Attendees with Email Validation */}
@@ -885,19 +900,19 @@ const UnifiedModalComponent = function UnifiedModal({
                         Attendees (Email ID)
                       </label>
                       <div className="relative">
-                                                 <input
-                           type="text"
-                           value={attendees}
-                           onChange={(e) =>
-                             handleAttendeesChange(e.target.value)
-                           }
-                           placeholder="Enter email addresses separated by commas or enter"
-                           className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
-                             attendeesError
-                               ? "border-red-300"
-                               : "border-gray-300"
-                           }`}
-                         />
+                        <input
+                          type="text"
+                          value={attendees}
+                          onChange={(e) =>
+                            handleAttendeesChange(e.target.value)
+                          }
+                          placeholder="Enter email addresses separated by commas or enter"
+                          className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
+                            attendeesError
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                        />
                         {attendeesError && (
                           <div className="flex items-center gap-1 mt-1 text-red-600">
                             <FaExclamationTriangle size={10} />
@@ -919,13 +934,13 @@ const UnifiedModalComponent = function UnifiedModal({
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Subject
                             </label>
-                                                         <select
-                               value={selectedSubject}
-                               onChange={(e) =>
-                                 setSelectedSubject(e.target.value)
-                               }
-                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
-                             >
+                            <select
+                              value={selectedSubject}
+                              onChange={(e) =>
+                                setSelectedSubject(e.target.value)
+                              }
+                              className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
+                            >
                               <option value="">Choose subject...</option>
                               {SUBJECTS.map((subject) => (
                                 <option
@@ -942,25 +957,33 @@ const UnifiedModalComponent = function UnifiedModal({
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Class Type
                             </label>
-                                                         <select
-                               value={selectedClassType}
-                               onChange={(e) => {
-                                 const newClassType = e.target.value;
-                                 // If switching to 1:2 and already have more than 2 students, show warning
-                                 if (newClassType === "1:2" && selectedStudents.length > 2) {
-                                   alert("Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2).");
-                                   return;
-                                 }
-                                 setSelectedClassType(newClassType);
-                               }}
-                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
-                             >
+                            <select
+                              value={selectedClassType}
+                              onChange={(e) => {
+                                const newClassType = e.target.value;
+                                // If switching to 1:2 and already have more than 2 students, show warning
+                                if (
+                                  newClassType === "1:2" &&
+                                  selectedStudents.length > 2
+                                ) {
+                                  alert(
+                                    "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2)."
+                                  );
+                                  return;
+                                }
+                                setSelectedClassType(newClassType);
+                              }}
+                              className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
+                            >
                               <option value="">Choose type...</option>
                               {CLASS_TYPES.map((type) => (
-                                <option 
-                                  key={type.value} 
+                                <option
+                                  key={type.value}
                                   value={type.value}
-                                  disabled={type.value === "1:2" && selectedStudents.length > 2}
+                                  disabled={
+                                    type.value === "1:2" &&
+                                    selectedStudents.length > 2
+                                  }
                                 >
                                   {type.label}
                                 </option>
@@ -972,28 +995,33 @@ const UnifiedModalComponent = function UnifiedModal({
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Classes
                             </label>
-                                                         <input
-                               type="number"
-                               value={selectedClassCount}
-                               onChange={(e) =>
-                                 setSelectedClassCount(e.target.value)
-                               }
-                               placeholder="Enter number of classes"
-                               className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent"
-                             />
+                            <input
+                              type="number"
+                              value={selectedClassCount}
+                              onChange={(e) =>
+                                setSelectedClassCount(e.target.value)
+                              }
+                              placeholder="Enter number of classes"
+                              className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent"
+                            />
                           </div>
 
                           <div>
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Add More Details
                             </label>
-                                                         <select
-                               value={selectedRecording}
-                               onChange={(e) =>
-                                 setSelectedRecording(e.target.value)
-                               }
-                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
-                             >
+                            <select
+                              multiple
+                              value={selectedRecording}
+                              onChange={(e) => {
+                                const values = Array.from(
+                                  e.target.selectedOptions,
+                                  (option) => option.value
+                                );
+                                setSelectedRecording(values);
+                              }}
+                              className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
+                            >
                               <option value="">Choose option...</option>
                               {RECORDING_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>
@@ -1007,13 +1035,13 @@ const UnifiedModalComponent = function UnifiedModal({
                           {selectedClassType === "batch" && (
                             <div className="col-span-2">
                               <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                                Batch No.
+                                Batch Name
                               </label>
                               <input
                                 type="text"
                                 value={batchNumber}
                                 onChange={(e) => setBatchNumber(e.target.value)}
-                                placeholder="Enter batch number"
+                                placeholder="Enter Batch Name"
                                 className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent"
                               />
                             </div>

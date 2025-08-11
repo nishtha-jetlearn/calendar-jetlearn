@@ -44,6 +44,8 @@ const CLASS_COUNTS = [
 const RECORDING_OPTIONS = [
   { value: "record", label: "Record" },
   { value: "do-not-record", label: "Do not Record" },
+  { value: "make-up-class", label: "Make Up Class" },
+  { value: "makeup-substitute", label: "Make Up - Substitute" },
 ];
 
 export const formatDate = (date) => {
@@ -83,6 +85,7 @@ const UnifiedModalComponent = function UnifiedModal({
   const [selectedClassType, setSelectedClassType] = useState("");
   const [selectedClassCount, setSelectedClassCount] = useState("");
   const [selectedRecording, setSelectedRecording] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
 
   // Enhanced booking form fields
   const [platformCredentials, setPlatformCredentials] = useState("");
@@ -212,6 +215,12 @@ const UnifiedModalComponent = function UnifiedModal({
     const studentId = student.jetlearner_id || student.id;
 
     if (!selectedStudents.some((s) => s.id === studentId)) {
+      // Check class type limits
+      if (selectedClassType === "1:2" && selectedStudents.length >= 2) {
+        alert("Maximum 2 learners can be selected for 1:2 class type.");
+        return;
+      }
+      
       if (selectedStudents.length >= 10) {
         alert("Maximum 10 learners can be selected.");
         return;
@@ -287,6 +296,12 @@ const UnifiedModalComponent = function UnifiedModal({
       return;
     }
 
+    // Validate class type limits
+    if (selectedClassType === "1:2" && selectedStudents.length > 2) {
+      alert("Maximum 2 learners can be selected for 1:2 class type.");
+      return;
+    }
+
     // For paid bookings, validate additional fields
     if (bookingType === "paid") {
       if (
@@ -296,6 +311,12 @@ const UnifiedModalComponent = function UnifiedModal({
         !selectedRecording
       ) {
         alert("Please fill in all required fields for paid booking.");
+        return;
+      }
+      
+      // Validate batch number for batch class type
+      if (selectedClassType === "batch" && !batchNumber.trim()) {
+        alert("Please enter a batch number for batch class type.");
         return;
       }
     }
@@ -321,6 +342,7 @@ const UnifiedModalComponent = function UnifiedModal({
           classType: selectedClassType,
           classCount: selectedClassCount,
           recording: selectedRecording,
+          ...(selectedClassType === "batch" && { batchNumber: batchNumber.trim() }),
         }),
         ...(bookingType === "trial" && {
           classType: "1:1",
@@ -339,6 +361,7 @@ const UnifiedModalComponent = function UnifiedModal({
     setSelectedClassType("");
     setSelectedClassCount("");
     setSelectedRecording("");
+    setBatchNumber("");
     setStudentSearchTerm("");
     setPlatformCredentials("");
     setAttendees("");
@@ -666,7 +689,7 @@ const UnifiedModalComponent = function UnifiedModal({
                     </div>
                     Selected Learners
                     <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                      {selectedStudents.length}/10
+                      {selectedStudents.length}/{selectedClassType === "1:2" ? "2" : "10"}
                     </span>
                   </h3>
 
@@ -690,29 +713,46 @@ const UnifiedModalComponent = function UnifiedModal({
                       {studentSearchTerm.trim() &&
                         filteredStudents.length > 0 && (
                           <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
-                            {filteredStudents.slice(0, 10).map((student) => (
-                              <div
-                                key={student.id || student.jetlearner_id}
-                                onClick={() => addStudentToSelection(student)}
-                                className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                              >
-                                <div className="flex items-center gap-1.5">
-                                  <FaGraduationCap
-                                    size={12}
-                                    className="text-purple-600"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-gray-900 truncate">
-                                      {student.deal_name || student.name}
-                                    </p>
-                                    <p className="text-[10px] text-gray-500 truncate">
-                                      {student.jetlearner_id}
-                                      {student.country && `•${student.country}`}
-                                    </p>
+                            {filteredStudents.slice(0, 10).map((student) => {
+                              const isLimitReached = selectedClassType === "1:2" && selectedStudents.length >= 2;
+                              return (
+                                <div
+                                  key={student.id || student.jetlearner_id}
+                                  onClick={() => addStudentToSelection(student)}
+                                  className={`p-2 border-b border-gray-100 last:border-b-0 ${
+                                    isLimitReached 
+                                      ? "bg-gray-100 cursor-not-allowed opacity-60" 
+                                      : "hover:bg-gray-50 cursor-pointer"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <FaGraduationCap
+                                      size={12}
+                                      className="text-purple-600"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-gray-900 truncate">
+                                        {student.deal_name || student.name}
+                                      </p>
+                                      <p className="text-[10px] text-gray-500 truncate">
+                                        {student.jetlearner_id}
+                                        {student.country && `•${student.country}`}
+                                      </p>
+                                    </div>
+                                    {isLimitReached && (
+                                      <FaExclamationTriangle size={10} className="text-amber-600" />
+                                    )}
                                   </div>
                                 </div>
+                              );
+                            })}
+                            {selectedClassType === "1:2" && selectedStudents.length >= 2 && (
+                              <div className="p-2 bg-amber-50 border-t border-amber-200">
+                                <p className="text-xs text-amber-800 text-center">
+                                  Maximum 2 learners reached for 1:2 class type
+                                </p>
                               </div>
-                            ))}
+                            )}
                           </div>
                         )}
                     </div>
@@ -766,6 +806,18 @@ const UnifiedModalComponent = function UnifiedModal({
                           </div>
                         )}
                     </div>
+                    
+                    {/* Class Type Limit Warning */}
+                    {selectedClassType === "1:2" && selectedStudents.length >= 2 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded p-2">
+                        <div className="flex items-center gap-1.5">
+                          <FaExclamationTriangle size={12} className="text-amber-600" />
+                          <span className="text-xs text-amber-800 font-medium">
+                            Maximum 2 learners allowed for 1:2 class type
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -892,14 +944,24 @@ const UnifiedModalComponent = function UnifiedModal({
                             </label>
                                                          <select
                                value={selectedClassType}
-                               onChange={(e) =>
-                                 setSelectedClassType(e.target.value)
-                               }
+                               onChange={(e) => {
+                                 const newClassType = e.target.value;
+                                 // If switching to 1:2 and already have more than 2 students, show warning
+                                 if (newClassType === "1:2" && selectedStudents.length > 2) {
+                                   alert("Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2).");
+                                   return;
+                                 }
+                                 setSelectedClassType(newClassType);
+                               }}
                                className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
                              >
                               <option value="">Choose type...</option>
                               {CLASS_TYPES.map((type) => (
-                                <option key={type.value} value={type.value}>
+                                <option 
+                                  key={type.value} 
+                                  value={type.value}
+                                  disabled={type.value === "1:2" && selectedStudents.length > 2}
+                                >
                                   {type.label}
                                 </option>
                               ))}
@@ -923,7 +985,7 @@ const UnifiedModalComponent = function UnifiedModal({
 
                           <div>
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                              Recording
+                              Add More Details
                             </label>
                                                          <select
                                value={selectedRecording}
@@ -940,6 +1002,22 @@ const UnifiedModalComponent = function UnifiedModal({
                               ))}
                             </select>
                           </div>
+
+                          {/* Batch Number Input - Only show when class type is Batch */}
+                          {selectedClassType === "batch" && (
+                            <div className="col-span-2">
+                              <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                                Batch No.
+                              </label>
+                              <input
+                                type="text"
+                                value={batchNumber}
+                                onChange={(e) => setBatchNumber(e.target.value)}
+                                placeholder="Enter batch number"
+                                className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

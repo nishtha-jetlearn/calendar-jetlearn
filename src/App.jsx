@@ -3712,7 +3712,7 @@ function App() {
                                                   Manage
                                                 </span>
                                               </button>
-                                              <button
+                                              {/* <button
                                                 onClick={() => {
                                                   // Extract time from the booking data
                                                   let timeSlot = "00:00";
@@ -3776,7 +3776,7 @@ function App() {
                                                 <span className="hidden sm:inline">
                                                   Cancel Availability
                                                 </span>
-                                              </button>
+                                              </button> */}
                                             </div>
                                           )}
                                         {extractedData.summary &&

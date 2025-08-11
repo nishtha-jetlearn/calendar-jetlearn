@@ -12,6 +12,8 @@ import {
   FaCalendarAlt,
   FaExclamationTriangle,
 } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { formatDisplayDate } from "../utils/dateUtils";
 import { useDebounce } from "../hooks/useDebounce";
 
@@ -42,7 +44,6 @@ const CLASS_COUNTS = [
 ];
 
 const RECORDING_OPTIONS = [
-  { value: "", label: "Record" },
   { value: "DNREC", label: "Do not Record" },
   { value: "MAKE UP", label: "Make Up Class" },
   { value: "MAKE UP - S", label: "Make Up - Substitute" },
@@ -51,7 +52,16 @@ const RECORDING_OPTIONS = [
 export const formatDate = (date) => {
   // Ensure date is a Date object
   const dateObj = date instanceof Date ? date : new Date(date);
-  return dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
+  const day = dateObj.getDate().toString().padStart(2, '0');
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+  const year = dateObj.getFullYear();
+  return `${day}-${month}-${year}`; // DD-MM-YYYY format
+};
+
+export const getDayName = (date) => {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[dateObj.getDay()];
 };
 const UnifiedModalComponent = function UnifiedModal({
   isOpen,
@@ -91,7 +101,7 @@ const UnifiedModalComponent = function UnifiedModal({
   const [platformCredentials, setPlatformCredentials] = useState("");
   const [attendees, setAttendees] = useState("");
   const [selectedScheduleDate, setSelectedScheduleDate] = useState(
-    formatDate(date)
+    new Date(date).toISOString().split("T")[0] // Keep YYYY-MM-DD for input
   );
   const [selectedScheduleTime, setSelectedScheduleTime] = useState(startTime);
 
@@ -195,7 +205,7 @@ const UnifiedModalComponent = function UnifiedModal({
 
     const newEntry = {
       id: Date.now(),
-      date: selectedScheduleDate,
+      date: formatDate(selectedScheduleDate),
       time: selectedScheduleTime,
     };
 
@@ -216,15 +226,52 @@ const UnifiedModalComponent = function UnifiedModal({
 
     if (!selectedStudents.some((s) => s.id === studentId)) {
       // Check class type limits
+      if (selectedClassType === "1:1" && selectedStudents.length >= 1) {
+        toast.warning("Maximum 1 learner can be selected for 1:1 class type.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        return;
+      }
+
       if (selectedClassType === "1:2" && selectedStudents.length >= 2) {
-        alert("Maximum 2 learners can be selected for 1:2 class type.");
+        toast.warning("Maximum 2 learners can be selected for 1:2 class type.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         return;
       }
 
       if (selectedStudents.length >= 10) {
-        alert("Maximum 10 learners can be selected.");
+        toast.warning("Maximum 10 learners can be selected.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         return;
       }
+      
+      // Success toast for adding student
+      toast.success(`${studentName} added successfully!`, {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      
       setSelectedStudents([
         ...selectedStudents,
         {
@@ -239,7 +286,19 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Remove student from selection
   const removeStudentFromSelection = (studentId) => {
+    const studentToRemove = selectedStudents.find((s) => s.id === studentId);
     setSelectedStudents(selectedStudents.filter((s) => s.id !== studentId));
+    
+    if (studentToRemove) {
+      toast.info(`${studentToRemove.name} removed from selection`, {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    }
   };
 
   const handleAddTeacher = () => {
@@ -265,7 +324,7 @@ const UnifiedModalComponent = function UnifiedModal({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [day, month, year] = selectedDate.split("-");
+    const [year, month, day] = selectedDate.split("-");
     const bookingDate = new Date(year, month - 1, day);
 
     if (bookingDate < today) {
@@ -296,11 +355,30 @@ const UnifiedModalComponent = function UnifiedModal({
       return;
     }
 
-    // Validate class type limits
-    if (selectedClassType === "1:2" && selectedStudents.length > 2) {
-      alert("Maximum 2 learners can be selected for 1:2 class type.");
-      return;
-    }
+         // Validate class type limits
+     if (selectedClassType === "1:1" && selectedStudents.length > 1) {
+       toast.error("Maximum 1 learner can be selected for 1:1 class type.", {
+         position: "top-right",
+         autoClose: 4000,
+         hideProgressBar: false,
+         closeOnClick: true,
+         pauseOnHover: true,
+         draggable: true,
+       });
+       return;
+     }
+
+     if (selectedClassType === "1:2" && selectedStudents.length > 2) {
+       toast.error("Maximum 2 learners can be selected for 1:2 class type.", {
+         position: "top-right",
+         autoClose: 4000,
+         hideProgressBar: false,
+         closeOnClick: true,
+         pauseOnHover: true,
+         draggable: true,
+       });
+       return;
+     }
 
     // For paid bookings, validate additional fields
     if (bookingType === "paid") {
@@ -446,398 +524,7 @@ const UnifiedModalComponent = function UnifiedModal({
 
           <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-              {/* Left Column - Teachers */}
-              {/* <div className="space-y-3"> */}
-              {/* Available Teachers */}
-              {/* <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200"> */}
-              {/* <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                  <div className="p-0.5 bg-green-100 rounded">
-                    <FaUsers size={14} className="text-green-600" />
-                  </div>
-                  AvailableTeachers
-                  <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                    {availableTeachers.length}
-                  </span>
-                </h3> */}
-
-              {/* <div className="space-y-1.5 max-h-28 overflow-y-auto mb-2">
-                  {availableTeachers.map(t => (
-                    <div key={t.id} className="bg-white rounded p-2 border border-green-200 shadow-sm hover:shadow-md transition-all duration-200">
-                      <div className="flex justify-between items-center gap-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                            <FaUserCheck size={10} className="text-green-600" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-xs text-gray-900 truncate">{t.full_name}</p>
-                            <p className="text-[10px] text-gray-600 flex items-center gap-0.5 truncate">
-                              <FaBook size={8} />
-                              {t.uid}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => onRemoveTeacher(t.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
-                        >
-                          <FaTrash size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div> */}
-
-              {/* Add Teacher Section */}
-              {/* <div className="space-y-1.5">
-                  <div className="relative">
-                    <FaSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={teacherSearchTerm}
-                      onChange={(e) => setTeacherSearchTerm(e.target.value)}
-                      placeholder="Search teachers to add..."
-                      className="w-full pl-8 pr-2.5 py-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {teacherSearchTerm.trim() && (
-                    <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
-                      {filteredUnassignedTeachers.map(t => (
-                        <div
-                          key={t.id}
-                          onClick={() => {
-                            setNewTeacherId(String(t.id));
-                            setTeacherSearchTerm('');
-                            handleAddTeacher();
-                          }}
-                          className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <FaUserCheck size={12} className="text-green-600" />
-                            <div>
-                              <p className="text-xs font-medium text-gray-900">{t.full_name}</p>
-                              <p className="text-[10px] text-gray-500">{t.uid}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {filteredUnassignedTeachers.length === 0 && (
-                        <div className="p-2 text-xs text-gray-500 text-center">No teachers found</div>
-                      )}
-                    </div>
-                  )}
-                </div> */}
-              {/* </div> */}
-
-              {/* Booked Students */}
-              {/* <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-3 border border-amber-200">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                  <div className="p-0.5 bg-amber-100 rounded">
-                    <FaClock size={14} className="text-amber-600" />
-                  </div>
-                  Booked Learner
-                  <span className="bg-amber-100 text-amber-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                    {bookedStudents.length}
-                  </span>
-                </h3>
-
-                <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                  {bookedStudents.map(s => (
-                    <div key={s.id} className="bg-white rounded p-2 border border-amber-200 shadow-sm hover:shadow-md transition-all duration-200">
-                      <div className="flex justify-between items-center gap-1.5">
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                          <div className="w-5 h-5 bg-amber-100 rounded-full flex items-center justify-center">
-                            <FaGraduationCap size={10} className="text-amber-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-xs text-gray-900 truncate">{s.name}</p>
-                            <p className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate">
-                              <FaUsers size={8} />
-                              Teacher : {getTeacherNameById(s.teacherId)}
-                            </p>
-                            {s.bookingType && (
-                              <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-full font-medium ${s.bookingType === 'paid' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                                {s.bookingType === 'paid' ? 'Paid' : 'Trial'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => onRemoveStudent(s.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
-                        >
-                          <FaTrash size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {bookedStudents.length === 0 && (
-                    <div className="text-center py-3 text-gray-500">
-                      <FaGraduationCap size={20} className="mx-auto mb-1 text-gray-300" />
-                      <p className="text-xs">No Learner booked yet</p>
-                    </div>
-                  )}
-                </div>
-              </div> */}
-              {/* </div> */}
-
-              {/* Middle Column - Schedule and Students */}
-              <div className="space-y-3">
-                {/* Schedule Section */}
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                    <div className="p-0.5 bg-blue-100 rounded">
-                      <FaCalendarAlt size={14} className="text-blue-600" />
-                    </div>
-                    Schedule
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                      {scheduleEntries.length}/3
-                    </span>
-                  </h3>
-
-                  <div className="space-y-2">
-                    {/* Schedule Entry Form */}
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Date
-                        </label>
-                        <input
-                          type="date"
-                          value={selectedScheduleDate}
-                          onChange={(e) =>
-                            setSelectedScheduleDate(e.target.value)
-                          }
-                          min={new Date().toISOString().split("T")[0]}
-                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Time
-                        </label>
-                        <select
-                          value={selectedScheduleTime}
-                          onChange={(e) =>
-                            setSelectedScheduleTime(e.target.value)
-                          }
-                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select time...</option>
-                          {timeSlots.map((slot) => (
-                            <option key={slot} value={slot}>
-                              {slot}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={addScheduleEntry}
-                      disabled={
-                        !selectedScheduleDate ||
-                        !selectedScheduleTime ||
-                        scheduleEntries.length >= 3
-                      }
-                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-2 rounded hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
-                    >
-                      <FaPlus size={12} />
-                      Add Schedule Entry {scheduleEntries.length}/3
-                    </button>
-
-                    {/* Schedule Entries List */}
-                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                      {scheduleEntries.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="bg-white rounded p-2 border border-blue-200 shadow-sm flex justify-between items-center"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <FaCalendarAlt
-                              size={12}
-                              className="text-blue-600"
-                            />
-                            <span className="text-xs font-medium text-gray-900">
-                              {entry.date} at {entry.time}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => removeScheduleEntry(entry.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
-                          >
-                            <FaTrash size={10} />
-                          </button>
-                        </div>
-                      ))}
-                      {scheduleEntries.length === 0 && (
-                        <div className="text-center py-2 text-gray-500">
-                          <FaCalendarAlt
-                            size={16}
-                            className="mx-auto mb-1 text-gray-300"
-                          />
-                          <p className="text-xs">No schedule entries added</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Student Selection */}
-                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                    <div className="p-0.5 bg-purple-100 rounded">
-                      <FaGraduationCap size={14} className="text-purple-600" />
-                    </div>
-                    Selected Learners
-                    <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                      {selectedStudents.length}/
-                      {selectedClassType === "1:2" ? "2" : "10"}
-                    </span>
-                  </h3>
-
-                  <div className="space-y-2">
-                    {/* Student Search */}
-                    <div className="space-y-1.5">
-                      <div className="relative">
-                        <FaSearch
-                          size={14}
-                          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
-                        <input
-                          type="text"
-                          value={studentSearchTerm}
-                          onChange={(e) => setStudentSearchTerm(e.target.value)}
-                          placeholder="Search Learners..."
-                          className="w-full pl-8 pr-2.5 py-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-purple-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      {studentSearchTerm.trim() &&
-                        filteredStudents.length > 0 && (
-                          <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
-                            {filteredStudents.slice(0, 10).map((student) => {
-                              const isLimitReached =
-                                selectedClassType === "1:2" &&
-                                selectedStudents.length >= 2;
-                              return (
-                                <div
-                                  key={student.id || student.jetlearner_id}
-                                  onClick={() => addStudentToSelection(student)}
-                                  className={`p-2 border-b border-gray-100 last:border-b-0 ${
-                                    isLimitReached
-                                      ? "bg-gray-100 cursor-not-allowed opacity-60"
-                                      : "hover:bg-gray-50 cursor-pointer"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-1.5">
-                                    <FaGraduationCap
-                                      size={12}
-                                      className="text-purple-600"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-medium text-gray-900 truncate">
-                                        {student.deal_name || student.name}
-                                      </p>
-                                      <p className="text-[10px] text-gray-500 truncate">
-                                        {student.jetlearner_id}
-                                        {student.country &&
-                                          `•${student.country}`}
-                                      </p>
-                                    </div>
-                                    {isLimitReached && (
-                                      <FaExclamationTriangle
-                                        size={10}
-                                        className="text-amber-600"
-                                      />
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            {selectedClassType === "1:2" &&
-                              selectedStudents.length >= 2 && (
-                                <div className="p-2 bg-amber-50 border-t border-amber-200">
-                                  <p className="text-xs text-amber-800 text-center">
-                                    Maximum 2 learners reached for 1:2 class
-                                    type
-                                  </p>
-                                </div>
-                              )}
-                          </div>
-                        )}
-                    </div>
-
-                    {/* Manual Student Entry */}
-                    {/* <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Manual Entry</label>
-                    <input
-                      type="text"
-                      value={studentName}
-                      onChange={(e) => setStudentName(e.target.value)}
-                      placeholder="Enter learner name manually"
-                      className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div> */}
-
-                    {/* Selected Students List */}
-                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                      {selectedStudents.map((student) => (
-                        <div
-                          key={student.id}
-                          className="bg-white rounded p-2 border border-purple-200 shadow-sm flex justify-between items-center"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <FaGraduationCap
-                              size={12}
-                              className="text-purple-600"
-                            />
-                            <span className="text-xs font-medium text-gray-900 truncate">
-                              {student.name}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() =>
-                              removeStudentFromSelection(student.id)
-                            }
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
-                          >
-                            <FaTrash size={10} />
-                          </button>
-                        </div>
-                      ))}
-                      {selectedStudents.length === 0 &&
-                        studentName.trim() === "" && (
-                          <div className="text-center py-2 text-gray-500">
-                            <FaGraduationCap
-                              size={16}
-                              className="mx-auto mb-1 text-gray-300"
-                            />
-                            <p className="text-xs">No learners selected</p>
-                          </div>
-                        )}
-                    </div>
-
-                    {/* Class Type Limit Warning */}
-                    {selectedClassType === "1:2" &&
-                      selectedStudents.length >= 2 && (
-                        <div className="bg-amber-50 border border-amber-200 rounded p-2">
-                          <div className="flex items-center gap-1.5">
-                            <FaExclamationTriangle
-                              size={12}
-                              className="text-amber-600"
-                            />
-                            <span className="text-xs text-amber-800 font-medium">
-                              Maximum 2 learners allowed for 1:2 class type
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column - Booking Details */}
+              {/* Left Column - Booking Details */}
               <div className="space-y-3">
                 {/* Book New Student */}
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
@@ -959,20 +646,55 @@ const UnifiedModalComponent = function UnifiedModal({
                             </label>
                             <select
                               value={selectedClassType}
-                              onChange={(e) => {
-                                const newClassType = e.target.value;
-                                // If switching to 1:2 and already have more than 2 students, show warning
-                                if (
-                                  newClassType === "1:2" &&
-                                  selectedStudents.length > 2
-                                ) {
-                                  alert(
-                                    "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2)."
-                                  );
-                                  return;
-                                }
-                                setSelectedClassType(newClassType);
-                              }}
+                                                             onChange={(e) => {
+                                 const newClassType = e.target.value;
+                                 // If switching to 1:1 and already have more than 1 student, show warning
+                                 if (
+                                   newClassType === "1:1" &&
+                                   selectedStudents.length > 1
+                                 ) {
+                                   toast.error(
+                                     "Cannot switch to 1:1 class type. Please remove some learners first (maximum 1 allowed for 1:1).", {
+                                       position: "top-right",
+                                       autoClose: 4000,
+                                       hideProgressBar: false,
+                                       closeOnClick: true,
+                                       pauseOnHover: true,
+                                       draggable: true,
+                                     }
+                                   );
+                                   return;
+                                 }
+                                 // If switching to 1:2 and already have more than 2 students, show warning
+                                 if (
+                                   newClassType === "1:2" &&
+                                   selectedStudents.length > 2
+                                 ) {
+                                   toast.error(
+                                     "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2).", {
+                                       position: "top-right",
+                                       autoClose: 4000,
+                                       hideProgressBar: false,
+                                       closeOnClick: true,
+                                       pauseOnHover: true,
+                                       draggable: true,
+                                     }
+                                   );
+                                   return;
+                                 }
+                                 
+                                 // Success toast for class type change
+                                 toast.info(`Class type changed to ${newClassType}`, {
+                                   position: "top-right",
+                                   autoClose: 2000,
+                                   hideProgressBar: false,
+                                   closeOnClick: true,
+                                   pauseOnHover: true,
+                                   draggable: true,
+                                 });
+                                 
+                                 setSelectedClassType(newClassType);
+                               }}
                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
                             >
                               <option value="">Choose type...</option>
@@ -981,8 +703,10 @@ const UnifiedModalComponent = function UnifiedModal({
                                   key={type.value}
                                   value={type.value}
                                   disabled={
-                                    type.value === "1:2" &&
-                                    selectedStudents.length > 2
+                                    (type.value === "1:1" &&
+                                      selectedStudents.length > 1) ||
+                                    (type.value === "1:2" &&
+                                      selectedStudents.length > 2)
                                   }
                                 >
                                   {type.label}
@@ -1011,15 +735,8 @@ const UnifiedModalComponent = function UnifiedModal({
                               Add More Details
                             </label>
                             <select
-                              multiple
                               value={selectedRecording}
-                              onChange={(e) => {
-                                const values = Array.from(
-                                  e.target.selectedOptions,
-                                  (option) => option.value
-                                );
-                                setSelectedRecording(values);
-                              }}
+                              onChange={(e) => setSelectedRecording(e.target.value)}
                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
                             >
                               <option value="">Choose option...</option>
@@ -1075,10 +792,242 @@ const UnifiedModalComponent = function UnifiedModal({
                   </div>
                 </div>
               </div>
+
+              {/* Right Column - Schedule and Students */}
+              <div className="space-y-3">
+                {/* Schedule Section */}
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-blue-100 rounded">
+                      <FaCalendarAlt size={14} className="text-blue-600" />
+                    </div>
+                    Schedule
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
+                      {scheduleEntries.length}/3
+                    </span>
+                  </h3>
+
+                  <div className="space-y-2">
+                    {/* Schedule Entry Form */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedScheduleDate}
+                          onChange={(e) =>
+                            setSelectedScheduleDate(e.target.value)
+                          }
+                          min={new Date().toISOString().split("T")[0]}
+                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Time
+                        </label>
+                        <select
+                          value={selectedScheduleTime}
+                          onChange={(e) =>
+                            setSelectedScheduleTime(e.target.value)
+                          }
+                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select time...</option>
+                          {timeSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={addScheduleEntry}
+                      disabled={
+                        !selectedScheduleDate ||
+                        !selectedScheduleTime ||
+                        scheduleEntries.length >= 3
+                      }
+                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-2 rounded hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
+                    >
+                      <FaPlus size={12} />
+                      Add Schedule Entry {scheduleEntries.length}/3
+                    </button>
+
+                    {/* Schedule Entries List */}
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {scheduleEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="bg-white rounded p-2 border border-blue-200 shadow-sm flex justify-between items-center"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <FaCalendarAlt
+                              size={12}
+                              className="text-blue-600"
+                            />
+                            <span className="text-xs font-medium text-gray-900">
+                              {entry.date} ({getDayName(entry.date)}) at {entry.time}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => removeScheduleEntry(entry.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
+                          >
+                            <FaTrash size={10} />
+                          </button>
+                        </div>
+                      ))}
+                      {scheduleEntries.length === 0 && (
+                        <div className="text-center py-2 text-gray-500">
+                          <FaCalendarAlt
+                            size={16}
+                            className="mx-auto mb-1 text-gray-300"
+                          />
+                          <p className="text-xs">No schedule entries added</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Student Selection */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-purple-100 rounded">
+                      <FaGraduationCap size={14} className="text-purple-600" />
+                    </div>
+                    Selected Learners
+                                         <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
+                       {selectedStudents.length}/
+                       {selectedClassType === "1:1" ? "1" : selectedClassType === "1:2" ? "2" : "10"}
+                     </span>
+                  </h3>
+
+                  <div className="space-y-2">
+                    {/* Student Search */}
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <FaSearch
+                          size={14}
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+                        <input
+                          type="text"
+                          value={studentSearchTerm}
+                          onChange={(e) => setStudentSearchTerm(e.target.value)}
+                          placeholder="Search Learners..."
+                          className="w-full pl-8 pr-2.5 py-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {studentSearchTerm.trim() &&
+                        filteredStudents.length > 0 && (
+                          <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
+                                                         {filteredStudents.slice(0, 10).map((student) => {
+                               const isLimitReached =
+                                 (selectedClassType === "1:1" &&
+                                   selectedStudents.length >= 1) ||
+                                 (selectedClassType === "1:2" &&
+                                   selectedStudents.length >= 2);
+                               return (
+                                <div
+                                  key={student.id || student.jetlearner_id}
+                                  onClick={() => addStudentToSelection(student)}
+                                  className={`p-2 border-b border-gray-100 last:border-b-0 ${
+                                    isLimitReached
+                                      ? "bg-gray-100 cursor-not-allowed opacity-60"
+                                      : "hover:bg-gray-50 cursor-pointer"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <FaGraduationCap
+                                      size={12}
+                                      className="text-purple-600"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-gray-900 truncate">
+                                        {student.deal_name || student.name}
+                                      </p>
+                                      <p className="text-[10px] text-gray-500 truncate">
+                                        {student.jetlearner_id}
+                                        {student.country &&
+                                          `•${student.country}`}
+                                      </p>
+                                    </div>
+                                    
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Manual Student Entry */}
+                    {/* <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-0.5">Manual Entry</label>
+                    <input
+                      type="text"
+                      value={studentName}
+                      onChange={(e) => setStudentName(e.target.value)}
+                      placeholder="Enter learner name manually"
+                      className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div> */}
+
+                    {/* Selected Students List */}
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {selectedStudents.map((student) => (
+                        <div
+                          key={student.id}
+                          className="bg-white rounded p-2 border border-purple-200 shadow-sm flex justify-between items-center"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <FaGraduationCap
+                              size={12}
+                              className="text-purple-600"
+                            />
+                            <span className="text-xs font-medium text-gray-900 truncate">
+                              {student.name}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() =>
+                              removeStudentFromSelection(student.id)
+                            }
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
+                          >
+                            <FaTrash size={10} />
+                          </button>
+                        </div>
+                      ))}
+                      {selectedStudents.length === 0 &&
+                        studentName.trim() === "" && (
+                          <div className="text-center py-2 text-gray-500">
+                            <FaGraduationCap
+                              size={16}
+                              className="mx-auto mb-1 text-gray-300"
+                            />
+                            <p className="text-xs">No learners selected</p>
+                          </div>
+                        )}
+                    </div>
+
+                    
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

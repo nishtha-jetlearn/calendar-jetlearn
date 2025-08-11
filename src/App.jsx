@@ -216,7 +216,7 @@ function App() {
 
   // State for timezones
   const [timezones, setTimezones] = useState([]);
-  const [selectedTimezone, setSelectedTimezone] = useState("(GMT+00:00) UTC");
+  const [selectedTimezone, setSelectedTimezone] = useState("(GMT+02:00) CET");
 
   // State for students from API
   const [students, setStudents] = useState([]);
@@ -395,14 +395,14 @@ function App() {
           // Set a default selected timezone if it exists in the fetched list
           if (data.length > 0) {
             // Find UTC timezone in the list (could be "UTC" or "(GMT+00:00) UTC")
-            const utcTimezone = data.find(
+            const CETTimezone = data.find(
               (tz) =>
-                tz === "UTC" ||
-                tz === "(GMT+00:00) UTC" ||
-                (tz.includes("UTC") && tz.includes("GMT+00:00"))
+                tz === "CET" ||
+                tz === "(GMT+02:00) CET" ||
+                (tz.includes("CET") && tz.includes("GMT+"))
             );
-            if (utcTimezone) {
-              setSelectedTimezone(utcTimezone);
+            if (CETTimezone) {
+              setSelectedTimezone(CETTimezone);
             } else {
               // Fallback to first timezone if UTC not found
               setSelectedTimezone(data[0]);
@@ -976,8 +976,11 @@ function App() {
       setMonthRange(range);
       console.log("getCurrentMonthRange", getCurrentMonthRange());
 
-      const startDate = range.startOfMonth;
+      // const startDate = range.startOfMonth;
       const endDate = range.endOfMonth;
+      const weekDates = getWeekDates(currentWeekStart);
+      const startDate = formatDate(weekDates[0]);
+      // const endDate = formatDate(weekDates[6]);
 
       const formData = new URLSearchParams();
       formData.append("start_date", startDate);
@@ -1293,6 +1296,8 @@ function App() {
         classType: bookingData.classType,
         classCount: bookingData.classCount,
         recording: bookingData.recording,
+        batch_name: bookingData.batchNumber,
+        tags: bookingData.recording,
       }),
       ...(bookingData.bookingType === "trial" && {
         classType: "1:1",
@@ -1333,22 +1338,24 @@ function App() {
           ...(bookingData.bookingType === "paid" && {
             course: bookingData.subject,
             recording: recording,
+            batch_name: bookingData.batchNumber,
+            tags: bookingData.recording,
           }),
         };
 
         console.log("📤 Sending booking to API:", apiPayload);
 
         // TODO: Implement actual API call to https://live.jetlearn.com/api/book-class
-        // const response = await fetch(
-        //   "https://live.jetlearn.com/api/book-class/",
-        //   {
-        //     method: "POST",
-        //     headers: {
-        //       "Content-Type": "application/json",
-        //     },
-        //     body: JSON.stringify(apiPayload),
-        //   }
-        // );
+        const response = await fetch(
+          "https://live.jetlearn.com/api/book-class/",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(apiPayload),
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`API call failed: ${response.status}`);
@@ -2876,8 +2883,12 @@ function App() {
                     Cancelled by Parent - Unplanned leave - within 48 hours
                   </option>
                   <option value="CBO">Cancelled by Ops</option>
-                  <option value="NO SHOW - LR">NO SHOW - LR	No show by Learner</option>
-                  <option value="NO SHOW - TR">NO SHOW - TR	No show by Teacher</option>
+                  <option value="NO SHOW - LR">
+                    NO SHOW - LR No show by Learner
+                  </option>
+                  <option value="NO SHOW - TR">
+                    NO SHOW - TR No show by Teacher
+                  </option>
                 </select>
               </div>
             </div>
@@ -3190,16 +3201,16 @@ function App() {
                 <FaUserCheck size={10} className="text-white" />
                 <span className="text-white">Hi,</span>
                 <span className="bg-blue-500 px-1 py-0.5 rounded text-xs">
-                  {user?.name || user?.email || 'User'}
+                  {user?.name || user?.email || "User"}
                 </span>
-              <button
-                onClick={logout}
-                className="flex items-center gap-1 px-1 sm:px-2 py-0.5 sm:py-1 bg-red-500 hover:bg-red-400 text-white rounded text-xs transition-all duration-200"
-                title="Logout"
-              >
-                <FaSignOutAlt size={10} />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1 px-1 sm:px-2 py-0.5 sm:py-1 bg-red-500 hover:bg-red-400 text-white rounded text-xs transition-all duration-200"
+                  title="Logout"
+                >
+                  <FaSignOutAlt size={10} />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
               </div>
             </div>
           </div>
@@ -3590,26 +3601,56 @@ function App() {
                                                     .includes("off"))
                                               ? "bg-yellow-500"
                                               : extractedData.summary &&
-                                                (extractedData.summary.trim() === "B&R" ||
-                                                  extractedData.summary.trim() === "CBT/PL" ||
-                                                  extractedData.summary.trim() === "CBT/UL" ||
-                                                  extractedData.summary.trim() === "CBP/PL" ||
-                                                  extractedData.summary.trim() === "CBP/UL" ||
-                                                  extractedData.summary.trim() === "CBO" ||
-                                                  extractedData.summary.trim() === "NO SHOW - LR" ||
-                                                  extractedData.summary.trim() === "NO SHOW - TR" ||
-                                                  extractedData.summary.trim() === "MAKE UP" ||
-                                                  extractedData.summary.trim() === "MAKE UP - S" ||
-                                                  extractedData.summary.includes("B&R") ||
-                                                  extractedData.summary.includes("CBT/PL") ||
-                                                  extractedData.summary.includes("CBT/UL") ||
-                                                  extractedData.summary.includes("CBP/PL") ||
-                                                  extractedData.summary.includes("CBP/UL") ||
-                                                  extractedData.summary.includes("CBO") ||
-                                                  extractedData.summary.includes("NO SHOW - LR") ||
-                                                  extractedData.summary.includes("NO SHOW - TR") ||
-                                                  extractedData.summary.includes("MAKE UP") ||
-                                                  extractedData.summary.includes("MAKE UP - S"))
+                                                (extractedData.summary.trim() ===
+                                                  "B&R" ||
+                                                  extractedData.summary.trim() ===
+                                                    "CBT/PL" ||
+                                                  extractedData.summary.trim() ===
+                                                    "CBT/UL" ||
+                                                  extractedData.summary.trim() ===
+                                                    "CBP/PL" ||
+                                                  extractedData.summary.trim() ===
+                                                    "CBP/UL" ||
+                                                  extractedData.summary.trim() ===
+                                                    "CBO" ||
+                                                  extractedData.summary.trim() ===
+                                                    "NO SHOW - LR" ||
+                                                  extractedData.summary.trim() ===
+                                                    "NO SHOW - TR" ||
+                                                  extractedData.summary.trim() ===
+                                                    "MAKE UP" ||
+                                                  extractedData.summary.trim() ===
+                                                    "MAKE UP - S" ||
+                                                  extractedData.summary.includes(
+                                                    "B&R"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBT/PL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBT/UL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBP/PL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBP/UL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBO"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "NO SHOW - LR"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "NO SHOW - TR"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "MAKE UP"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "MAKE UP - S"
+                                                  ))
                                               ? "bg-black"
                                               : "bg-red-500"
                                           }`}
@@ -3799,26 +3840,56 @@ function App() {
                                             <div className="flex items-center gap-2 ml-3">
                                               {/* Cancel/No show button - only show for non-black-dot statuses */}
                                               {!(
-                                                extractedData.summary.trim() === "B&R" ||
-                                                extractedData.summary.trim() === "CBT/PL" ||
-                                                extractedData.summary.trim() === "CBT/UL" ||
-                                                extractedData.summary.trim() === "CBP/PL" ||
-                                                extractedData.summary.trim() === "CBP/UL" ||
-                                                extractedData.summary.trim() === "CBO" ||
-                                                extractedData.summary.trim() === "NO SHOW - LR" ||
-                                                extractedData.summary.trim() === "NO SHOW - TR" ||
-                                                extractedData.summary.trim() === "MAKE UP" ||
-                                                extractedData.summary.trim() === "MAKE UP - S" ||
-                                                extractedData.summary.includes("B&R") ||
-                                                extractedData.summary.includes("CBT/PL") ||
-                                                extractedData.summary.includes("CBT/UL") ||
-                                                extractedData.summary.includes("CBP/PL") ||
-                                                extractedData.summary.includes("CBP/UL") ||
-                                                extractedData.summary.includes("CBO") ||
-                                                extractedData.summary.includes("NO SHOW - LR") ||
-                                                extractedData.summary.includes("NO SHOW - TR") ||
-                                                extractedData.summary.includes("MAKE UP") ||
-                                                extractedData.summary.includes("MAKE UP - S")
+                                                extractedData.summary.trim() ===
+                                                  "B&R" ||
+                                                extractedData.summary.trim() ===
+                                                  "CBT/PL" ||
+                                                extractedData.summary.trim() ===
+                                                  "CBT/UL" ||
+                                                extractedData.summary.trim() ===
+                                                  "CBP/PL" ||
+                                                extractedData.summary.trim() ===
+                                                  "CBP/UL" ||
+                                                extractedData.summary.trim() ===
+                                                  "CBO" ||
+                                                extractedData.summary.trim() ===
+                                                  "NO SHOW - LR" ||
+                                                extractedData.summary.trim() ===
+                                                  "NO SHOW - TR" ||
+                                                extractedData.summary.trim() ===
+                                                  "MAKE UP" ||
+                                                extractedData.summary.trim() ===
+                                                  "MAKE UP - S" ||
+                                                extractedData.summary.includes(
+                                                  "B&R"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBT/PL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBT/UL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBP/PL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBP/UL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBO"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "NO SHOW - LR"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "NO SHOW - TR"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "MAKE UP"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "MAKE UP - S"
+                                                )
                                               ) && (
                                                 <button
                                                   onClick={() => {
@@ -3889,11 +3960,11 @@ function App() {
                                                     className="sm:w-3 sm:h-3"
                                                   />
                                                   <span className="hidden sm:inline">
-                                                  Cancel/No show
+                                                    Cancel/No show
                                                   </span>
                                                 </button>
                                               )}
-                                              
+
                                               {/* Reschedule button - show for all statuses */}
                                               <button
                                                 onClick={() => {

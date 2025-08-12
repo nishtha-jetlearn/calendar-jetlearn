@@ -1352,9 +1352,15 @@ function App() {
       bookingData.schedule.length > 0
     ) {
       try {
-        const attendeeslist = bookingData.attendees && bookingData.attendees.trim() ? bookingData.attendees.trim().split(",") : [];
+        const attendeeslist =
+          bookingData.attendees && bookingData.attendees.trim()
+            ? bookingData.attendees.trim().split(",")
+            : [];
         console.log(attendeeslist);
-        const taglist = bookingData.recording && bookingData.recording.trim() ? bookingData.recording.trim().split(",") : [];
+        const taglist =
+          bookingData.recording && bookingData.recording.trim()
+            ? bookingData.recording.trim().split(",")
+            : [];
         console.log("taglist", taglist);
 
         const apiPayload = {
@@ -1400,7 +1406,7 @@ function App() {
 
         const result = await response.json();
         console.log("✅ Booking API response:", result);
-        
+
         // Check if booking was successful
         if (result.status === "success") {
           // Show success message
@@ -1409,7 +1415,22 @@ function App() {
             message: "Booking Successfully Done !!",
             type: "booking",
           });
-          
+          //
+          const res = await fetch(
+            "https://live.jetlearn.com/sync/sync-teachers-events/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                calendar_id: selectedTeacher.email,
+              }).toString(),
+            }
+          );
+          const resjson = await res.json();
+          console.log("✅ Sync Teacher events API response:", resjson);
+
           // Close the modal after a short delay
           setTimeout(() => {
             setModalOpen(false);
@@ -1952,17 +1973,32 @@ function App() {
         // Determine message type based on reason
         const isNoShow = reason.includes("NO SHOW");
         const messageType = isNoShow ? "no-show" : "cancel";
-        const messageText = isNoShow 
-          ? "No Show Successfully Recorded !!" 
+        const messageText = isNoShow
+          ? "No Show Successfully Recorded !!"
           : "Booking Successfully Cancelled !!";
-        
+
         // Show success message
         setSuccessMessage({
           show: true,
           message: messageText,
           type: messageType,
         });
-        
+        // sync teacher calendar
+        const res = await fetch(
+          "https://live.jetlearn.com/sync/sync-teachers-events/",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              calendar_id: selectedTeacher.email,
+            }).toString(),
+          }
+        );
+        const resjson = await res.json();
+        console.log("✅ Sync Teacher events API response:", resjson);
+
         // Close the cancel popup after a short delay
         setTimeout(() => {
           setCancelPopup({
@@ -2380,7 +2416,9 @@ function App() {
 
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
-        <div className={`${getMessageColor()} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-sm`}>
+        <div
+          className={`${getMessageColor()} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-sm`}
+        >
           {getIcon()}
           <div>
             <p className="font-semibold text-sm">{successMessage.message}</p>

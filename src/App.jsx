@@ -305,6 +305,13 @@ function App() {
   // Add mobile sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // New state for success messages
+  const [successMessage, setSuccessMessage] = useState({
+    show: false,
+    message: "",
+    type: "", // 'booking', 'cancel', 'no-show'
+  });
+
   // Update popup pagination when details popup changes
   useEffect(() => {
     if (detailsPopup.isOpen) {
@@ -1391,6 +1398,26 @@ function App() {
 
         const result = await response.json();
         console.log("✅ Booking API response:", result);
+        
+        // Check if booking was successful
+        if (result.status === "success") {
+          // Show success message
+          setSuccessMessage({
+            show: true,
+            message: "Booking Successfully Done !!",
+            type: "booking",
+          });
+          
+          // Close the modal after a short delay
+          setTimeout(() => {
+            setModalOpen(false);
+            setSuccessMessage({
+              show: false,
+              message: "",
+              type: "",
+            });
+          }, 2000);
+        }
       } catch (error) {
         console.error("❌ Error sending booking to API:", error);
         alert("Failed to send booking to API. Please try again.");
@@ -1918,11 +1945,44 @@ function App() {
       const result = await response.json();
       console.log("✅ Booking canceled successfully:", result);
 
+      // Check if cancellation was successful
+      if (result.status === "success") {
+        // Determine message type based on reason
+        const isNoShow = reason.includes("NO SHOW");
+        const messageType = isNoShow ? "no-show" : "cancel";
+        const messageText = isNoShow 
+          ? "No Show Successfully Recorded !!" 
+          : "Booking Successfully Cancelled !!";
+        
+        // Show success message
+        setSuccessMessage({
+          show: true,
+          message: messageText,
+          type: messageType,
+        });
+        
+        // Close the cancel popup after a short delay
+        setTimeout(() => {
+          setCancelPopup({
+            isOpen: false,
+            type: null,
+            data: null,
+            date: null,
+            time: null,
+            reason: "",
+            studentDetails: null,
+            teacherDetails: null,
+          });
+          setSuccessMessage({
+            show: false,
+            message: "",
+            type: "",
+          });
+        }, 2000);
+      }
+
       // Refresh the data after canceling
       await fetchListViewBookingDetails();
-
-      // Show success message
-      // alert("Booking canceled successfully!");
     } catch (error) {
       console.error("❌ Error canceling booking:", error);
       // alert("Failed to cancel booking. Please try again.");
@@ -2268,6 +2328,62 @@ function App() {
         >
           <FaChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
+      </div>
+    );
+  };
+
+  // Success Message Component
+  const SuccessMessage = () => {
+    if (!successMessage.show) return null;
+
+    // Auto-hide success message after 3 seconds
+    React.useEffect(() => {
+      if (successMessage.show) {
+        const timer = setTimeout(() => {
+          setSuccessMessage({
+            show: false,
+            message: "",
+            type: "",
+          });
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }, [successMessage.show]);
+
+    const getMessageColor = () => {
+      switch (successMessage.type) {
+        case "booking":
+          return "bg-green-500";
+        case "cancel":
+          return "bg-orange-500";
+        case "no-show":
+          return "bg-red-500";
+        default:
+          return "bg-blue-500";
+      }
+    };
+
+    const getIcon = () => {
+      switch (successMessage.type) {
+        case "booking":
+          return <FaCheckCircle size={20} />;
+        case "cancel":
+          return <FaTimes size={20} />;
+        case "no-show":
+          return <FaExclamationTriangle size={20} />;
+        default:
+          return <FaCheckCircle size={20} />;
+      }
+    };
+
+    return (
+      <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
+        <div className={`${getMessageColor()} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-sm`}>
+          {getIcon()}
+          <div>
+            <p className="font-semibold text-sm">{successMessage.message}</p>
+          </div>
+        </div>
       </div>
     );
   };
@@ -4366,6 +4482,7 @@ function App() {
 
       <DetailsPopup />
       <CancelPopup />
+      <SuccessMessage />
     </div>
   );
 }

@@ -3994,7 +3994,7 @@ function App() {
                                               )}
 
                                               {/* Reschedule button - show for all statuses */}
-                                              <button
+                                              {/* <button
                                                 onClick={() => {
                                                   // Extract time from the booking data
                                                   let timeSlot = "00:00";
@@ -4038,7 +4038,7 @@ function App() {
                                                 <span className="hidden sm:inline">
                                                   Reschedule
                                                 </span>
-                                              </button>
+                                              </button> */}
                                             </div>
                                           )}
                                       </div>

@@ -1383,6 +1383,7 @@ function App() {
             recording: taglist,
             batch_name: bookingData.batchNumber || "",
             tags: taglist,
+            updated_by: user?.email,
           }),
         };
 
@@ -1957,6 +1958,7 @@ function App() {
             tlid: tl_id[0],
             summary: bookingData.summary,
             cancellation_type: reason,
+            updated_by: user?.email,
           }),
         }
       );

@@ -1276,8 +1276,10 @@ function App() {
   ) => {
     if (!selectedSlot) return;
     const dateStr = formatDate(selectedSlot.date);
-    console.log("selectedStudent" + selectedStudents);
-    console.log("Booking Data " + JSON.stringify(bookingData, null, 2));
+    console.log("selectedStudent", selectedStudents);
+    console.log("Booking Data", JSON.stringify(bookingData, null, 2));
+    console.log("bookingData.attendees:", bookingData.attendees);
+    console.log("bookingData.recording:", bookingData.recording);
     // Find teacher and student details
     const teacher = selectedTeacher?.uid;
     const student = selectedStudents.map((item) => item.id);
@@ -1350,9 +1352,9 @@ function App() {
       bookingData.schedule.length > 0
     ) {
       try {
-        const attendeeslist = bookingData.attendees.split(",");
+        const attendeeslist = bookingData.attendees && bookingData.attendees.trim() ? bookingData.attendees.trim().split(",") : [];
         console.log(attendeeslist);
-        const taglist = bookingData.recording.split(",");
+        const taglist = bookingData.recording && bookingData.recording.trim() ? bookingData.recording.trim().split(",") : [];
         console.log("taglist", taglist);
 
         const apiPayload = {
@@ -1371,9 +1373,9 @@ function App() {
               : bookingData.classType || "1:1",
           booking_type: bookingData.bookingType === "trial" ? "Trial" : "Paid",
           ...(bookingData.bookingType === "paid" && {
-            course: bookingData.subject,
+            course: bookingData.subject || "",
             recording: taglist,
-            batch_name: bookingData.batchNumber,
+            batch_name: bookingData.batchNumber || "",
             tags: taglist,
           }),
         };

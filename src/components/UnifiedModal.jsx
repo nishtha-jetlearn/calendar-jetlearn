@@ -57,7 +57,24 @@ export const formatDate = (date) => {
 };
 
 export const getDayName = (date) => {
-  const dateObj = date instanceof Date ? date : new Date(date);
+  let dateObj;
+  
+  if (date instanceof Date) {
+    dateObj = date;
+  } else if (typeof date === 'string') {
+    // Handle DD-MM-YYYY format
+    if (date.includes('-') && date.split('-').length === 3) {
+      const [day, month, year] = date.split('-');
+      // Create date with MM-DD-YYYY format (month is 0-indexed)
+      dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    } else {
+      // Try default Date constructor for other formats
+      dateObj = new Date(date);
+    }
+  } else {
+    dateObj = new Date(date);
+  }
+  
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   return days[dateObj.getDay()];
 };

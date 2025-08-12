@@ -50,21 +50,21 @@ const RECORDING_OPTIONS = [
 export const formatDate = (date) => {
   // Ensure date is a Date object
   const dateObj = date instanceof Date ? date : new Date(date);
-  const day = dateObj.getDate().toString().padStart(2, '0');
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+  const day = dateObj.getDate().toString().padStart(2, "0");
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
   const year = dateObj.getFullYear();
   return `${day}-${month}-${year}`; // DD-MM-YYYY format
 };
 
 export const getDayName = (date) => {
   let dateObj;
-  
+
   if (date instanceof Date) {
     dateObj = date;
-  } else if (typeof date === 'string') {
+  } else if (typeof date === "string") {
     // Handle DD-MM-YYYY format
-    if (date.includes('-') && date.split('-').length === 3) {
-      const [day, month, year] = date.split('-');
+    if (date.includes("-") && date.split("-").length === 3) {
+      const [day, month, year] = date.split("-");
       // Create date with MM-DD-YYYY format (month is 0-indexed)
       dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     } else {
@@ -74,8 +74,16 @@ export const getDayName = (date) => {
   } else {
     dateObj = new Date(date);
   }
-  
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   return days[dateObj.getDay()];
 };
 const UnifiedModalComponent = function UnifiedModal({
@@ -127,9 +135,9 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Handle recording options selection
   const handleRecordingOptionChange = (optionValue) => {
-    setSelectedRecording(prev => {
+    setSelectedRecording((prev) => {
       if (prev.includes(optionValue)) {
-        return prev.filter(item => item !== optionValue);
+        return prev.filter((item) => item !== optionValue);
       } else {
         return [...prev, optionValue];
       }
@@ -266,7 +274,7 @@ const UnifiedModalComponent = function UnifiedModal({
         alert("Maximum 10 learners can be selected.");
         return;
       }
-      
+
       setSelectedStudents([
         ...selectedStudents,
         {
@@ -339,28 +347,28 @@ const UnifiedModalComponent = function UnifiedModal({
       return;
     }
 
-         // Validate class type limits
-     if (selectedClassType === "1:1" && selectedStudents.length > 1) {
-       alert("Maximum 1 learner can be selected for 1:1 class type.");
-       return;
-     }
+    // Validate class type limits
+    if (selectedClassType === "1:1" && selectedStudents.length > 1) {
+      alert("Maximum 1 learner can be selected for 1:1 class type.");
+      return;
+    }
 
-     if (selectedClassType === "1:2" && selectedStudents.length > 2) {
-       alert("Maximum 2 learners can be selected for 1:2 class type.");
-       return;
-     }
+    if (selectedClassType === "1:2" && selectedStudents.length > 2) {
+      alert("Maximum 2 learners can be selected for 1:2 class type.");
+      return;
+    }
 
-         // For paid bookings, validate additional fields
-     if (bookingType === "paid") {
-       if (
-         !selectedSubject ||
-         !selectedClassType ||
-         !selectedClassCount ||
-         selectedRecording.length === 0
-       ) {
-         alert("Please fill in all required fields for paid booking.");
-         return;
-       }
+    // For paid bookings, validate additional fields
+    if (bookingType === "paid") {
+      if (
+        !selectedSubject ||
+        !selectedClassType ||
+        !selectedClassCount ||
+        selectedRecording.length === 0
+      ) {
+        alert("Please fill in all required fields for paid booking.");
+        return;
+      }
 
       // Validate batch number for batch class type
       if (selectedClassType === "batch" && !batchNumber.trim()) {
@@ -379,47 +387,47 @@ const UnifiedModalComponent = function UnifiedModal({
         : [{ id: Date.now().toString(), name: studentName.trim() }];
 
     studentsToBook.forEach((student) => {
-             // Prepare API payload
-       const bookingData = {
-         bookingType,
-         platformCredentials,
-         attendees: attendees.trim(),
-         schedule,
-         ...(bookingType === "paid" && {
-           subject: selectedSubject,
-           classType: selectedClassType,
-           classCount: selectedClassCount,
-           recording: selectedRecording.join(", "),
-           ...(selectedClassType === "batch" && {
-             batchNumber: batchNumber.trim(),
-           }),
-         }),
-         ...(bookingType === "trial" && {
-           classType: "1:1",
-           classCount: 1,
-         }),
-       };
+      // Prepare API payload
+      const bookingData = {
+        bookingType,
+        platformCredentials,
+        attendees: attendees.trim(),
+        schedule,
+        ...(bookingType === "paid" && {
+          subject: selectedSubject,
+          classType: selectedClassType,
+          classCount: selectedClassCount,
+          recording: selectedRecording.join(", "),
+          ...(selectedClassType === "batch" && {
+            batchNumber: batchNumber.trim(),
+          }),
+        }),
+        ...(bookingType === "trial" && {
+          classType: "1:1",
+          classCount: 1,
+        }),
+      };
 
       onBookStudent(student.name, selectedStudents, bookingData);
     });
 
-         // Reset form
-     setStudentName("");
-     setSelectedTeacher("");
-     setBookingType("trial");
-     setSelectedSubject("");
-     setSelectedClassType("");
-     setSelectedClassCount("");
-     setSelectedRecording([]);
-     setBatchNumber("");
-     setStudentSearchTerm("");
-     setPlatformCredentials("");
-     setAttendees("");
-     setSelectedScheduleDate("");
-     setSelectedScheduleTime("");
-     setScheduleEntries([]);
-     setSelectedStudents([]);
-     setAttendeesError("");
+    // Reset form
+    setStudentName("");
+    setSelectedTeacher("");
+    setBookingType("trial");
+    setSelectedSubject("");
+    setSelectedClassType("");
+    setSelectedClassCount("");
+    setSelectedRecording([]);
+    setBatchNumber("");
+    setStudentSearchTerm("");
+    setPlatformCredentials("");
+    setAttendees("");
+    setSelectedScheduleDate("");
+    setSelectedScheduleTime("");
+    setScheduleEntries([]);
+    setSelectedStudents([]);
+    setAttendeesError("");
   };
 
   const selectStudentFromSearch = (student) => {
@@ -616,31 +624,31 @@ const UnifiedModalComponent = function UnifiedModal({
                             </label>
                             <select
                               value={selectedClassType}
-                                                             onChange={(e) => {
-                                 const newClassType = e.target.value;
-                                 // If switching to 1:1 and already have more than 1 student, show warning
-                                 if (
-                                   newClassType === "1:1" &&
-                                   selectedStudents.length > 1
-                                 ) {
-                                   alert(
-                                     "Cannot switch to 1:1 class type. Please remove some learners first (maximum 1 allowed for 1:1)."
-                                   );
-                                   return;
-                                 }
-                                 // If switching to 1:2 and already have more than 2 students, show warning
-                                 if (
-                                   newClassType === "1:2" &&
-                                   selectedStudents.length > 2
-                                 ) {
-                                   alert(
-                                     "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2)."
-                                   );
-                                   return;
-                                 }
-                                 
-                                 setSelectedClassType(newClassType);
-                               }}
+                              onChange={(e) => {
+                                const newClassType = e.target.value;
+                                // If switching to 1:1 and already have more than 1 student, show warning
+                                if (
+                                  newClassType === "1:1" &&
+                                  selectedStudents.length > 1
+                                ) {
+                                  alert(
+                                    "Cannot switch to 1:1 class type. Please remove some learners first (maximum 1 allowed for 1:1)."
+                                  );
+                                  return;
+                                }
+                                // If switching to 1:2 and already have more than 2 students, show warning
+                                if (
+                                  newClassType === "1:2" &&
+                                  selectedStudents.length > 2
+                                ) {
+                                  alert(
+                                    "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2)."
+                                  );
+                                  return;
+                                }
+
+                                setSelectedClassType(newClassType);
+                              }}
                               className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
                             >
                               <option value="">Choose type...</option>
@@ -676,29 +684,33 @@ const UnifiedModalComponent = function UnifiedModal({
                             />
                           </div>
 
-                                                     <div className="col-span-2">
-                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                               Add More Details
-                             </label>
-                             <div className="space-y-1.5 border border-gray-300 rounded p-2 bg-white">
-                               {RECORDING_OPTIONS.map((option) => (
-                                 <label
-                                   key={option.value}
-                                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
-                                 >
-                                   <input
-                                     type="checkbox"
-                                     checked={selectedRecording.includes(option.value)}
-                                     onChange={() => handleRecordingOptionChange(option.value)}
-                                     className="w-3 h-3 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-1"
-                                   />
-                                   <span className="text-xs text-gray-700">
-                                     {option.label}
-                                   </span>
-                                 </label>
-                               ))}
-                             </div>
-                           </div>
+                          <div className="col-span-2">
+                            <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                              Add More Details
+                            </label>
+                            <div className="space-y-1.5 border border-gray-300 rounded p-2 bg-white">
+                              {RECORDING_OPTIONS.map((option) => (
+                                <label
+                                  key={option.value}
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRecording.includes(
+                                      option.value
+                                    )}
+                                    onChange={() =>
+                                      handleRecordingOptionChange(option.value)
+                                    }
+                                    className="w-3 h-3 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-1"
+                                  />
+                                  <span className="text-xs text-gray-700">
+                                    {option.label}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
 
                           {/* Batch Number Input - Only show when class type is Batch */}
                           {selectedClassType === "batch" && (
@@ -823,7 +835,8 @@ const UnifiedModalComponent = function UnifiedModal({
                               className="text-blue-600"
                             />
                             <span className="text-xs font-medium text-gray-900">
-                              {entry.date} ({getDayName(entry.date)}) at {entry.time}
+                              {entry.date} ({getDayName(entry.date)}) at{" "}
+                              {entry.time}
                             </span>
                           </div>
                           <button
@@ -854,10 +867,14 @@ const UnifiedModalComponent = function UnifiedModal({
                       <FaGraduationCap size={14} className="text-purple-600" />
                     </div>
                     Selected Learners
-                                         <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                       {selectedStudents.length}/
-                       {selectedClassType === "1:1" ? "1" : selectedClassType === "1:2" ? "2" : "10"}
-                     </span>
+                    <span className="bg-purple-100 text-purple-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
+                      {selectedStudents.length}/
+                      {selectedClassType === "1:1"
+                        ? "1"
+                        : selectedClassType === "1:2"
+                        ? "2"
+                        : "10"}
+                    </span>
                   </h3>
 
                   <div className="space-y-2">
@@ -880,13 +897,13 @@ const UnifiedModalComponent = function UnifiedModal({
                       {studentSearchTerm.trim() &&
                         filteredStudents.length > 0 && (
                           <div className="max-h-28 overflow-y-auto border border-gray-200 rounded">
-                                                         {filteredStudents.slice(0, 10).map((student) => {
-                               const isLimitReached =
-                                 (selectedClassType === "1:1" &&
-                                   selectedStudents.length >= 1) ||
-                                 (selectedClassType === "1:2" &&
-                                   selectedStudents.length >= 2);
-                               return (
+                            {filteredStudents.slice(0, 10).map((student) => {
+                              const isLimitReached =
+                                (selectedClassType === "1:1" &&
+                                  selectedStudents.length >= 1) ||
+                                (selectedClassType === "1:2" &&
+                                  selectedStudents.length >= 2);
+                              return (
                                 <div
                                   key={student.id || student.jetlearner_id}
                                   onClick={() => addStudentToSelection(student)}
@@ -911,12 +928,10 @@ const UnifiedModalComponent = function UnifiedModal({
                                           `•${student.country}`}
                                       </p>
                                     </div>
-                                    
                                   </div>
                                 </div>
                               );
                             })}
-                            
                           </div>
                         )}
                     </div>
@@ -970,8 +985,6 @@ const UnifiedModalComponent = function UnifiedModal({
                           </div>
                         )}
                     </div>
-
-                    
                   </div>
                 </div>
               </div>

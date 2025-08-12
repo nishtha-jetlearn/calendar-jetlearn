@@ -1280,6 +1280,36 @@ function App() {
       return;
     }
 
+    // Extract offset hours and minutes from "(GMT+02:00)"
+    const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+    const offsetHours = parseInt(match[1], 10); // +02
+    const offsetMinutes = parseInt(match[2], 10); // 00
+
+    const formattedSchedule = bookingData.schedule.map(([date, time]) => {
+      // Parse DD-MM-YYYY
+      const [day, month, year] = date.split("-").map(Number);
+      const [hour, minute] = time.split(":").map(Number);
+
+      // Create a date as if it were in the given offset
+      const localDate = new Date(
+        Date.UTC(
+          year,
+          month - 1,
+          day,
+          hour - offsetHours,
+          minute - offsetMinutes
+        )
+      );
+
+      // Convert to UTC string
+      const utcYear = localDate.getUTCFullYear();
+      const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, "0");
+      const utcDay = String(localDate.getUTCDate()).padStart(2, "0");
+      const utcHour = String(localDate.getUTCHours()).padStart(2, "0");
+      const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
+
+      return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
+    });
     const newStudent = {
       id: Date.now().toString(),
       name: studentName,
@@ -1290,7 +1320,7 @@ function App() {
       jetlearner_id: student?.jetlearner_id || "",
       platformCredentials: bookingData.platformCredentials || "",
       attendees: bookingData.attendees || "",
-      schedule: bookingData.schedule || [],
+      schedule: formattedSchedule || [],
       ...(bookingData.bookingType === "paid" && {
         subject: bookingData.subject,
         classType: bookingData.classType,
@@ -1315,10 +1345,8 @@ function App() {
       try {
         const attendeeslist = bookingData.attendees.split(",");
         console.log(attendeeslist);
-        let recording = "";
-        if (bookingData.recording == "do-not-record") {
-          recording = "DNREC";
-        }
+        const taglist = bookingData.recording.split(",");
+        console.log("taglist", taglist);
 
         const apiPayload = {
           jl_uid: student,
@@ -1328,7 +1356,7 @@ function App() {
             bookingData.bookingType === "trial"
               ? 1
               : parseInt(bookingData.classCount) || 1,
-          schedule: bookingData.schedule,
+          schedule: formattedSchedule,
           attendees: attendeeslist,
           class_type:
             bookingData.bookingType === "trial"
@@ -1337,9 +1365,9 @@ function App() {
           booking_type: bookingData.bookingType === "trial" ? "Trial" : "Paid",
           ...(bookingData.bookingType === "paid" && {
             course: bookingData.subject,
-            recording: recording,
+            recording: taglist,
             batch_name: bookingData.batchNumber,
-            tags: bookingData.recording,
+            tags: taglist,
           }),
         };
 
@@ -1873,9 +1901,9 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            cancellation_datetime: formatted, // YYYY-MM-DD format
-            //jl_uid: jl_id,
-            jluid: jl_id,
+            cancellation_datetime: formatted, // "31-07-2025 09:15"
+            jl_uid: jl_id,
+            //jluid: jl_id,
             tlid: tl_id[0],
             summary: bookingData.summary,
             cancellation_type: reason,

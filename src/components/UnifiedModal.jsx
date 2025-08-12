@@ -12,8 +12,6 @@ import {
   FaCalendarAlt,
   FaExclamationTriangle,
 } from "react-icons/fa";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { formatDisplayDate } from "../utils/dateUtils";
 import { useDebounce } from "../hooks/useDebounce";
 
@@ -94,7 +92,7 @@ const UnifiedModalComponent = function UnifiedModal({
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedClassType, setSelectedClassType] = useState("");
   const [selectedClassCount, setSelectedClassCount] = useState("");
-  const [selectedRecording, setSelectedRecording] = useState("");
+  const [selectedRecording, setSelectedRecording] = useState([]);
   const [batchNumber, setBatchNumber] = useState("");
 
   // Enhanced booking form fields
@@ -109,6 +107,17 @@ const UnifiedModalComponent = function UnifiedModal({
   const [scheduleEntries, setScheduleEntries] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [attendeesError, setAttendeesError] = useState("");
+
+  // Handle recording options selection
+  const handleRecordingOptionChange = (optionValue) => {
+    setSelectedRecording(prev => {
+      if (prev.includes(optionValue)) {
+        return prev.filter(item => item !== optionValue);
+      } else {
+        return [...prev, optionValue];
+      }
+    });
+  };
 
   const debouncedTeacherSearch = useDebounce(teacherSearchTerm, 300);
   const debouncedStudentSearch = useDebounce(studentSearchTerm, 300);
@@ -227,50 +236,19 @@ const UnifiedModalComponent = function UnifiedModal({
     if (!selectedStudents.some((s) => s.id === studentId)) {
       // Check class type limits
       if (selectedClassType === "1:1" && selectedStudents.length >= 1) {
-        toast.warning("Maximum 1 learner can be selected for 1:1 class type.", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        alert("Maximum 1 learner can be selected for 1:1 class type.");
         return;
       }
 
       if (selectedClassType === "1:2" && selectedStudents.length >= 2) {
-        toast.warning("Maximum 2 learners can be selected for 1:2 class type.", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        alert("Maximum 2 learners can be selected for 1:2 class type.");
         return;
       }
 
       if (selectedStudents.length >= 10) {
-        toast.warning("Maximum 10 learners can be selected.", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
+        alert("Maximum 10 learners can be selected.");
         return;
       }
-      
-      // Success toast for adding student
-      toast.success(`${studentName} added successfully!`, {
-        position: "top-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
       
       setSelectedStudents([
         ...selectedStudents,
@@ -288,17 +266,6 @@ const UnifiedModalComponent = function UnifiedModal({
   const removeStudentFromSelection = (studentId) => {
     const studentToRemove = selectedStudents.find((s) => s.id === studentId);
     setSelectedStudents(selectedStudents.filter((s) => s.id !== studentId));
-    
-    if (studentToRemove) {
-      toast.info(`${studentToRemove.name} removed from selection`, {
-        position: "top-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
-    }
   };
 
   const handleAddTeacher = () => {
@@ -357,40 +324,26 @@ const UnifiedModalComponent = function UnifiedModal({
 
          // Validate class type limits
      if (selectedClassType === "1:1" && selectedStudents.length > 1) {
-       toast.error("Maximum 1 learner can be selected for 1:1 class type.", {
-         position: "top-right",
-         autoClose: 4000,
-         hideProgressBar: false,
-         closeOnClick: true,
-         pauseOnHover: true,
-         draggable: true,
-       });
+       alert("Maximum 1 learner can be selected for 1:1 class type.");
        return;
      }
 
      if (selectedClassType === "1:2" && selectedStudents.length > 2) {
-       toast.error("Maximum 2 learners can be selected for 1:2 class type.", {
-         position: "top-right",
-         autoClose: 4000,
-         hideProgressBar: false,
-         closeOnClick: true,
-         pauseOnHover: true,
-         draggable: true,
-       });
+       alert("Maximum 2 learners can be selected for 1:2 class type.");
        return;
      }
 
-    // For paid bookings, validate additional fields
-    if (bookingType === "paid") {
-      if (
-        !selectedSubject ||
-        !selectedClassType ||
-        !selectedClassCount ||
-        !selectedRecording
-      ) {
-        alert("Please fill in all required fields for paid booking.");
-        return;
-      }
+         // For paid bookings, validate additional fields
+     if (bookingType === "paid") {
+       if (
+         !selectedSubject ||
+         !selectedClassType ||
+         !selectedClassCount ||
+         selectedRecording.length === 0
+       ) {
+         alert("Please fill in all required fields for paid booking.");
+         return;
+       }
 
       // Validate batch number for batch class type
       if (selectedClassType === "batch" && !batchNumber.trim()) {
@@ -409,47 +362,47 @@ const UnifiedModalComponent = function UnifiedModal({
         : [{ id: Date.now().toString(), name: studentName.trim() }];
 
     studentsToBook.forEach((student) => {
-      // Prepare API payload
-      const bookingData = {
-        bookingType,
-        platformCredentials,
-        attendees: attendees.trim(),
-        schedule,
-        ...(bookingType === "paid" && {
-          subject: selectedSubject,
-          classType: selectedClassType,
-          classCount: selectedClassCount,
-          recording: selectedRecording,
-          ...(selectedClassType === "batch" && {
-            batchNumber: batchNumber.trim(),
-          }),
-        }),
-        ...(bookingType === "trial" && {
-          classType: "1:1",
-          classCount: 1,
-        }),
-      };
+             // Prepare API payload
+       const bookingData = {
+         bookingType,
+         platformCredentials,
+         attendees: attendees.trim(),
+         schedule,
+         ...(bookingType === "paid" && {
+           subject: selectedSubject,
+           classType: selectedClassType,
+           classCount: selectedClassCount,
+           recording: selectedRecording.join(", "),
+           ...(selectedClassType === "batch" && {
+             batchNumber: batchNumber.trim(),
+           }),
+         }),
+         ...(bookingType === "trial" && {
+           classType: "1:1",
+           classCount: 1,
+         }),
+       };
 
       onBookStudent(student.name, selectedStudents, bookingData);
     });
 
-    // Reset form
-    setStudentName("");
-    setSelectedTeacher("");
-    setBookingType("trial");
-    setSelectedSubject("");
-    setSelectedClassType("");
-    setSelectedClassCount("");
-    setSelectedRecording("");
-    setBatchNumber("");
-    setStudentSearchTerm("");
-    setPlatformCredentials("");
-    setAttendees("");
-    setSelectedScheduleDate("");
-    setSelectedScheduleTime("");
-    setScheduleEntries([]);
-    setSelectedStudents([]);
-    setAttendeesError("");
+         // Reset form
+     setStudentName("");
+     setSelectedTeacher("");
+     setBookingType("trial");
+     setSelectedSubject("");
+     setSelectedClassType("");
+     setSelectedClassCount("");
+     setSelectedRecording([]);
+     setBatchNumber("");
+     setStudentSearchTerm("");
+     setPlatformCredentials("");
+     setAttendees("");
+     setSelectedScheduleDate("");
+     setSelectedScheduleTime("");
+     setScheduleEntries([]);
+     setSelectedStudents([]);
+     setAttendeesError("");
   };
 
   const selectStudentFromSearch = (student) => {
@@ -653,15 +606,8 @@ const UnifiedModalComponent = function UnifiedModal({
                                    newClassType === "1:1" &&
                                    selectedStudents.length > 1
                                  ) {
-                                   toast.error(
-                                     "Cannot switch to 1:1 class type. Please remove some learners first (maximum 1 allowed for 1:1).", {
-                                       position: "top-right",
-                                       autoClose: 4000,
-                                       hideProgressBar: false,
-                                       closeOnClick: true,
-                                       pauseOnHover: true,
-                                       draggable: true,
-                                     }
+                                   alert(
+                                     "Cannot switch to 1:1 class type. Please remove some learners first (maximum 1 allowed for 1:1)."
                                    );
                                    return;
                                  }
@@ -670,28 +616,11 @@ const UnifiedModalComponent = function UnifiedModal({
                                    newClassType === "1:2" &&
                                    selectedStudents.length > 2
                                  ) {
-                                   toast.error(
-                                     "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2).", {
-                                       position: "top-right",
-                                       autoClose: 4000,
-                                       hideProgressBar: false,
-                                       closeOnClick: true,
-                                       pauseOnHover: true,
-                                       draggable: true,
-                                     }
+                                   alert(
+                                     "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2)."
                                    );
                                    return;
                                  }
-                                 
-                                 // Success toast for class type change
-                                 toast.info(`Class type changed to ${newClassType}`, {
-                                   position: "top-right",
-                                   autoClose: 2000,
-                                   hideProgressBar: false,
-                                   closeOnClick: true,
-                                   pauseOnHover: true,
-                                   draggable: true,
-                                 });
                                  
                                  setSelectedClassType(newClassType);
                                }}
@@ -730,23 +659,29 @@ const UnifiedModalComponent = function UnifiedModal({
                             />
                           </div>
 
-                          <div>
-                            <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                              Add More Details
-                            </label>
-                            <select
-                              value={selectedRecording}
-                              onChange={(e) => setSelectedRecording(e.target.value)}
-                              className="w-full p-1.5 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500"
-                            >
-                              <option value="">Choose option...</option>
-                              {RECORDING_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                                                     <div className="col-span-2">
+                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                               Add More Details
+                             </label>
+                             <div className="space-y-1.5 border border-gray-300 rounded p-2 bg-white">
+                               {RECORDING_OPTIONS.map((option) => (
+                                 <label
+                                   key={option.value}
+                                   className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded transition-colors"
+                                 >
+                                   <input
+                                     type="checkbox"
+                                     checked={selectedRecording.includes(option.value)}
+                                     onChange={() => handleRecordingOptionChange(option.value)}
+                                     className="w-3 h-3 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-1"
+                                   />
+                                   <span className="text-xs text-gray-700">
+                                     {option.label}
+                                   </span>
+                                 </label>
+                               ))}
+                             </div>
+                           </div>
 
                           {/* Batch Number Input - Only show when class type is Batch */}
                           {selectedClassType === "batch" && (
@@ -1027,7 +962,6 @@ const UnifiedModalComponent = function UnifiedModal({
           </div>
         </div>
       </div>
-      <ToastContainer />
     </div>
   );
 };

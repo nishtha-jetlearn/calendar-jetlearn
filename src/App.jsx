@@ -1416,21 +1416,6 @@ function App() {
             message: "Booking Successfully Done !!",
             type: "booking",
           });
-          //
-          const res = await fetch(
-            "https://live.jetlearn.com/sync/sync-teachers-events/",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: new URLSearchParams({
-                calendar_id: selectedTeacher.email,
-              }).toString(),
-            }
-          );
-          const resjson = await res.json();
-          console.log("✅ Sync Teacher events API response:", resjson);
 
           // Close the modal after a short delay
           setTimeout(() => {
@@ -1985,21 +1970,6 @@ function App() {
           message: messageText,
           type: messageType,
         });
-        // sync teacher calendar
-        const res = await fetch(
-          "https://live.jetlearn.com/sync/sync-teachers-events/",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: new URLSearchParams({
-              calendar_id: selectedTeacher.email,
-            }).toString(),
-          }
-        );
-        const resjson = await res.json();
-        console.log("✅ Sync Teacher events API response:", resjson);
 
         // Close the cancel popup after a short delay
         setTimeout(() => {

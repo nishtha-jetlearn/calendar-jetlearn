@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   FaTimes,
   FaUsers,
@@ -100,6 +100,8 @@ const UnifiedModalComponent = function UnifiedModal({
   onRemoveTeacher,
   onBookStudent,
   onRemoveStudent,
+  teacherAvailability, // New prop for teacher availability data
+  selectedTeacherId, // New prop for selected teacher ID
 }) {
   const cleanedTimeRange = time.replace(/\s+/g, ""); // Remove all spaces
   const startTime = cleanedTimeRange.split("-")[0];
@@ -132,6 +134,129 @@ const UnifiedModalComponent = function UnifiedModal({
   const [scheduleEntries, setScheduleEntries] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [attendeesError, setAttendeesError] = useState("");
+
+  // Generate available dates based on teacher availability
+  const generateAvailableDates = () => {
+    if (!teacherAvailability || !selectedTeacherId) {
+      // Fallback to next 30 days if no teacher availability data
+      const dates = [];
+      const today = new Date();
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        dates.push(date.toISOString().split("T")[0]);
+      }
+      return dates;
+    }
+
+    // Extract available dates from teacher availability data
+    const availableDates = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Process teacher availability data to get available dates
+    if (Array.isArray(teacherAvailability)) {
+      teacherAvailability.forEach(availability => {
+        if (availability.date && availability.available_slots > 0) {
+          const [day, month, year] = availability.date.split("-");
+          const availabilityDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          
+          if (availabilityDate >= today) {
+            availableDates.push(availabilityDate.toISOString().split("T")[0]);
+          }
+        }
+      });
+    } else if (typeof teacherAvailability === 'object') {
+      // Handle object format
+      Object.keys(teacherAvailability).forEach(dateKey => {
+        const availability = teacherAvailability[dateKey];
+        if (availability && availability.available_slots > 0) {
+          const [day, month, year] = dateKey.split("-");
+          const availabilityDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          
+          if (availabilityDate >= today) {
+            availableDates.push(availabilityDate.toISOString().split("T")[0]);
+          }
+        }
+      });
+    }
+
+    return availableDates.sort();
+  };
+
+  // Generate available times based on teacher availability for selected date
+  const generateAvailableTimes = (selectedDate) => {
+    if (!teacherAvailability || !selectedTeacherId || !selectedDate) {
+      // Fallback to default time slots
+      const slots = [];
+      for (let hour = 8; hour <= 20; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+          slots.push(timeStr);
+        }
+      }
+      return slots;
+    }
+
+    // Convert selected date to DD-MM-YYYY format for matching
+    const dateObj = new Date(selectedDate);
+    const day = dateObj.getDate().toString().padStart(2, "0");
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+    const year = dateObj.getFullYear();
+    const formattedDate = `${day}-${month}-${year}`;
+
+    const availableTimes = [];
+
+    // Process teacher availability data to get available times for the selected date
+    if (Array.isArray(teacherAvailability)) {
+      const dateAvailability = teacherAvailability.find(av => av.date === formattedDate);
+      if (dateAvailability && dateAvailability.time_slots) {
+        dateAvailability.time_slots.forEach(slot => {
+          if (slot.available) {
+            availableTimes.push(slot.time);
+          }
+        });
+      }
+    } else if (typeof teacherAvailability === 'object') {
+      const dateAvailability = teacherAvailability[formattedDate];
+      if (dateAvailability && dateAvailability.time_slots) {
+        dateAvailability.time_slots.forEach(slot => {
+          if (slot.available) {
+            availableTimes.push(slot.time);
+          }
+        });
+      }
+    }
+
+    return availableTimes.length > 0 ? availableTimes.sort() : generateTimeSlots();
+  };
+
+  // Generate time slots for schedule (fallback)
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour <= 20; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+        slots.push(timeStr);
+      }
+    }
+    return slots;
+  };
+
+  // Get available dates and times
+  const availableDates = generateAvailableDates();
+  const availableTimes = generateAvailableTimes(selectedScheduleDate);
+
+  // Update available times when selected date changes
+  useEffect(() => {
+    if (selectedScheduleDate) {
+      const times = generateAvailableTimes(selectedScheduleDate);
+      // If the currently selected time is not available for the new date, reset it
+      if (selectedScheduleTime && !times.includes(selectedScheduleTime)) {
+        setSelectedScheduleTime("");
+      }
+    }
+  }, [selectedScheduleDate, teacherAvailability, selectedTeacherId]);
 
   // Handle recording options selection
   const handleRecordingOptionChange = (optionValue) => {
@@ -456,22 +581,6 @@ const UnifiedModalComponent = function UnifiedModal({
     }
   };
 
-  // Generate time slots for schedule
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 8; hour <= 20; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeStr = `${hour.toString().padStart(2, "0")}:${minute
-          .toString()
-          .padStart(2, "0")}`;
-        slots.push(timeStr);
-      }
-    }
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
-
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-3 md:p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl max-h-[85vh] sm:max-h-[80vh] md:max-h-[75vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
@@ -766,46 +875,82 @@ const UnifiedModalComponent = function UnifiedModal({
                       <FaCalendarAlt size={14} className="text-blue-600" />
                     </div>
                     Schedule
+                    {selectedTeacherId && (
+                      <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
+                        Teacher Filtered
+                      </span>
+                    )}
                     <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
                       {scheduleEntries.length}/3
                     </span>
                   </h3>
 
                   <div className="space-y-2">
+                    {/* Teacher Availability Info */}
+                    {selectedTeacherId && (
+                      <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
+                        <p className="text-xs text-blue-800">
+                          <strong>Teacher Availability Filter:</strong> Only showing dates and times when the selected teacher is available.
+                        </p>
+                      </div>
+                    )}
+                    
                     {/* Schedule Entry Form */}
                     <div className="grid grid-cols-2 gap-1.5">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Date
-                        </label>
-                        <input
-                          type="date"
+                                              <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                            Date {selectedTeacherId && "(Teacher Availability)"}
+                          </label>
+                        <select
                           value={selectedScheduleDate}
                           onChange={(e) =>
                             setSelectedScheduleDate(e.target.value)
                           }
-                          min={new Date().toISOString().split("T")[0]}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        />
+                                                 >
+                           <option value="">Select date...</option>
+                           {availableDates.length > 0 ? (
+                             availableDates.map((date) => (
+                               <option key={date} value={date}>
+                                 {new Date(date).toLocaleDateString("en-US", {
+                                   weekday: "short",
+                                   month: "short",
+                                   day: "numeric",
+                                   year: "numeric",
+                                 })}
+                               </option>
+                             ))
+                           ) : (
+                             <option value="" disabled>
+                               No available dates for selected teacher
+                             </option>
+                           )}
+                         </select>
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Time
-                        </label>
+                                              <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                            Time {selectedTeacherId && "(Teacher Availability)"}
+                          </label>
                         <select
                           value={selectedScheduleTime}
                           onChange={(e) =>
                             setSelectedScheduleTime(e.target.value)
                           }
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select time...</option>
-                          {timeSlots.map((slot) => (
-                            <option key={slot} value={slot}>
-                              {slot}
-                            </option>
-                          ))}
-                        </select>
+                                                 >
+                           <option value="">Select time...</option>
+                           {availableTimes.length > 0 ? (
+                             availableTimes.map((slot) => (
+                               <option key={slot} value={slot}>
+                                 {slot}
+                               </option>
+                             ))
+                           ) : (
+                             <option value="" disabled>
+                               No available times for selected date
+                             </option>
+                           )}
+                         </select>
                       </div>
                     </div>
 

@@ -45,6 +45,7 @@ const RECORDING_OPTIONS = [
   { value: "DNREC", label: "Do not Record" },
   { value: "MAKE UP", label: "Make Up Class" },
   { value: "MAKE UP - S", label: "Make Up - Substitute" },
+  { value: "Reserved", label: "Reserve Slot" },
 ];
 
 export const formatDate = (date) => {
@@ -156,24 +157,32 @@ const UnifiedModalComponent = function UnifiedModal({
 
     // Process teacher availability data to get available dates
     if (Array.isArray(teacherAvailability)) {
-      teacherAvailability.forEach(availability => {
+      teacherAvailability.forEach((availability) => {
         if (availability.date && availability.available_slots > 0) {
           const [day, month, year] = availability.date.split("-");
-          const availabilityDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-          
+          const availabilityDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day)
+          );
+
           if (availabilityDate >= today) {
             availableDates.push(availabilityDate.toISOString().split("T")[0]);
           }
         }
       });
-    } else if (typeof teacherAvailability === 'object') {
+    } else if (typeof teacherAvailability === "object") {
       // Handle object format
-      Object.keys(teacherAvailability).forEach(dateKey => {
+      Object.keys(teacherAvailability).forEach((dateKey) => {
         const availability = teacherAvailability[dateKey];
         if (availability && availability.available_slots > 0) {
           const [day, month, year] = dateKey.split("-");
-          const availabilityDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-          
+          const availabilityDate = new Date(
+            parseInt(year),
+            parseInt(month) - 1,
+            parseInt(day)
+          );
+
           if (availabilityDate >= today) {
             availableDates.push(availabilityDate.toISOString().split("T")[0]);
           }
@@ -191,7 +200,9 @@ const UnifiedModalComponent = function UnifiedModal({
       const slots = [];
       for (let hour = 8; hour <= 20; hour++) {
         for (let minute = 0; minute < 60; minute += 30) {
-          const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+          const timeStr = `${hour.toString().padStart(2, "0")}:${minute
+            .toString()
+            .padStart(2, "0")}`;
           slots.push(timeStr);
         }
       }
@@ -209,18 +220,20 @@ const UnifiedModalComponent = function UnifiedModal({
 
     // Process teacher availability data to get available times for the selected date
     if (Array.isArray(teacherAvailability)) {
-      const dateAvailability = teacherAvailability.find(av => av.date === formattedDate);
+      const dateAvailability = teacherAvailability.find(
+        (av) => av.date === formattedDate
+      );
       if (dateAvailability && dateAvailability.time_slots) {
-        dateAvailability.time_slots.forEach(slot => {
+        dateAvailability.time_slots.forEach((slot) => {
           if (slot.available) {
             availableTimes.push(slot.time);
           }
         });
       }
-    } else if (typeof teacherAvailability === 'object') {
+    } else if (typeof teacherAvailability === "object") {
       const dateAvailability = teacherAvailability[formattedDate];
       if (dateAvailability && dateAvailability.time_slots) {
-        dateAvailability.time_slots.forEach(slot => {
+        dateAvailability.time_slots.forEach((slot) => {
           if (slot.available) {
             availableTimes.push(slot.time);
           }
@@ -228,7 +241,9 @@ const UnifiedModalComponent = function UnifiedModal({
       }
     }
 
-    return availableTimes.length > 0 ? availableTimes.sort() : generateTimeSlots();
+    return availableTimes.length > 0
+      ? availableTimes.sort()
+      : generateTimeSlots();
   };
 
   // Generate time slots for schedule (fallback)
@@ -236,7 +251,9 @@ const UnifiedModalComponent = function UnifiedModal({
     const slots = [];
     for (let hour = 8; hour <= 20; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+        const timeStr = `${hour.toString().padStart(2, "0")}:${minute
+          .toString()
+          .padStart(2, "0")}`;
         slots.push(timeStr);
       }
     }
@@ -890,67 +907,69 @@ const UnifiedModalComponent = function UnifiedModal({
                     {selectedTeacherId && (
                       <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
                         <p className="text-xs text-blue-800">
-                          <strong>Teacher Availability Filter:</strong> Only showing dates and times when the selected teacher is available.
+                          <strong>Teacher Availability Filter:</strong> Only
+                          showing dates and times when the selected teacher is
+                          available.
                         </p>
                       </div>
                     )}
-                    
+
                     {/* Schedule Entry Form */}
                     <div className="grid grid-cols-2 gap-1.5">
-                                              <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                            Date {selectedTeacherId && "(Teacher Availability)"}
-                          </label>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Date {selectedTeacherId && "(Teacher Availability)"}
+                        </label>
                         <select
                           value={selectedScheduleDate}
                           onChange={(e) =>
                             setSelectedScheduleDate(e.target.value)
                           }
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                                                 >
-                           <option value="">Select date...</option>
-                           {availableDates.length > 0 ? (
-                             availableDates.map((date) => (
-                               <option key={date} value={date}>
-                                 {new Date(date).toLocaleDateString("en-US", {
-                                   weekday: "short",
-                                   month: "short",
-                                   day: "numeric",
-                                   year: "numeric",
-                                 })}
-                               </option>
-                             ))
-                           ) : (
-                             <option value="" disabled>
-                               No available dates for selected teacher
-                             </option>
-                           )}
-                         </select>
+                        >
+                          <option value="">Select date...</option>
+                          {availableDates.length > 0 ? (
+                            availableDates.map((date) => (
+                              <option key={date} value={date}>
+                                {new Date(date).toLocaleDateString("en-US", {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>
+                              No available dates for selected teacher
+                            </option>
+                          )}
+                        </select>
                       </div>
-                                              <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                            Time {selectedTeacherId && "(Teacher Availability)"}
-                          </label>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Time {selectedTeacherId && "(Teacher Availability)"}
+                        </label>
                         <select
                           value={selectedScheduleTime}
                           onChange={(e) =>
                             setSelectedScheduleTime(e.target.value)
                           }
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                                                 >
-                           <option value="">Select time...</option>
-                           {availableTimes.length > 0 ? (
-                             availableTimes.map((slot) => (
-                               <option key={slot} value={slot}>
-                                 {slot}
-                               </option>
-                             ))
-                           ) : (
-                             <option value="" disabled>
-                               No available times for selected date
-                             </option>
-                           )}
-                         </select>
+                        >
+                          <option value="">Select time...</option>
+                          {availableTimes.length > 0 ? (
+                            availableTimes.map((slot) => (
+                              <option key={slot} value={slot}>
+                                {slot}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>
+                              No available times for selected date
+                            </option>
+                          )}
+                        </select>
                       </div>
                     </div>
 

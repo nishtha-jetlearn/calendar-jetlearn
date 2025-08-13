@@ -3802,10 +3802,10 @@ function App() {
                                                     "NO SHOW - TR"
                                                   ) ||
                                                   extractedData.summary.includes(
-                                                    "MAKE UP"
+                                                    // "MAKE UP"
                                                   ) ||
                                                   extractedData.summary.includes(
-                                                    "MAKE UP - S"
+                                                    // "MAKE UP - S"
                                                   ))
                                               ? "bg-black"
                                               : "bg-red-500"
@@ -4041,10 +4041,10 @@ function App() {
                                                   "NO SHOW - TR"
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "MAKE UP"
+                                                  // "MAKE UP"
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "MAKE UP - S"
+                                                  // "MAKE UP - S"
                                                 )
                                               ) && (
                                                 <button

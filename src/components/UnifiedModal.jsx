@@ -146,16 +146,20 @@ const UnifiedModalComponent = function UnifiedModal({
       today.setHours(0, 0, 0, 0);
 
       const parsedBookings = parseBookingDetails(listViewBookingDetails.data);
-      
+
       // Get unique dates that have green dots
       const greenDotDates = new Set();
-      
-      parsedBookings.forEach(booking => {
-        const bookingDate = booking.date || (booking.start_time ? new Date(booking.start_time).toISOString().split('T')[0] : null);
-        
+
+      parsedBookings.forEach((booking) => {
+        const bookingDate =
+          booking.date ||
+          (booking.start_time
+            ? new Date(booking.start_time).toISOString().split("T")[0]
+            : null);
+
         if (bookingDate) {
           const dateObj = new Date(bookingDate);
-          
+
           // Only include future dates
           if (dateObj >= today) {
             // Check if this booking has a green dot (availability or hours)
@@ -195,9 +199,31 @@ const UnifiedModalComponent = function UnifiedModal({
         });
       } else if (typeof teacherAvailability === "object") {
         // Handle object format
+        // Support two shapes:
+        // 1) { 'DD-MM-YYYY': { available_slots: number, time_slots: [{ time, available }] } }
+        // 2) { 'DD-MM-YYYY': { 'HH:MM': { availability: number, ... }, ... } }  // weeklyApiData shape
         Object.keys(teacherAvailability).forEach((dateKey) => {
-          const availability = teacherAvailability[dateKey];
-          if (availability && availability.available_slots > 0) {
+          const dateData = teacherAvailability[dateKey];
+          let hasAvailableSlots = false;
+
+          if (dateData && typeof dateData === "object") {
+            if (typeof dateData.available_slots === "number") {
+              hasAvailableSlots = dateData.available_slots > 0;
+            } else {
+              // Assume times map shape; check any time with availability > 0
+              const timeEntries = Object.values(dateData);
+              hasAvailableSlots = timeEntries.some((slot) => {
+                if (!slot || typeof slot !== "object") return false;
+                // Support either boolean available or numeric availability
+                if (typeof slot.available === "boolean") return slot.available;
+                if (typeof slot.availability === "number")
+                  return slot.availability > 0;
+                return false;
+              });
+            }
+          }
+
+          if (hasAvailableSlots) {
             const [day, month, year] = dateKey.split("-");
             const availabilityDate = new Date(
               parseInt(year),
@@ -238,12 +264,18 @@ const UnifiedModalComponent = function UnifiedModal({
     if (listViewBookingDetails && listViewBookingDetails.data) {
       const availableTimes = [];
       const parsedBookings = parseBookingDetails(listViewBookingDetails.data);
-      
+
       // Get times for the selected date that have green dots
-      parsedBookings.forEach(booking => {
-        const bookingDate = booking.date || (booking.start_time ? new Date(booking.start_time).toISOString().split('T')[0] : null);
-        const bookingTime = booking.time || (booking.start_time ? booking.start_time.slice(11, 16) : null);
-        
+      parsedBookings.forEach((booking) => {
+        const bookingDate =
+          booking.date ||
+          (booking.start_time
+            ? new Date(booking.start_time).toISOString().split("T")[0]
+            : null);
+        const bookingTime =
+          booking.time ||
+          (booking.start_time ? booking.start_time.slice(11, 16) : null);
+
         if (bookingDate === selectedDate && bookingTime) {
           // Check if this booking has a green dot (availability or hours)
           if (isGreenDotBooking(booking)) {
@@ -251,7 +283,7 @@ const UnifiedModalComponent = function UnifiedModal({
           }
         }
       });
-      
+
       if (availableTimes.length > 0) {
         return [...new Set(availableTimes)].sort(); // Remove duplicates and sort
       }
@@ -282,12 +314,28 @@ const UnifiedModalComponent = function UnifiedModal({
         }
       } else if (typeof teacherAvailability === "object") {
         const dateAvailability = teacherAvailability[formattedDate];
-        if (dateAvailability && dateAvailability.time_slots) {
-          dateAvailability.time_slots.forEach((slot) => {
-            if (slot.available) {
-              availableTimes.push(slot.time);
-            }
-          });
+        if (dateAvailability) {
+          if (dateAvailability.time_slots) {
+            // Shape 1: time_slots array with { time, available }
+            dateAvailability.time_slots.forEach((slot) => {
+              if (slot && slot.available) {
+                availableTimes.push(slot.time);
+              }
+            });
+          } else if (typeof dateAvailability === "object") {
+            // Shape 2: times map with { availability: number }
+            Object.entries(dateAvailability).forEach(([timeKey, slot]) => {
+              if (!slot || typeof slot !== "object") return;
+              if (typeof slot.available === "boolean" && slot.available) {
+                availableTimes.push(timeKey);
+              } else if (
+                typeof slot.availability === "number" &&
+                slot.availability > 0
+              ) {
+                availableTimes.push(timeKey);
+              }
+            });
+          }
         }
       }
 
@@ -354,7 +402,7 @@ const UnifiedModalComponent = function UnifiedModal({
   // Helper function to check if a booking has a green dot (availability or hours)
   const isGreenDotBooking = (booking) => {
     if (!booking || !booking.summary) return false;
-    
+
     const summary = booking.summary.toLowerCase();
     return summary.includes("availability") || summary.includes("hours");
   };
@@ -372,7 +420,12 @@ const UnifiedModalComponent = function UnifiedModal({
         setSelectedScheduleTime("");
       }
     }
-  }, [selectedScheduleDate, teacherAvailability, selectedTeacherId, listViewBookingDetails]);
+  }, [
+    selectedScheduleDate,
+    teacherAvailability,
+    selectedTeacherId,
+    listViewBookingDetails,
+  ]);
 
   // Handle recording options selection
   const handleRecordingOptionChange = (optionValue) => {
@@ -991,11 +1044,6 @@ const UnifiedModalComponent = function UnifiedModal({
                       <FaCalendarAlt size={14} className="text-blue-600" />
                     </div>
                     Schedule
-                    {listViewBookingDetails && (
-                      <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
-                        List View Green Dots
-                      </span>
-                    )}
                     {selectedTeacherId && !listViewBookingDetails && (
                       <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
                         Teacher Filtered
@@ -1007,29 +1055,14 @@ const UnifiedModalComponent = function UnifiedModal({
                   </h3>
 
                   <div className="space-y-2">
-                    {/* Teacher Availability Info */}
-                    {listViewBookingDetails && (
-                      <div className="bg-green-50 border border-green-200 rounded p-2 mb-2">
-                        <p className="text-xs text-green-800">
-                          <strong>List View Green Dots Filter:</strong> Only showing dates and times with green dots from "Details of the Availability and Bookings" list.
-                        </p>
-                      </div>
-                    )}
-                    {selectedTeacherId && !listViewBookingDetails && (
-                      <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
-                        <p className="text-xs text-blue-800">
-                          <strong>Teacher Availability Filter:</strong> Only
-                          showing dates and times when the selected teacher is
-                          available.
-                        </p>
-                      </div>
-                    )}
-
                     {/* Schedule Entry Form */}
                     <div className="grid grid-cols-2 gap-1.5">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Date {listViewBookingDetails ? "(List View Green Dots)" : selectedTeacherId && "(Teacher Availability)"}
+                          Date{" "}
+                          {listViewBookingDetails
+                            ? ""
+                            : selectedTeacherId && "(Teacher Availability)"}
                         </label>
                         <select
                           value={selectedScheduleDate}
@@ -1042,8 +1075,13 @@ const UnifiedModalComponent = function UnifiedModal({
                           {availableDates.length > 0 ? (
                             availableDates.map((date) => {
                               const dateObj = new Date(date);
-                              const day = dateObj.getDate().toString().padStart(2, "0");
-                              const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+                              const day = dateObj
+                                .getDate()
+                                .toString()
+                                .padStart(2, "0");
+                              const month = (dateObj.getMonth() + 1)
+                                .toString()
+                                .padStart(2, "0");
                               const year = dateObj.getFullYear();
                               const formattedDate = `${day}-${month}-${year}`;
                               return (
@@ -1054,14 +1092,19 @@ const UnifiedModalComponent = function UnifiedModal({
                             })
                           ) : (
                             <option value="" disabled>
-                              {listViewBookingDetails ? "No green dots in list view" : "No available dates for selected teacher"}
+                              {listViewBookingDetails
+                                ? "No green dots in list view"
+                                : "No available dates for selected teacher"}
                             </option>
                           )}
                         </select>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Time {listViewBookingDetails ? "(List View Green Dots)" : selectedTeacherId && "(Teacher Availability)"}
+                          Time{" "}
+                          {listViewBookingDetails
+                            ? ""
+                            : selectedTeacherId && "(Teacher Availability)"}
                         </label>
                         <select
                           value={selectedScheduleTime}
@@ -1079,7 +1122,9 @@ const UnifiedModalComponent = function UnifiedModal({
                             ))
                           ) : (
                             <option value="" disabled>
-                              {listViewBookingDetails ? "No green dots for selected date in list view" : "No available times for selected date"}
+                              {listViewBookingDetails
+                                ? "No green dots for selected date in list view"
+                                : "No available times for selected date"}
                             </option>
                           )}
                         </select>

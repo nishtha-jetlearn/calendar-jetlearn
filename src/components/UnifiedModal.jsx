@@ -103,6 +103,7 @@ const UnifiedModalComponent = function UnifiedModal({
   onRemoveStudent,
   teacherAvailability, // New prop for teacher availability data
   selectedTeacherId, // New prop for selected teacher ID
+  listViewBookingDetails, // New prop for list view booking details to filter green dot availability
 }) {
   const cleanedTimeRange = time.replace(/\s+/g, ""); // Remove all spaces
   const startTime = cleanedTimeRange.split("-")[0];
@@ -138,112 +139,165 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Generate available dates based on teacher availability
   const generateAvailableDates = () => {
-    if (!teacherAvailability || !selectedTeacherId) {
-      // Fallback to next 30 days if no teacher availability data
-      const dates = [];
+    // Priority 1: Use listViewBookingDetails data (green dots from list view)
+    if (listViewBookingDetails && listViewBookingDetails.data) {
+      const availableDates = [];
       const today = new Date();
-      for (let i = 0; i < 30; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        dates.push(date.toISOString().split("T")[0]);
+      today.setHours(0, 0, 0, 0);
+
+      const parsedBookings = parseBookingDetails(listViewBookingDetails.data);
+      
+      // Get unique dates that have green dots
+      const greenDotDates = new Set();
+      
+      parsedBookings.forEach(booking => {
+        const bookingDate = booking.date || (booking.start_time ? new Date(booking.start_time).toISOString().split('T')[0] : null);
+        
+        if (bookingDate) {
+          const dateObj = new Date(bookingDate);
+          
+          // Only include future dates
+          if (dateObj >= today) {
+            // Check if this booking has a green dot (availability or hours)
+            if (isGreenDotBooking(booking)) {
+              greenDotDates.add(bookingDate);
+            }
+          }
+        }
+      });
+
+      if (greenDotDates.size > 0) {
+        return Array.from(greenDotDates).sort();
       }
-      return dates;
     }
 
-    // Extract available dates from teacher availability data
-    const availableDates = [];
+    // Priority 2: Use teacherAvailability data
+    if (teacherAvailability && selectedTeacherId) {
+      const availableDates = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Process teacher availability data to get available dates
+      if (Array.isArray(teacherAvailability)) {
+        teacherAvailability.forEach((availability) => {
+          if (availability.date && availability.available_slots > 0) {
+            const [day, month, year] = availability.date.split("-");
+            const availabilityDate = new Date(
+              parseInt(year),
+              parseInt(month) - 1,
+              parseInt(day)
+            );
+
+            if (availabilityDate >= today) {
+              availableDates.push(availabilityDate.toISOString().split("T")[0]);
+            }
+          }
+        });
+      } else if (typeof teacherAvailability === "object") {
+        // Handle object format
+        Object.keys(teacherAvailability).forEach((dateKey) => {
+          const availability = teacherAvailability[dateKey];
+          if (availability && availability.available_slots > 0) {
+            const [day, month, year] = dateKey.split("-");
+            const availabilityDate = new Date(
+              parseInt(year),
+              parseInt(month) - 1,
+              parseInt(day)
+            );
+
+            if (availabilityDate >= today) {
+              availableDates.push(availabilityDate.toISOString().split("T")[0]);
+            }
+          }
+        });
+      }
+
+      if (availableDates.length > 0) {
+        return availableDates.sort();
+      }
+    }
+
+    // Fallback to next 30 days if no availability data
+    const dates = [];
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Process teacher availability data to get available dates
-    if (Array.isArray(teacherAvailability)) {
-      teacherAvailability.forEach((availability) => {
-        if (availability.date && availability.available_slots > 0) {
-          const [day, month, year] = availability.date.split("-");
-          const availabilityDate = new Date(
-            parseInt(year),
-            parseInt(month) - 1,
-            parseInt(day)
-          );
-
-          if (availabilityDate >= today) {
-            availableDates.push(availabilityDate.toISOString().split("T")[0]);
-          }
-        }
-      });
-    } else if (typeof teacherAvailability === "object") {
-      // Handle object format
-      Object.keys(teacherAvailability).forEach((dateKey) => {
-        const availability = teacherAvailability[dateKey];
-        if (availability && availability.available_slots > 0) {
-          const [day, month, year] = dateKey.split("-");
-          const availabilityDate = new Date(
-            parseInt(year),
-            parseInt(month) - 1,
-            parseInt(day)
-          );
-
-          if (availabilityDate >= today) {
-            availableDates.push(availabilityDate.toISOString().split("T")[0]);
-          }
-        }
-      });
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date.toISOString().split("T")[0]);
     }
-
-    return availableDates.sort();
+    return dates;
   };
 
   // Generate available times based on teacher availability for selected date
   const generateAvailableTimes = (selectedDate) => {
-    if (!teacherAvailability || !selectedTeacherId || !selectedDate) {
-      // Fallback to default time slots
-      const slots = [];
-      for (let hour = 8; hour <= 20; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-          const timeStr = `${hour.toString().padStart(2, "0")}:${minute
-            .toString()
-            .padStart(2, "0")}`;
-          slots.push(timeStr);
+    if (!selectedDate) {
+      return generateTimeSlots();
+    }
+
+    // Priority 1: Use listViewBookingDetails data (green dots from list view)
+    if (listViewBookingDetails && listViewBookingDetails.data) {
+      const availableTimes = [];
+      const parsedBookings = parseBookingDetails(listViewBookingDetails.data);
+      
+      // Get times for the selected date that have green dots
+      parsedBookings.forEach(booking => {
+        const bookingDate = booking.date || (booking.start_time ? new Date(booking.start_time).toISOString().split('T')[0] : null);
+        const bookingTime = booking.time || (booking.start_time ? booking.start_time.slice(11, 16) : null);
+        
+        if (bookingDate === selectedDate && bookingTime) {
+          // Check if this booking has a green dot (availability or hours)
+          if (isGreenDotBooking(booking)) {
+            availableTimes.push(bookingTime);
+          }
+        }
+      });
+      
+      if (availableTimes.length > 0) {
+        return [...new Set(availableTimes)].sort(); // Remove duplicates and sort
+      }
+    }
+
+    // Priority 2: Use teacherAvailability data
+    if (teacherAvailability && selectedTeacherId) {
+      // Convert selected date to DD-MM-YYYY format for matching
+      const dateObj = new Date(selectedDate);
+      const day = dateObj.getDate().toString().padStart(2, "0");
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+      const year = dateObj.getFullYear();
+      const formattedDate = `${day}-${month}-${year}`;
+
+      const availableTimes = [];
+
+      // Process teacher availability data to get available times for the selected date
+      if (Array.isArray(teacherAvailability)) {
+        const dateAvailability = teacherAvailability.find(
+          (av) => av.date === formattedDate
+        );
+        if (dateAvailability && dateAvailability.time_slots) {
+          dateAvailability.time_slots.forEach((slot) => {
+            if (slot.available) {
+              availableTimes.push(slot.time);
+            }
+          });
+        }
+      } else if (typeof teacherAvailability === "object") {
+        const dateAvailability = teacherAvailability[formattedDate];
+        if (dateAvailability && dateAvailability.time_slots) {
+          dateAvailability.time_slots.forEach((slot) => {
+            if (slot.available) {
+              availableTimes.push(slot.time);
+            }
+          });
         }
       }
-      return slots;
-    }
 
-    // Convert selected date to DD-MM-YYYY format for matching
-    const dateObj = new Date(selectedDate);
-    const day = dateObj.getDate().toString().padStart(2, "0");
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
-    const year = dateObj.getFullYear();
-    const formattedDate = `${day}-${month}-${year}`;
-
-    const availableTimes = [];
-
-    // Process teacher availability data to get available times for the selected date
-    if (Array.isArray(teacherAvailability)) {
-      const dateAvailability = teacherAvailability.find(
-        (av) => av.date === formattedDate
-      );
-      if (dateAvailability && dateAvailability.time_slots) {
-        dateAvailability.time_slots.forEach((slot) => {
-          if (slot.available) {
-            availableTimes.push(slot.time);
-          }
-        });
-      }
-    } else if (typeof teacherAvailability === "object") {
-      const dateAvailability = teacherAvailability[formattedDate];
-      if (dateAvailability && dateAvailability.time_slots) {
-        dateAvailability.time_slots.forEach((slot) => {
-          if (slot.available) {
-            availableTimes.push(slot.time);
-          }
-        });
+      if (availableTimes.length > 0) {
+        return availableTimes.sort();
       }
     }
 
-    return availableTimes.length > 0
-      ? availableTimes.sort()
-      : generateTimeSlots();
+    // Fallback to default time slots
+    return generateTimeSlots();
   };
 
   // Generate time slots for schedule (fallback)
@@ -260,6 +314,51 @@ const UnifiedModalComponent = function UnifiedModal({
     return slots;
   };
 
+  // Helper function to parse booking details and extract green dot information
+  const parseBookingDetails = (data) => {
+    if (!data) return [];
+
+    const bookings = [];
+
+    // Handle different data formats
+    if (Array.isArray(data)) {
+      // Direct array format
+      bookings.push(...data);
+    } else if (typeof data === "object") {
+      // Object format with dates as keys
+      Object.entries(data).forEach(([date, timeSlots]) => {
+        if (typeof timeSlots === "object") {
+          Object.entries(timeSlots).forEach(([time, slotData]) => {
+            if (slotData && slotData.events && Array.isArray(slotData.events)) {
+              slotData.events.forEach((event) => {
+                bookings.push({
+                  ...event,
+                  date: date,
+                  time: time,
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // Sort bookings by date and time
+    return bookings.sort((a, b) => {
+      const dateA = new Date(a.start_time || a.date);
+      const dateB = new Date(b.start_time || b.date);
+      return dateA - dateB;
+    });
+  };
+
+  // Helper function to check if a booking has a green dot (availability or hours)
+  const isGreenDotBooking = (booking) => {
+    if (!booking || !booking.summary) return false;
+    
+    const summary = booking.summary.toLowerCase();
+    return summary.includes("availability") || summary.includes("hours");
+  };
+
   // Get available dates and times
   const availableDates = generateAvailableDates();
   const availableTimes = generateAvailableTimes(selectedScheduleDate);
@@ -273,7 +372,7 @@ const UnifiedModalComponent = function UnifiedModal({
         setSelectedScheduleTime("");
       }
     }
-  }, [selectedScheduleDate, teacherAvailability, selectedTeacherId]);
+  }, [selectedScheduleDate, teacherAvailability, selectedTeacherId, listViewBookingDetails]);
 
   // Handle recording options selection
   const handleRecordingOptionChange = (optionValue) => {
@@ -892,7 +991,12 @@ const UnifiedModalComponent = function UnifiedModal({
                       <FaCalendarAlt size={14} className="text-blue-600" />
                     </div>
                     Schedule
-                    {selectedTeacherId && (
+                    {listViewBookingDetails && (
+                      <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
+                        List View Green Dots
+                      </span>
+                    )}
+                    {selectedTeacherId && !listViewBookingDetails && (
                       <span className="bg-green-100 text-green-800 text-xs font-medium px-1.5 py-0.5 rounded-full">
                         Teacher Filtered
                       </span>
@@ -904,7 +1008,14 @@ const UnifiedModalComponent = function UnifiedModal({
 
                   <div className="space-y-2">
                     {/* Teacher Availability Info */}
-                    {selectedTeacherId && (
+                    {listViewBookingDetails && (
+                      <div className="bg-green-50 border border-green-200 rounded p-2 mb-2">
+                        <p className="text-xs text-green-800">
+                          <strong>List View Green Dots Filter:</strong> Only showing dates and times with green dots from "Details of the Availability and Bookings" list.
+                        </p>
+                      </div>
+                    )}
+                    {selectedTeacherId && !listViewBookingDetails && (
                       <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
                         <p className="text-xs text-blue-800">
                           <strong>Teacher Availability Filter:</strong> Only
@@ -918,7 +1029,7 @@ const UnifiedModalComponent = function UnifiedModal({
                     <div className="grid grid-cols-2 gap-1.5">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Date {selectedTeacherId && "(Teacher Availability)"}
+                          Date {listViewBookingDetails ? "(List View Green Dots)" : selectedTeacherId && "(Teacher Availability)"}
                         </label>
                         <select
                           value={selectedScheduleDate}
@@ -929,26 +1040,28 @@ const UnifiedModalComponent = function UnifiedModal({
                         >
                           <option value="">Select date...</option>
                           {availableDates.length > 0 ? (
-                            availableDates.map((date) => (
-                              <option key={date} value={date}>
-                                {new Date(date).toLocaleDateString("en-US", {
-                                  weekday: "short",
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
-                              </option>
-                            ))
+                            availableDates.map((date) => {
+                              const dateObj = new Date(date);
+                              const day = dateObj.getDate().toString().padStart(2, "0");
+                              const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+                              const year = dateObj.getFullYear();
+                              const formattedDate = `${day}-${month}-${year}`;
+                              return (
+                                <option key={date} value={date}>
+                                  {formattedDate} ({getDayName(formattedDate)})
+                                </option>
+                              );
+                            })
                           ) : (
                             <option value="" disabled>
-                              No available dates for selected teacher
+                              {listViewBookingDetails ? "No green dots in list view" : "No available dates for selected teacher"}
                             </option>
                           )}
                         </select>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Time {selectedTeacherId && "(Teacher Availability)"}
+                          Time {listViewBookingDetails ? "(List View Green Dots)" : selectedTeacherId && "(Teacher Availability)"}
                         </label>
                         <select
                           value={selectedScheduleTime}
@@ -966,7 +1079,7 @@ const UnifiedModalComponent = function UnifiedModal({
                             ))
                           ) : (
                             <option value="" disabled>
-                              No available times for selected date
+                              {listViewBookingDetails ? "No green dots for selected date in list view" : "No available times for selected date"}
                             </option>
                           )}
                         </select>

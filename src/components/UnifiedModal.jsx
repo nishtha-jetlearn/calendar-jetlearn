@@ -654,12 +654,7 @@ const UnifiedModalComponent = function UnifiedModal({
 
     // For paid bookings, validate additional fields
     if (bookingType === "paid") {
-      if (
-        !selectedSubject ||
-        !selectedClassType ||
-        !selectedClassCount ||
-        selectedRecording.length === 0
-      ) {
+      if (!selectedSubject || !selectedClassType || !selectedClassCount) {
         alert("Please fill in all required fields for paid booking.");
         return;
       }

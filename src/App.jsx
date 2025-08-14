@@ -3800,15 +3800,7 @@ function App() {
                                                   ) ||
                                                   extractedData.summary.includes(
                                                     "NO SHOW - TR"
-                                                  ) ||
-                                                  extractedData.summary
-                                                    .includes
-                                                    // "MAKE UP"
-                                                    () ||
-                                                  extractedData.summary
-                                                    .includes
-                                                    // "MAKE UP - S"
-                                                    ())
+                                                  ))
                                               ? "bg-black"
                                               : "bg-red-500"
                                           }`}
@@ -4041,15 +4033,7 @@ function App() {
                                                 ) ||
                                                 extractedData.summary.includes(
                                                   "NO SHOW - TR"
-                                                ) ||
-                                                extractedData.summary
-                                                  .includes
-                                                  // "MAKE UP"
-                                                  () ||
-                                                extractedData.summary
-                                                  .includes
-                                                  // "MAKE UP - S"
-                                                  ()
+                                                )
                                               ) && (
                                                 <button
                                                   onClick={() => {

@@ -255,6 +255,7 @@ function App() {
     reason: "",
     studentDetails: null,
     teacherDetails: null,
+    upcomingEvents: false, // New field for upcoming events checkbox
   });
 
   // State for booking API response
@@ -356,6 +357,7 @@ function App() {
     time: null,
     eventId: null,
     onConfirm: null,
+    upcomingEvents: false, // New field for upcoming events checkbox
   });
 
   // Update popup pagination when details popup changes
@@ -1925,7 +1927,8 @@ function App() {
     time,
     teacherId = null,
     reason = "",
-    eventId = null
+    eventId = null,
+    upcomingEvents = false
   ) => {
     try {
       console.log("🚀 Canceling availability for:", {
@@ -1934,6 +1937,7 @@ function App() {
         teacherId,
         reason,
         eventId,
+        upcomingEvents,
       });
 
       // Ensure date is a Date object
@@ -1963,6 +1967,7 @@ function App() {
           timezone: selectedTimezone,
           reason: reason,
           eventId: eventId, // Include event_id in API call
+          upcoming_events: upcomingEvents, // Include upcoming_events parameter
         }),
       });
 
@@ -1998,13 +2003,14 @@ function App() {
   };
 
   // Handle cancel booking
-  const handleCancelBooking = async (date, time, bookingData, reason = "", eventId = null) => {
+  const handleCancelBooking = async (date, time, bookingData, reason = "", eventId = null, upcomingEvents = false) => {
     try {
       console.log("🚀 Canceling booking for:", {
         date,
         time,
         bookingData,
         reason,
+        upcomingEvents,
       });
 
       // Ensure date is a Date object
@@ -2040,6 +2046,7 @@ function App() {
             cancellation_type: reason,
             updated_by: user?.email,
             eventId: eventId, // Include event_id in API call
+            upcoming_events: upcomingEvents, // Include upcoming_events parameter
           }),
         }
       );
@@ -2078,6 +2085,7 @@ function App() {
             reason: "",
             studentDetails: null,
             teacherDetails: null,
+            upcomingEvents: false,
           });
           setSuccessMessage({
             show: false,
@@ -3221,29 +3229,22 @@ function App() {
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
                           Class Count
                         </label>
-                        <select
+                        <input
+                          type="number"
                           value={selectedClassCount}
                           onChange={(e) => setSelectedClassCount(e.target.value)}
-                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select Class Count</option>
-                          <option value="1">1</option>
-                          <option value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                          <option value="5">5</option>
-                          <option value="8">8</option>
-                          <option value="10">10</option>
-                          <option value="12">12</option>
-                          <option value="16">16</option>
-                          <option value="20">20</option>
-                        </select>
+                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100 cursor-not-allowed"
+                          disabled
+                          min="1"
+                          max="50"
+                          placeholder="Enter class count"
+                        />
                       </div>
 
                       {/* Recording Options */}
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Recording Options
+                        Add More Details
                         </label>
                         <div className="space-y-1">
                           {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map((option) => (
@@ -3487,6 +3488,7 @@ function App() {
         time: null,
         eventId: null,
         onConfirm: null,
+        upcomingEvents: false,
       });
     };
 
@@ -3501,6 +3503,7 @@ function App() {
         time: null,
         eventId: null,
         onConfirm: null,
+        upcomingEvents: false,
       });
     };
 
@@ -3539,6 +3542,26 @@ function App() {
                 id="event_id"
               />
             )}
+
+            {/* Upcoming Events Checkbox */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={confirmationPopup.upcomingEvents}
+                  onChange={(e) => {
+                    setConfirmationPopup((prev) => ({
+                      ...prev,
+                      upcomingEvents: e.target.checked,
+                    }));
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-gray-700">
+                  Do you want to do it for upcoming events as well?
+                </span>
+              </label>
+            </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
@@ -4069,7 +4092,8 @@ function App() {
             cancelPopup.time,
             cancelPopup.teacherDetails?.uid,
                   cancelPopup.reason,
-                  cancelPopup.data?.event_id || null
+                  cancelPopup.data?.event_id || null,
+                  cancelPopup.upcomingEvents
           );
         } else if (cancelPopup.type === "booking") {
           await handleCancelBooking(
@@ -4077,7 +4101,8 @@ function App() {
             cancelPopup.time,
             cancelPopup.data,
                   cancelPopup.reason,
-                  cancelPopup.data?.event_id || null
+                  cancelPopup.data?.event_id || null,
+                  cancelPopup.upcomingEvents
           );
         }
 
@@ -4231,6 +4256,32 @@ function App() {
                     NO SHOW - TR No show by Teacher
                   </option>
                 </select>
+              </div>
+            </div>
+
+            {/* Upcoming Events Checkbox */}
+            <div className="mb-3 p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded border border-blue-200 shadow-sm">
+              <h3 className="font-bold text-blue-900 mb-1 text-xs sm:text-sm flex items-center gap-1">
+                <FaCalendarAlt size={12} className="flex-shrink-0" />
+                Additional Options
+              </h3>
+              <div className="bg-white p-1.5 rounded border border-blue-100">
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={cancelPopup.upcomingEvents}
+                    onChange={(e) => {
+                      setCancelPopup((prev) => ({
+                        ...prev,
+                        upcomingEvents: e.target.checked,
+                      }));
+                    }}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700">
+                    Do you want to do it for upcoming events as well?
+                  </span>
+                </label>
               </div>
             </div>
 
@@ -5111,6 +5162,7 @@ function App() {
                                                             date: bookingDate,
                                                             time: timeSlot,
                                                             eventId: extractedData.event_id || null,
+                                                            upcomingEvents: false,
                                                             onConfirm: async () => {
                                                               try {
                                                                 // Call the cancel availability function
@@ -5119,7 +5171,8 @@ function App() {
                                                                   timeSlot,
                                                                   getTeacherByTeacherId(extractedData.teacherid)?.uid || selectedTeacher?.uid,
                                                                   "",
-                                                                  extractedData.event_id || null
+                                                                  extractedData.event_id || null,
+                                                                  confirmationPopup.upcomingEvents
                                                                 );
                                                                 
                                                                 // Close the action menu
@@ -5236,6 +5289,7 @@ function App() {
                                                               jetlearner_id: extractedData.jlid,
                                                             },
                                                             teacherDetails: getTeacherByTeacherId(extractedData.teacherid) || selectedTeacher,
+                                                            upcomingEvents: false,
                                                           });
                                                           setActionMenuOpen(null);
                                                         }}
@@ -5272,10 +5326,12 @@ function App() {
                                                             date: bookingDate,
                                                             time: timeRange,
                                                             eventId: extractedData.event_id || null,
+                                                            upcomingEvents: false,
                                                             onConfirm: async () => {
                                                               try {
                                                                 // TODO: Implement delete booking API call
                                                                 console.log("Delete booking:", extractedData);
+                                                                console.log("Upcoming events:", confirmationPopup.upcomingEvents);
                                                                 
                                                                 // Close the action menu
                                                                 setActionMenuOpen(null);
@@ -5367,10 +5423,12 @@ function App() {
                                                             date: bookingDate,
                                                             time: timeRange,
                                                             eventId: extractedData.event_id || null,
+                                                            upcomingEvents: false,
                                                             onConfirm: async () => {
                                                               try {
                                                                 // TODO: Implement delete event API call
                                                                 console.log("Delete event:", extractedData);
+                                                                console.log("Upcoming events:", confirmationPopup.upcomingEvents);
                                                                 
                                                                 // Close the action menu
                                                                 setActionMenuOpen(null);

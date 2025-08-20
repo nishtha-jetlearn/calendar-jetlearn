@@ -984,10 +984,12 @@ function App() {
       console.log("getCurrentMonthRange", getCurrentMonthRange());
 
       // const startDate = range.startOfMonth;
-      const endDate = range.endOfMonth;
+      let endDate = range.endOfMonth;
       const weekDates = getWeekDates(currentWeekStart);
       const startDate = formatDate(weekDates[0]);
-      // const endDate = formatDate(weekDates[6]);
+      if (startDate > endDate) {
+        endDate = formatDate(weekDates[6]);
+      }
 
       const formData = new URLSearchParams();
       formData.append("start_date", startDate);

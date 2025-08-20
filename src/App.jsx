@@ -10,6 +10,7 @@ import {
   FaClock,
   FaChevronLeft,
   FaChevronRight,
+  FaChevronDown,
   FaTimes,
   FaCheckCircle,
   FaExclamationTriangle,
@@ -22,7 +23,14 @@ import {
   FaBars,
   FaInfoCircle,
   FaSignOutAlt,
+  FaTrash,
+  FaPlus,
+  FaEdit,
+  FaCheck,
+  FaSync,
+  FaDownload,
 } from "react-icons/fa";
+import { MdManageAccounts } from "react-icons/md";
 import UnifiedModal from "./components/UnifiedModal";
 import TeacherDetails from "./components/TeacherDetails";
 import StudentDetails from "./components/StudentDetails";
@@ -312,6 +320,44 @@ function App() {
     type: "", // 'booking', 'cancel', 'no-show'
   });
 
+  // New state to track individual toasters for each slot
+  const [slotToasters, setSlotToasters] = useState({});
+
+  // New state to track clicked slots (to prevent plus icon from showing again until deleted)
+  const [clickedSlots, setClickedSlots] = useState(new Set());
+
+  // State for action menu dropdown
+  const [actionMenuOpen, setActionMenuOpen] = useState(null);
+
+  // State for booking details popup
+  const [bookingDetailsPopup, setBookingDetailsPopup] = useState({
+    isOpen: false,
+    data: null,
+    date: null,
+    time: null,
+  });
+
+  // New state for Edit/Reschedule popup
+  const [editReschedulePopup, setEditReschedulePopup] = useState({
+    isOpen: false,
+    data: null,
+    date: null,
+    time: null,
+  });
+
+  // New state for confirmation popup
+  const [confirmationPopup, setConfirmationPopup] = useState({
+    isOpen: false,
+    type: null, // 'delete-booking' or 'cancel-availability'
+    title: "",
+    message: "",
+    data: null,
+    date: null,
+    time: null,
+    eventId: null,
+    onConfirm: null,
+  });
+
   // Update popup pagination when details popup changes
   useEffect(() => {
     if (detailsPopup.isOpen) {
@@ -381,6 +427,26 @@ function App() {
       console.error = originalConsoleError;
     };
   }, []);
+
+  // Handle click outside to close action menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if click is outside the dropdown menu
+      const dropdownMenus = document.querySelectorAll('[data-dropdown-menu]');
+      const isClickInsideDropdown = Array.from(dropdownMenus).some(menu =>
+        menu.contains(event.target)
+      );
+
+      if (actionMenuOpen !== null && !isClickInsideDropdown) {
+        setActionMenuOpen(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [actionMenuOpen]);
 
   // Fetch timezones from the API
   useEffect(() => {
@@ -1330,6 +1396,7 @@ function App() {
       platformCredentials: bookingData.platformCredentials || "",
       attendees: bookingData.attendees || "",
       schedule: formattedSchedule || [],
+      summary: bookingData.summary || "",
       ...(bookingData.bookingType === "paid" && {
         subject: bookingData.subject,
         classType: bookingData.classType,
@@ -1384,6 +1451,12 @@ function App() {
             batch_name: bookingData.batchNumber || "",
             tags: taglist,
             updated_by: user?.email,
+          }),
+          ...(bookingData.summary && {
+            summary: bookingData.summary,
+          }),
+          ...(bookingData.eventId && {
+            event_id: bookingData.eventId, // Include event_id for edit operations
           }),
         };
 
@@ -1582,6 +1655,9 @@ function App() {
   const clearTeacherFilter = () => {
     console.log("🗑️ Clearing teacher filter...");
     setSelectedTeacher(null);
+    
+    // Clear clicked slots when teacher filter is cleared
+    setClickedSlots(new Set());
 
     // Switch to Week View when no filters are applied
     if (!selectedStudent) {
@@ -1643,6 +1719,9 @@ function App() {
     console.log("🗑️ Clearing all filters...");
     setSelectedTeacher(null);
     setSelectedStudent(null);
+    
+    // Clear clicked slots when filters are cleared
+    setClickedSlots(new Set());
 
     // Switch to Week View when all filters are cleared
     setCurrentView("week");
@@ -1845,7 +1924,8 @@ function App() {
     date,
     time,
     teacherId = null,
-    reason = ""
+    reason = "",
+    eventId = null
   ) => {
     try {
       console.log("🚀 Canceling availability for:", {
@@ -1853,6 +1933,7 @@ function App() {
         time,
         teacherId,
         reason,
+        eventId,
       });
 
       // Ensure date is a Date object
@@ -1881,6 +1962,7 @@ function App() {
           teacherId: teacherId,
           timezone: selectedTimezone,
           reason: reason,
+          eventId: eventId, // Include event_id in API call
         }),
       });
 
@@ -1894,16 +1976,29 @@ function App() {
       // Refresh the data after canceling
       await fetchListViewBookingDetails();
 
-      // Show success message (you can implement a toast notification here)
-      // alert("Availability canceled successfully!");
+      // Show success message
+      setSuccessMessage({
+        show: true,
+        message: "Availability Successfully Cancelled !!",
+        type: "cancel",
+      });
+
+      // Close success message after delay
+      setTimeout(() => {
+        setSuccessMessage({
+          show: false,
+          message: "",
+          type: "",
+        });
+      }, 2000);
     } catch (error) {
       console.error("❌ Error canceling availability:", error);
-      // alert("Failed to cancel availability. Please try again.");
+      alert("Failed to cancel availability. Please try again.");
     }
   };
 
   // Handle cancel booking
-  const handleCancelBooking = async (date, time, bookingData, reason = "") => {
+  const handleCancelBooking = async (date, time, bookingData, reason = "", eventId = null) => {
     try {
       console.log("🚀 Canceling booking for:", {
         date,
@@ -1944,6 +2039,7 @@ function App() {
             summary: bookingData.summary,
             cancellation_type: reason,
             updated_by: user?.email,
+            eventId: eventId, // Include event_id in API call
           }),
         }
       );
@@ -2027,6 +2123,147 @@ function App() {
     } catch (error) {
       console.error("❌ Error rescheduling booking:", error);
       // alert("Failed to reschedule booking. Please try again.");
+    }
+  };
+
+  // Handle adding availability from gray blocks
+  const handleAddAvailability = (date, time) => {
+    if (!selectedTeacher) {
+      alert("Please select a teacher first to add availability.");
+      return;
+    }
+
+    // Create a unique key for this slot
+    const slotKey = `${formatDate(date)}-${time}`;
+    
+    // Add to clicked slots to prevent plus icon from showing again
+    setClickedSlots(prev => new Set([...prev, slotKey]));
+
+    // Create individual toaster for this slot
+    setSlotToasters(prev => ({
+      ...prev,
+      [slotKey]: {
+        show: true,
+        date: date,
+        time: time,
+        teacherId: selectedTeacher.uid,
+      }
+    }));
+  };
+
+  // Handle deleting availability
+  const handleDeleteAvailability = async (slotKey) => {
+    const toasterData = slotToasters[slotKey];
+    if (!toasterData || !toasterData.date || !toasterData.time || !toasterData.teacherId) {
+      alert("Missing required data for deleting availability.");
+      return;
+    }
+
+    try {
+      // Format date to YYYY-MM-DD format
+      const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
+      const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Remove from clicked slots to make plus icon clickable again
+      setClickedSlots(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(slotKey);
+        return newSet;
+      });
+
+      // Close toaster
+      setSlotToasters(prev => {
+        const newToasters = { ...prev };
+        delete newToasters[slotKey];
+        return newToasters;
+      });
+      
+      // Show success message
+      setSuccessMessage({
+        show: true,
+        message: "Availability deleted successfully!",
+        type: "availability",
+      });
+
+      // Refresh the weekly data
+      await refreshWeeklyDataForTeacher(selectedTeacher);
+    } catch (error) {
+      console.error("❌ Error deleting availability:", error);
+      alert("Failed to delete availability. Please try again.");
+    }
+  };
+
+  // Handle saving availability
+  const handleSaveAvailability = async (slotKey) => {
+    const toasterData = slotToasters[slotKey];
+    if (!toasterData || !toasterData.date || !toasterData.time || !toasterData.teacherId) {
+      alert("Missing required data for adding availability.");
+      return;
+    }
+
+    try {
+      // Format date to YYYY-MM-DD format
+      const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
+      const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Prepare payload for add-teacher-availability API
+      const payload = {
+        teacher_uid: toasterData.teacherId,
+        schedule: [[formattedDate, toasterData.time]]
+      };
+
+      console.log("📤 Sending add-teacher-availability API request:");
+      console.log("🚀 Payload:", payload);
+      console.log("🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/");
+
+      const response = await fetch(
+        "https://live.jetlearn.com/api/add-teacher-availability/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
+        } catch {}
+        throw new Error(errorMsg);
+      }
+
+      const result = await response.json();
+      console.log("✅ Add Teacher Availability API Response:", result);
+      
+      // Keep the slot in clickedSlots to hide the plus icon permanently after saving
+      // This ensures the plus icon doesn't show again for this slot
+      // setClickedSlots(prev => {
+      //   const newSet = new Set(prev);
+      //   newSet.delete(slotKey);
+      //   return newSet;
+      // });
+
+      // Close toaster and show success message
+      setSlotToasters(prev => {
+        const newToasters = { ...prev };
+        delete newToasters[slotKey];
+        return newToasters;
+      });
+      setSuccessMessage({
+        show: true,
+        message: "Availability added successfully!",
+        type: "availability",
+      });
+
+      // Refresh the weekly data
+      await refreshWeeklyDataForTeacher(selectedTeacher);
+    } catch (error) {
+      console.error("❌ Error adding availability:", error);
+      alert("Failed to add availability. Please try again.");
     }
   };
 
@@ -2394,6 +2631,931 @@ function App() {
           {getIcon()}
           <div>
             <p className="font-semibold text-sm">{successMessage.message}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Booking Details Popup Component
+  const BookingDetailsPopup = () => {
+    if (!bookingDetailsPopup.isOpen) return null;
+
+    const formatTime = (time) => {
+      const [hours, minutes] = time.split(":");
+      const startHour = parseInt(hours);
+      const endHour = startHour + 1;
+      return `${time} - ${String(endHour).padStart(2, "0")}:${minutes}`;
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-3 md:p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl max-h-[85vh] sm:max-h-[80vh] md:max-h-[75vh] overflow-hidden border border-gray-100 backdrop-blur-lg animate-in slide-in-from-bottom-4 duration-300">
+          {/* Header with gradient background */}
+          <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-b border-gray-100">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold truncate bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                Booking Details
+              </h2>
+              <div className="mt-2 space-y-1">
+                {selectedTimezone !== "UTC" && (
+                  <p className="text-sm sm:text-base text-gray-700 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0"></span>
+                    <span>Time Slot:</span>
+                    <span className="font-semibold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg text-sm sm:text-base break-words">
+                      {formatDateDDMMMYYYY(bookingDetailsPopup.date)},{" "}
+                      {formatTime(bookingDetailsPopup.time)} {selectedTimezone}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() =>
+                setBookingDetailsPopup({
+                  isOpen: false,
+                  data: null,
+                  date: null,
+                  time: null,
+                })
+              }
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-2 sm:ml-4 flex-shrink-0 p-1.5 sm:p-2 rounded-full hover:scale-110"
+            >
+              <FaTimes size={18} className="sm:w-5 sm:h-5" />
+            </button>
+          </div>
+
+          <div className="p-3 sm:p-4 max-h-[calc(85vh-80px)] sm:max-h-[calc(80vh-90px)] md:max-h-[calc(75vh-100px)] overflow-y-auto">
+            {bookingDetailsPopup.data && (
+              <div className="space-y-4">
+                {/* Summary Information */}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg">
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-2">
+                    <p className="text-sm sm:text-base text-white font-medium">
+                      Booking Summary
+                    </p>
+                  </div>
+                  <div className="p-3">
+                    <div className="text-sm text-gray-900 font-medium break-words">
+                      {bookingDetailsPopup.data.summary || "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                  <button
+                    onClick={() => {
+                      setBookingDetailsPopup({
+                        isOpen: false,
+                        data: null,
+                        date: null,
+                        time: null,
+                      });
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors duration-200 font-medium text-sm"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Open Edit/Reschedule popup with current booking data
+                      setEditReschedulePopup({
+                        isOpen: true,
+                        data: bookingDetailsPopup.data,
+                        date: bookingDetailsPopup.date,
+                        time: bookingDetailsPopup.time,
+                      });
+                      // Close the booking details popup
+                      setBookingDetailsPopup({
+                        isOpen: false,
+                        data: null,
+                        date: null,
+                        time: null,
+                      });
+                    }}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors duration-200 font-medium text-sm flex items-center gap-2"
+                  >
+                    <FaCalendarAlt size={14} />
+                    Edit/Reschedule
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Edit/Reschedule Popup Component with Schedule Management functionality
+  const EditReschedulePopup = () => {
+    if (!editReschedulePopup.isOpen) return null;
+
+    // State for the edit/reschedule form
+    const [bookingType, setBookingType] = useState("trial");
+    const [platformCredentials, setPlatformCredentials] = useState("");
+    const [attendees, setAttendees] = useState("");
+    const [scheduleEntries, setScheduleEntries] = useState([]);
+    const [selectedScheduleDate, setSelectedScheduleDate] = useState("");
+    const [selectedScheduleTime, setSelectedScheduleTime] = useState("");
+    const [selectedStudents, setSelectedStudents] = useState([]);
+    const [studentSearchTerm, setStudentSearchTerm] = useState("");
+    const [studentSearchResults, setStudentSearchResults] = useState([]);
+    const [showStudentSearch, setShowStudentSearch] = useState(false);
+
+    // For paid booking type
+    const [selectedSubject, setSelectedSubject] = useState("");
+    const [selectedClassType, setSelectedClassType] = useState("");
+    const [selectedClassCount, setSelectedClassCount] = useState("");
+    const [selectedRecording, setSelectedRecording] = useState([]);
+    const [batchNumber, setBatchNumber] = useState("");
+
+    // New state for editable summary fields
+    const [studentName, setStudentName] = useState("");
+    const [jlId, setJlId] = useState("");
+    const [lessonType, setLessonType] = useState("");
+    const [tjlId, setTjlId] = useState("");
+
+    // New state for backend data
+    const [backendData, setBackendData] = useState(null);
+    const [isLoadingBackendData, setIsLoadingBackendData] = useState(false);
+    const [backendDataError, setBackendDataError] = useState(null);
+    const [isFormInitialized, setIsFormInitialized] = useState(false);
+
+    const formatTime = (time) => {
+      const [hours, minutes] = time.split(":");
+      const startHour = parseInt(hours);
+      const endHour = startHour + 1;
+      return `${time} - ${String(endHour).padStart(2, "0")}:${minutes}`;
+    };
+
+    // Function to fetch backend data for the booking
+    const fetchBackendBookingData = async () => {
+      if (!editReschedulePopup.data?.event_id) {
+        console.log("No event_id available for fetching backend data");
+        return;
+      }
+
+      setIsLoadingBackendData(true);
+      setBackendDataError(null);
+
+      try {
+        console.log("🔍 Fetching backend data for event_id:", editReschedulePopup.data.event_id);
+        
+        const response = await fetch(`/api/booking-details/${editReschedulePopup.data.event_id}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("✅ Backend booking data received:", result);
+
+        if (result.status === "success" && result.data) {
+          setBackendData(result.data);
+          
+          console.log("✅ Backend data received, updating form fields:", result.data);
+          
+          // Update form fields with backend data (backend data takes priority)
+          if (result.data.description) {
+            // Update the description in the popup data
+            const updatedData = { ...editReschedulePopup.data, description: result.data.description };
+            setEditReschedulePopup(prev => ({ ...prev, data: updatedData }));
+            console.log("📝 Updated description:", result.data.description);
+          }
+          
+          if (result.data.attendees) {
+            setAttendees(result.data.attendees);
+            console.log("📧 Updated attendees:", result.data.attendees);
+          }
+          
+          if (result.data.class_type) {
+            setSelectedClassType(result.data.class_type);
+            console.log("📚 Updated class type:", result.data.class_type);
+          }
+          
+          if (result.data.class_count) {
+            setSelectedClassCount(result.data.class_count.toString());
+            console.log("🔢 Updated class count:", result.data.class_count);
+          }
+          
+          if (result.data.recording && Array.isArray(result.data.recording)) {
+            setSelectedRecording(result.data.recording);
+            console.log("🎥 Updated recording options:", result.data.recording);
+          }
+          
+          if (result.data.schedule && Array.isArray(result.data.schedule)) {
+            setScheduleEntries(result.data.schedule);
+            console.log("📅 Updated schedule:", result.data.schedule);
+          }
+          
+          if (result.data.students && Array.isArray(result.data.students)) {
+            setSelectedStudents(result.data.students);
+            console.log("👥 Updated students:", result.data.students);
+          }
+          
+          console.log("✅ Form fields updated with backend data");
+        }
+        
+        // Mark form as initialized
+        setIsFormInitialized(true);
+      } catch (error) {
+        console.error("❌ Error fetching backend booking data:", error);
+        setBackendDataError("Failed to fetch booking data from backend");
+        setIsFormInitialized(true); // Still mark as initialized even if backend fails
+      } finally {
+        setIsLoadingBackendData(false);
+      }
+    };
+
+    // Initialize form with existing booking data
+    React.useEffect(() => {
+      if (editReschedulePopup.data) {
+        // Extract existing booking data and populate form
+        const bookingData = editReschedulePopup.data;
+        
+        console.log("🔍 Populating form with booking data:", bookingData);
+        
+        // Set attendees from existing data
+        setAttendees(bookingData.attendees || "");
+        console.log("📧 Set attendees:", bookingData.attendees || "");
+        
+        // Set class details if available
+        setSelectedClassType(bookingData.classType || bookingData.class_type || "");
+        setSelectedClassCount(bookingData.classCount || bookingData.class_count || "");
+        
+        // Handle recording options - support both string and array formats
+        let recordingOptions = [];
+        if (bookingData.recording) {
+          if (Array.isArray(bookingData.recording)) {
+            recordingOptions = bookingData.recording;
+          } else if (typeof bookingData.recording === 'string') {
+            recordingOptions = bookingData.recording.split(", ").filter(item => item.trim());
+          }
+        }
+        setSelectedRecording(recordingOptions);
+        console.log("🎥 Set recording options:", recordingOptions);
+        
+        // Initialize schedule entries with current booking
+        const currentSchedule = [[
+          formatDate(editReschedulePopup.date), 
+          editReschedulePopup.time
+        ]];
+        setScheduleEntries(currentSchedule);
+        setSelectedScheduleDate(formatDate(editReschedulePopup.date));
+        setSelectedScheduleTime(editReschedulePopup.time);
+        console.log("📅 Set schedule:", currentSchedule);
+        
+        // Set students if available - handle multiple formats
+        let studentList = [];
+        if (bookingData.students && Array.isArray(bookingData.students)) {
+          studentList = bookingData.students;
+        } else if (bookingData.jlid) {
+          const existingStudent = students.find(s => s.jetlearner_id === bookingData.jlid);
+          if (existingStudent) {
+            studentList = [existingStudent];
+          }
+        } else if (bookingData.student) {
+          studentList = [bookingData.student];
+        }
+        setSelectedStudents(studentList);
+        console.log("👥 Set students:", studentList);
+
+        // Fetch backend data if event_id is available
+        if (bookingData.event_id) {
+          console.log("🔄 Fetching backend data for event_id:", bookingData.event_id);
+          fetchBackendBookingData();
+        } else {
+          console.log("⚠️ No event_id available, using frontend data only");
+          setIsFormInitialized(true);
+        }
+      }
+    }, [editReschedulePopup.data, editReschedulePopup.date, editReschedulePopup.time, students]);
+
+    // Handle student search
+    const handleStudentSearch = (searchTerm) => {
+      setStudentSearchTerm(searchTerm);
+      if (searchTerm.trim().length > 0) {
+        const filtered = allAvailableStudents.filter(
+          (student) =>
+            student.deal_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.jetlearner_id?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setStudentSearchResults(filtered.slice(0, 5));
+        setShowStudentSearch(true);
+      } else {
+        setStudentSearchResults([]);
+        setShowStudentSearch(false);
+      }
+    };
+
+    // Add schedule entry
+    const addScheduleEntry = () => {
+      if (selectedScheduleDate && selectedScheduleTime) {
+        const newEntry = [selectedScheduleDate, selectedScheduleTime];
+        if (scheduleEntries.length < 3 && !scheduleEntries.some(entry => 
+          entry[0] === selectedScheduleDate && entry[1] === selectedScheduleTime
+        )) {
+          setScheduleEntries([...scheduleEntries, newEntry]);
+          setSelectedScheduleDate("");
+          setSelectedScheduleTime("");
+        }
+      }
+    };
+
+    // Remove schedule entry
+    const removeScheduleEntry = (index) => {
+      setScheduleEntries(scheduleEntries.filter((_, i) => i !== index));
+    };
+
+    // Handle form submission
+    const handleSubmit = async () => {
+      if (selectedStudents.length === 0) {
+        alert("Please select at least one student");
+        return;
+      }
+
+      if (scheduleEntries.length === 0) {
+        alert("Please add at least one schedule entry");
+        return;
+      }
+
+      const bookingData = {
+        bookingType: "paid", // Always use paid for Edit/Reschedule
+        attendees,
+        schedule: scheduleEntries,
+        classType: selectedClassType,
+        classCount: selectedClassCount,
+        recording: selectedRecording.join(", "),
+        description: editReschedulePopup.data?.description || "",
+        eventId: editReschedulePopup.data?.event_id || null, // Include event_id for API call
+      };
+
+      // Call the existing booking function with event_id
+      handleBookStudent(
+        selectedStudents[0].deal_name || selectedStudents[0].name,
+        selectedStudents,
+        bookingData
+      );
+
+      // Also update backend data if available
+      if (editReschedulePopup.data?.event_id) {
+        try {
+          const updateResponse = await fetch(`/api/update-booking/${editReschedulePopup.data.event_id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              attendees,
+              schedule: scheduleEntries,
+              class_type: selectedClassType,
+              class_count: selectedClassCount,
+              recording: selectedRecording,
+              description: editReschedulePopup.data?.description || "",
+              students: selectedStudents,
+            }),
+          });
+
+          if (updateResponse.ok) {
+            const result = await updateResponse.json();
+            console.log("✅ Backend booking updated:", result);
+          }
+        } catch (error) {
+          console.error("❌ Error updating backend booking:", error);
+        }
+      }
+
+      // Close the popup
+      setEditReschedulePopup({
+        isOpen: false,
+        data: null,
+        date: null,
+        time: null,
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-3 md:p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl max-h-[85vh] sm:max-h-[80vh] md:max-h-[75vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-yellow-600 to-orange-600 text-white p-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg md:text-xl font-bold">
+                  Edit/Reschedule Booking
+                </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1 text-sm sm:text-base text-yellow-100">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FaClock size={14} className="flex-shrink-0" />
+                    <span>
+                      {formatDateDDMMMYYYY(editReschedulePopup.date)} at {editReschedulePopup.time}
+                    </span>
+                    <span className="text-sm">{selectedTimezone}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() =>
+                  setEditReschedulePopup({
+                    isOpen: false,
+                    data: null,
+                    date: null,
+                    time: null,
+                  })
+                }
+                className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 sm:p-2 rounded-full transition-all duration-200 flex-shrink-0"
+              >
+                <FaTimes size={16} className="sm:w-5 sm:h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
+            {/* Hidden event_id field */}
+            {editReschedulePopup.data?.event_id && (
+                          <input
+                type="hidden" 
+                value={editReschedulePopup.data.event_id} 
+                id="edit_event_id"
+              />
+            )}
+
+            {/* Backend Data Loading and Error States */}
+            {isLoadingBackendData && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                  <span className="text-sm text-blue-700">Loading backend data...</span>
+                        </div>
+                        </div>
+            )}
+
+            {backendDataError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FaExclamationTriangle className="text-red-600" size={14} />
+                  <span className="text-sm text-red-700">{backendDataError}</span>
+                        </div>
+              </div>
+            )}
+
+            {/* Backend Data Display */}
+            {backendData && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-green-900">
+                    <FaCheckCircle size={14} className="text-green-600" />
+                    Backend Data Loaded
+                  </h3>
+                  <button
+                    onClick={fetchBackendBookingData}
+                    disabled={isLoadingBackendData}
+                    className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
+                  >
+                                         <FaSync size={10} />
+                    Refresh
+                  </button>
+                          </div>
+                <div className="text-xs text-green-800 space-y-1">
+                  <div><strong>Event ID:</strong> {backendData.event_id || 'N/A'}</div>
+                  <div><strong>Booking ID:</strong> {backendData.booking_id || 'N/A'}</div>
+                  <div><strong>Status:</strong> {backendData.status || 'N/A'}</div>
+                  {backendData.created_at && (
+                    <div><strong>Created:</strong> {new Date(backendData.created_at).toLocaleString()}</div>
+                  )}
+                  {backendData.updated_at && (
+                    <div><strong>Updated:</strong> {new Date(backendData.updated_at).toLocaleString()}</div>
+                  )}
+                        </div>
+                      </div>
+            )}
+
+            {/* Manual Refresh Button when no backend data */}
+            {!backendData && !isLoadingBackendData && editReschedulePopup.data?.event_id && (
+              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">No backend data loaded</span>
+                  <button
+                    onClick={fetchBackendBookingData}
+                    disabled={isLoadingBackendData}
+                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
+                  >
+                    <FaDownload size={10} />
+                    Load Backend Data
+                  </button>
+                    </div>
+              </div>
+            )}
+            
+            {/* Form Loading Indicator */}
+            {!isFormInitialized && (
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-600 border-t-transparent"></div>
+                  <span className="text-sm text-yellow-700">Loading booking details...</span>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+              {/* Left Column - Essential Booking Details */}
+              <div className="space-y-3">
+                {/* Description */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
+                      <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-blue-100 rounded">
+                      <FaEdit size={14} className="text-blue-600" />
+                        </div>
+                    Description
+                      </h3>
+                          <textarea
+                    value={editReschedulePopup.data?.description || ""}
+                    onChange={(e) => {
+                      // Update the description in the data
+                      const updatedData = { ...editReschedulePopup.data, description: e.target.value };
+                      setEditReschedulePopup(prev => ({ ...prev, data: updatedData }));
+                    }}
+                    placeholder="Enter booking description..."
+                            className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            rows={3}
+                          />
+                        </div>
+
+                {/* Class Type and Details */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-green-100 rounded">
+                      <FaBook size={14} className="text-green-600" />
+                    </div>
+                    Class Details
+                  </h3>
+
+                    <div className="space-y-2">
+                      {/* Class Type */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Class Type
+                        </label>
+                        <select
+                          value={selectedClassType}
+                          onChange={(e) => setSelectedClassType(e.target.value)}
+                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select Class Type</option>
+                          <option value="1:1">1:1</option>
+                          <option value="1:2">1:2</option>
+                          <option value="batch">Batch</option>
+                        </select>
+                      </div>
+
+                      {/* Class Count */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Class Count
+                        </label>
+                        <select
+                          value={selectedClassCount}
+                          onChange={(e) => setSelectedClassCount(e.target.value)}
+                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select Class Count</option>
+                          <option value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                          <option value="5">5</option>
+                          <option value="8">8</option>
+                          <option value="10">10</option>
+                          <option value="12">12</option>
+                          <option value="16">16</option>
+                          <option value="20">20</option>
+                        </select>
+                      </div>
+
+                      {/* Recording Options */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Recording Options
+                        </label>
+                        <div className="space-y-1">
+                          {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map((option) => (
+                            <label key={option} className="flex items-center gap-2 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={selectedRecording.includes(option)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedRecording([...selectedRecording, option]);
+                                  } else {
+                                    setSelectedRecording(selectedRecording.filter(item => item !== option));
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              {option}
+                            </label>
+                          ))}
+                      </div>
+                    </div>
+                        </div>
+                      </div>
+
+                {/* Attendees */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-purple-100 rounded">
+                      <FaUsers size={14} className="text-purple-600" />
+                    </div>
+                    Attendees
+                  </h3>
+                  <textarea
+                    value={attendees}
+                    onChange={(e) => setAttendees(e.target.value)}
+                    placeholder="Enter email addresses separated by commas or enter"
+                    className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={2}
+                  />
+                    </div>
+
+                {/* Update Button */}
+                    <button
+                      onClick={handleSubmit}
+                  className="w-full p-2 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                    >
+                  <FaEdit size={12} />
+                      Update Booking
+                    </button>
+              </div>
+
+              {/* Right Column - Learners and Schedule */}
+              <div className="space-y-3">
+                {/* Learners List */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-purple-100 rounded">
+                      <FaGraduationCap size={14} className="text-purple-600" />
+                    </div>
+                    Learners List ({selectedStudents.length}/10)
+                  </h3>
+
+                  <div className="space-y-2">
+                    {/* Student Search */}
+                    <div className="relative">
+                      <div className="flex items-center border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                        <FaSearch className="text-gray-400 ml-2" size={12} />
+                        <input
+                          type="text"
+                          value={studentSearchTerm}
+                          onChange={(e) => handleStudentSearch(e.target.value)}
+                          placeholder="Search Learners..."
+                          className="flex-1 p-2 text-xs border-none outline-none bg-transparent"
+                        />
+                      </div>
+
+                      {/* Search Results Dropdown */}
+                      {showStudentSearch && studentSearchResults.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                          {studentSearchResults.map((student) => (
+                            <button
+                              key={student.jetlearner_id}
+                              onClick={() => {
+                                if (!selectedStudents.find(s => s.jetlearner_id === student.jetlearner_id)) {
+                                  setSelectedStudents([...selectedStudents, student]);
+                                }
+                                setStudentSearchTerm("");
+                                setShowStudentSearch(false);
+                              }}
+                              className="w-full text-left p-2 text-xs hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">
+                                {student.deal_name || student.name}
+                              </div>
+                              <div className="text-gray-500">
+                                ID: {student.jetlearner_id}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selected Students List */}
+                    {selectedStudents.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500">
+                        <FaGraduationCap size={20} className="mx-auto mb-2 text-gray-300" />
+                        <p className="text-xs">No learners selected</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {selectedStudents.map((student) => (
+                          <div
+                            key={student.jetlearner_id}
+                            className="flex items-center justify-between p-2 bg-white rounded-md border border-gray-200"
+                          >
+                            <span className="text-xs text-gray-700">
+                              {student.deal_name || student.name}
+                            </span>
+                            <button
+                              onClick={() => setSelectedStudents(selectedStudents.filter(s => s.jetlearner_id !== student.jetlearner_id))}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <FaTimes size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Schedule List */}
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-orange-100 rounded">
+                      <FaCalendarAlt size={14} className="text-orange-600" />
+                    </div>
+                    Schedule List ({scheduleEntries.length}/3)
+                  </h3>
+
+                  <div className="space-y-2">
+                    {/* Date and Time Selection */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Date
+                        </label>
+                        <select
+                          value={selectedScheduleDate}
+                          onChange={(e) => setSelectedScheduleDate(e.target.value)}
+                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select Date</option>
+                          {weekDates.map((date) => (
+                            <option key={formatDate(date)} value={formatDate(date)}>
+                              {formatDate(date)} ({getDayName(date)})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Time
+                        </label>
+                        <select
+                          value={selectedScheduleTime}
+                          onChange={(e) => setSelectedScheduleTime(e.target.value)}
+                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select Time</option>
+                          {TIME_SLOTS.map((time) => (
+                            <option key={time} value={time}>
+                              {time}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Add Schedule Entry Button */}
+                    <button
+                      onClick={addScheduleEntry}
+                      className="w-full p-2 bg-orange-600 text-white text-xs font-medium rounded-md hover:bg-orange-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                    >
+                      <FaPlus size={12} />
+                      Add Schedule Entry {scheduleEntries.length}/3
+                    </button>
+
+                    {/* Schedule Entries List */}
+                    {scheduleEntries.length === 0 ? (
+                      <div className="text-center py-4 text-gray-500">
+                        <FaCalendarAlt size={20} className="mx-auto mb-2 text-gray-300" />
+                        <p className="text-xs">No schedule entries added</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {scheduleEntries.map((entry, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-white rounded-md border border-gray-200"
+                          >
+                            <span className="text-xs text-gray-700">
+                              {entry[0]} at {entry[1]}
+                            </span>
+                            <button
+                              onClick={() => removeScheduleEntry(index)}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <FaTrash size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                    </div>
+                      </div>
+                              </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Confirmation Popup Component
+  const ConfirmationPopup = () => {
+    if (!confirmationPopup.isOpen) return null;
+
+    const handleConfirm = () => {
+      if (confirmationPopup.onConfirm) {
+        confirmationPopup.onConfirm();
+      }
+      setConfirmationPopup({
+        isOpen: false,
+        type: null,
+        title: "",
+        message: "",
+        data: null,
+        date: null,
+        time: null,
+        eventId: null,
+        onConfirm: null,
+      });
+    };
+
+    const handleCancel = () => {
+      setConfirmationPopup({
+        isOpen: false,
+        type: null,
+        title: "",
+        message: "",
+        data: null,
+        date: null,
+        time: null,
+        eventId: null,
+        onConfirm: null,
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 animate-in fade-in duration-200">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden border border-gray-100 backdrop-blur-lg animate-in slide-in-from-bottom-4 duration-300">
+          {/* Header */}
+          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-red-100 border-b border-gray-200">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-red-800 flex items-center gap-2">
+                <FaExclamationTriangle size={14} className="flex-shrink-0" />
+                <span className="truncate">{confirmationPopup.title}</span>
+              </h2>
+            </div>
+            <button
+              onClick={handleCancel}
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-2 flex-shrink-0 p-1 rounded-full hover:scale-110"
+            >
+              <FaTimes size={14} />
+            </button>
+          </div>
+
+          <div className="p-4">
+            {/* Message */}
+            <div className="mb-4">
+              <p className="text-gray-700 text-sm leading-relaxed">
+                {confirmationPopup.message}
+              </p>
+            </div>
+
+            {/* Hidden event_id field */}
+            {confirmationPopup.eventId && (
+              <input 
+                type="hidden" 
+                value={confirmationPopup.eventId} 
+                id="event_id"
+              />
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 justify-end">
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors duration-200 font-medium text-sm"
+              >
+                No
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors duration-200 font-medium text-sm flex items-center gap-2"
+              >
+                <FaCheck size={12} />
+                Yes
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2885,23 +4047,41 @@ function App() {
 
     const handleCancelConfirm = async () => {
       try {
+        // Show confirmation popup first
+        const actionType = cancelPopup.type === "availability" ? "cancel-availability" : "delete-booking";
+        const actionText = cancelPopup.type === "availability" ? "cancel" : "delete";
+        const itemText = cancelPopup.type === "availability" ? "availability" : "booking";
+        
+        setConfirmationPopup({
+          isOpen: true,
+          type: actionType,
+          title: `Confirm ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
+          message: `Are you sure you want to ${actionText} the ${itemText}?`,
+          data: cancelPopup.data,
+          date: cancelPopup.date,
+          time: cancelPopup.time,
+          eventId: cancelPopup.data?.event_id || null,
+          onConfirm: async () => {
+      try {
         if (cancelPopup.type === "availability") {
           await handleCancelAvailability(
             cancelPopup.date,
             cancelPopup.time,
             cancelPopup.teacherDetails?.uid,
-            cancelPopup.reason
+                  cancelPopup.reason,
+                  cancelPopup.data?.event_id || null
           );
         } else if (cancelPopup.type === "booking") {
           await handleCancelBooking(
             cancelPopup.date,
             cancelPopup.time,
             cancelPopup.data,
-            cancelPopup.reason
+                  cancelPopup.reason,
+                  cancelPopup.data?.event_id || null
           );
         }
 
-        // Close the popup
+              // Close the cancel popup
         setCancelPopup({
           isOpen: false,
           type: null,
@@ -2914,6 +4094,11 @@ function App() {
         });
       } catch (error) {
         console.error("Error canceling:", error);
+            }
+          },
+        });
+      } catch (error) {
+        console.error("Error showing confirmation:", error);
       }
     };
 
@@ -3837,326 +5022,409 @@ function App() {
                                         <div className="text-sm text-gray-900 break-words">
                                           {extractedData.summary || "N/A"}
                                         </div>
-                                        {extractedData.summary &&
-                                          (extractedData.summary
-                                            .toLowerCase()
-                                            .includes("availability") ||
-                                            extractedData.summary
-                                              .toLowerCase()
-                                              .includes("hours")) &&
-                                          !(
-                                            extractedData.summary
-                                              .toLowerCase()
-                                              .includes("week off") ||
-                                            extractedData.summary
-                                              .toLowerCase()
-                                              .includes("off")
-                                          ) && (
-                                            <div className="flex items-center gap-2 ml-3">
-                                              <button
-                                                onClick={() => {
-                                                  // Open UnifiedModal for this time slot
-                                                  let timeSlot = timeRange;
-
-                                                  console.log(
-                                                    "Opening UnifiedModal for:",
-                                                    {
-                                                      date: bookingDate,
-                                                      time: timeSlot,
-                                                      summary:
-                                                        extractedData.summary,
-                                                      start_time:
-                                                        extractedData.start_time,
-                                                    }
-                                                  );
-
-                                                  // Get slot data for this specific time
-                                                  const slotData =
-                                                    getSlotCounts(
-                                                      bookingDate,
-                                                      timeSlot
-                                                    );
-
-                                                  setSelectedSlot({
-                                                    date: bookingDate,
-                                                    time: timeSlot,
-                                                    teacherid:
-                                                      slotData.teacherid ||
-                                                      extractedData.teacherid ||
-                                                      null,
-                                                    teacherDetails:
-                                                      slotData.teacherDetails,
-                                                    isFromAPI:
-                                                      slotData.isFromAPI ||
-                                                      true,
-                                                  });
-                                                  setModalOpen(true);
-                                                }}
-                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                title="Click to manage teachers and students for this time slot"
-                                              >
-                                                <FaUsers
-                                                  size={8}
-                                                  className="sm:w-3 sm:h-3"
-                                                />
-                                                <span className="hidden sm:inline">
-                                                  Manage
-                                                </span>
-                                              </button>
-                                              {/* <button
-                                                onClick={() => {
-                                                  // Extract time from the booking data
-                                                  let timeSlot = "00:00";
-
-                                                  // Try to extract time from summary
-                                                  if (extractedData.summary) {
-                                                    const timeMatch =
-                                                      extractedData.summary.match(
-                                                        /(\d{1,2}:\d{2})/
-                                                      );
-                                                    if (timeMatch) {
-                                                      timeSlot = timeMatch[1];
-                                                    }
-                                                  }
-
-                                                  // If no time found in summary, try to extract from start_time
-                                                  if (
-                                                    timeSlot === "00:00" &&
-                                                    extractedData.start_time
-                                                  ) {
-                                                    const timeFromStart =
-                                                      extractedData.start_time.match(
-                                                        /(\d{2}:\d{2})/
-                                                      );
-                                                    if (timeFromStart) {
-                                                      timeSlot =
-                                                        timeFromStart[1];
-                                                    }
-                                                  }
-
-                                                  // If still no time found, use a default time
-                                                  if (timeSlot === "00:00") {
-                                                    console.warn(
-                                                      "Could not extract time from data, using default 09:00"
-                                                    );
-                                                    timeSlot = "09:00";
-                                                  }
-
-                                                  // Open cancel popup for availability
-                                                  // setCancelPopup({
-                                                  //   isOpen: true,
-                                                  //   type: "availability",
-                                                  //   data: extractedData,
-                                                  //   date: bookingDate,
-                                                  //   time: timeSlot,
-                                                  //   reason: "",
-                                                  //   studentDetails: null,
-                                                  //   teacherDetails:
-                                                  //     getTeacherByTeacherId(
-                                                  //       extractedData.teacherid
-                                                  //     ) || selectedTeacher,
-                                                  // });
-                                                }}
-                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                title="Click to cancel availability for this time slot"
-                                              >
-                                                <FaTimes
-                                                  size={8}
-                                                  className="sm:w-3 sm:h-3"
-                                                />
-                                                <span className="hidden sm:inline">
-                                                  Cancel Availability
-                                                </span>
-                                              </button> */}
-                                            </div>
-                                          )}
-                                        {extractedData.summary &&
-                                          !(
-                                            extractedData.summary
+                                        {/* Action Menu Dropdown */}
+                                        <div className="relative ml-3">
+                                          {/* Availability Actions (Green Dot) */}
+                                          {extractedData.summary &&
+                                            (extractedData.summary
                                               .toLowerCase()
                                               .includes("availability") ||
-                                            extractedData.summary
-                                              .toLowerCase()
-                                              .includes("hours")
-                                          ) &&
-                                          !(
-                                            extractedData.summary
-                                              .toLowerCase()
-                                              .includes("week off") ||
-                                            extractedData.summary
-                                              .toLowerCase()
-                                              .includes("off")
-                                          ) && (
-                                            <div className="flex items-center gap-2 ml-3">
-                                              {/* Cancel/No show button - only show for non-black-dot statuses */}
-                                              {!(
-                                                extractedData.summary.trim() ===
-                                                  "B&R" ||
-                                                extractedData.summary.trim() ===
-                                                  "CBT/PL" ||
-                                                extractedData.summary.trim() ===
-                                                  "CBT/UL" ||
-                                                extractedData.summary.trim() ===
-                                                  "CBP/PL" ||
-                                                extractedData.summary.trim() ===
-                                                  "CBP/UL" ||
-                                                extractedData.summary.trim() ===
-                                                  "CBO" ||
-                                                extractedData.summary.trim() ===
-                                                  "NO SHOW - LR" ||
-                                                extractedData.summary.trim() ===
-                                                  "NO SHOW - TR" ||
-                                                extractedData.summary.trim() ===
-                                                  "MAKE UP" ||
-                                                extractedData.summary.trim() ===
-                                                  "MAKE UP - S" ||
-                                                extractedData.summary.includes(
-                                                  "B&R"
-                                                ) ||
-                                                extractedData.summary.includes(
-                                                  "CBT/PL"
-                                                ) ||
-                                                extractedData.summary.includes(
-                                                  "CBT/UL"
-                                                ) ||
-                                                extractedData.summary.includes(
-                                                  "CBP/PL"
-                                                ) ||
-                                                extractedData.summary.includes(
-                                                  "CBP/UL"
-                                                ) ||
-                                                extractedData.summary.includes(
-                                                  "CBO"
-                                                ) ||
-                                                extractedData.summary.includes(
-                                                  "NO SHOW - LR"
-                                                ) ||
-                                                extractedData.summary.includes(
-                                                  "NO SHOW - TR"
-                                                )
-                                              ) && (
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("hours")) &&
+                                            !(
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("week off") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("off")
+                                            ) && (
+                                              <div className="relative">
                                                 <button
-                                                  onClick={() => {
-                                                    // Extract time from the booking data
-                                                    let timeSlot = "00:00";
-
-                                                    // Try to extract time from summary
-                                                    if (extractedData.summary) {
-                                                      const timeMatch =
-                                                        extractedData.summary.match(
-                                                          /(\d{1,2}:\d{2})/
-                                                        );
-                                                      if (timeMatch) {
-                                                        timeSlot = timeMatch[1];
-                                                      }
-                                                    }
-
-                                                    // If no time found in summary, try to extract from start_time
-                                                    if (
-                                                      timeSlot === "00:00" &&
-                                                      extractedData.start_time
-                                                    ) {
-                                                      const timeFromStart =
-                                                        extractedData.start_time.match(
-                                                          /(\d{2}:\d{2})/
-                                                        );
-                                                      if (timeFromStart) {
-                                                        timeSlot =
-                                                          timeFromStart[1];
-                                                      }
-                                                    }
-
-                                                    // If still no time found, use a default time
-                                                    if (timeSlot === "00:00") {
-                                                      console.warn(
-                                                        "Could not extract time from data, using default 09:00"
-                                                      );
-                                                      timeSlot = "09:00";
-                                                    }
-
-                                                    // Open cancel popup for booking
-                                                    setCancelPopup({
-                                                      isOpen: true,
-                                                      type: "booking",
-                                                      data: extractedData,
-                                                      date: bookingDate,
-                                                      time: timeSlot,
-                                                      reason: "",
-                                                      studentDetails: {
-                                                        learner_name:
-                                                          extractedData.learner_name,
-                                                        jlid: extractedData.jlid,
-                                                        name: extractedData.learner_name,
-                                                        jetlearner_id:
-                                                          extractedData.jlid,
-                                                      },
-                                                      teacherDetails:
-                                                        getTeacherByTeacherId(
-                                                          extractedData.teacherid
-                                                        ) || selectedTeacher,
-                                                    });
-                                                  }}
-                                                  className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                  title="Click to cancel this booking"
-                                                >
-                                                  <FaTimes
-                                                    size={8}
-                                                    className="sm:w-3 sm:h-3"
-                                                  />
-                                                  <span className="hidden sm:inline">
-                                                    Cancel/No show
-                                                  </span>
-                                                </button>
-                                              )}
-
-                                              {/* Reschedule button - show for all statuses */}
-                                              {/* <button
-                                                onClick={() => {
-                                                  // Extract time from the booking data
-                                                  let timeSlot = "00:00";
-                                                  // If no time found in summary, try to extract from start_time
-                                                  if (
-                                                    timeSlot === "00:00" &&
-                                                    extractedData.start_time
-                                                  ) {
-                                                    const timeFromStart =
-                                                      extractedData.start_time.match(
-                                                        /(\d{2}:\d{2})/
-                                                      );
-                                                    if (timeFromStart) {
-                                                      timeSlot =
-                                                        timeFromStart[1];
-                                                    }
-                                                  }
-
-                                                  // If still no time found, use a default time
-                                                  if (timeSlot === "00:00") {
-                                                    console.warn(
-                                                      "Could not extract time from data, using default 09:00"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    // Toggle dropdown for this specific row
+                                                    setActionMenuOpen(
+                                                      actionMenuOpen === index
+                                                        ? null
+                                                        : index
                                                     );
-                                                    timeSlot = "09:00";
-                                                  }
+                                                  }}
+                                                  className="flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                  title="Manage Actions"
+                                                >
+                                                  <MdManageAccounts size={8} className="sm:w-3 sm:h-3" />
+                                                  <span className="hidden sm:inline">Manage</span>
+                                                  <FaChevronDown size={8} className="sm:w-3 sm:h-3" />
+                                                </button>
 
-                                                  // Call the reschedule booking function
-                                                  handleRescheduleBooking(
-                                                    bookingDate,
-                                                    timeSlot,
-                                                    extractedData
-                                                  );
-                                                }}
-                                                className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                title="Click to reschedule this booking"
-                                              >
-                                                <FaCalendarAlt
-                                                  size={8}
-                                                  className="sm:w-3 sm:h-3"
-                                                />
-                                                <span className="hidden sm:inline">
-                                                  Reschedule
-                                                </span>
-                                              </button> */}
-                                            </div>
-                                          )}
+                                                {actionMenuOpen === index && (
+                                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50" data-dropdown-menu>
+                                                    <div className="py-1">
+                                                      <button
+                                                        onClick={() => {
+                                                          // Open UnifiedModal for this time slot
+                                                          let timeSlot = timeRange;
+                                                          const slotData = getSlotCounts(bookingDate, timeSlot);
+                                                          setSelectedSlot({
+                                                            date: bookingDate,
+                                                            time: timeSlot,
+                                                            teacherid: slotData.teacherid || extractedData.teacherid || null,
+                                                            teacherDetails: slotData.teacherDetails,
+                                                            isFromAPI: slotData.isFromAPI || true,
+                                                          });
+                                                          setModalOpen(true);
+                                                          setActionMenuOpen(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
+                                                      >
+                                                        <FaUsers size={10} />
+                                                        Manage Button
+                                                      </button>
+                                                      <button
+                                                        onClick={() => {
+                                                          // Extract time from the booking data
+                                                          let timeSlot = "00:00";
+                                                          if (extractedData.summary) {
+                                                            const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                            if (timeMatch) {
+                                                              timeSlot = timeMatch[1];
+                                                            }
+                                                          }
+                                                          if (timeSlot === "00:00" && extractedData.start_time) {
+                                                            const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                            if (timeFromStart) {
+                                                              timeSlot = timeFromStart[1];
+                                                            }
+                                                          }
+                                                          if (timeSlot === "00:00") {
+                                                            timeSlot = "09:00";
+                                                          }
+
+                                                          setConfirmationPopup({
+                                                            isOpen: true,
+                                                            type: "cancel-availability",
+                                                            title: "Confirm Cancel",
+                                                            message: "Are you sure you want to cancel the availability?",
+                                                            data: extractedData,
+                                                            date: bookingDate,
+                                                            time: timeSlot,
+                                                            eventId: extractedData.event_id || null,
+                                                            onConfirm: async () => {
+                                                              try {
+                                                                // Call the cancel availability function
+                                                                await handleCancelAvailability(
+                                                                  bookingDate,
+                                                                  timeSlot,
+                                                                  getTeacherByTeacherId(extractedData.teacherid)?.uid || selectedTeacher?.uid,
+                                                                  "",
+                                                                  extractedData.event_id || null
+                                                                );
+                                                                
+                                                                // Close the action menu
+                                                                setActionMenuOpen(null);
+                                                              } catch (error) {
+                                                                console.error("Error canceling availability:", error);
+                                                                alert("Failed to cancel availability. Please try again.");
+                                                              }
+                                                            },
+                                                          });
+                                                          setActionMenuOpen(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                                      >
+                                                        <FaTimes size={10} />
+                                                        Cancel Availability
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+
+                                          {/* Booking Actions (Red Dot) */}
+                                          {extractedData.summary &&
+                                            !(
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("availability") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("hours")
+                                            ) &&
+                                            !(
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("week off") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("off")
+                                            ) &&
+                                            !(
+                                              extractedData.summary.trim() === "B&R" ||
+                                              extractedData.summary.trim() === "CBT/PL" ||
+                                              extractedData.summary.trim() === "CBT/UL" ||
+                                              extractedData.summary.trim() === "CBP/PL" ||
+                                              extractedData.summary.trim() === "CBP/UL" ||
+                                              extractedData.summary.trim() === "CBO" ||
+                                              extractedData.summary.trim() === "NO SHOW - LR" ||
+                                              extractedData.summary.trim() === "NO SHOW - TR" ||
+                                              extractedData.summary.trim() === "MAKE UP" ||
+                                              extractedData.summary.trim() === "MAKE UP - S" ||
+                                              extractedData.summary.includes("B&R") ||
+                                              extractedData.summary.includes("CBT/PL") ||
+                                              extractedData.summary.includes("CBT/UL") ||
+                                              extractedData.summary.includes("CBP/PL") ||
+                                              extractedData.summary.includes("CBP/UL") ||
+                                              extractedData.summary.includes("CBO") ||
+                                              extractedData.summary.includes("NO SHOW - LR") ||
+                                              extractedData.summary.includes("NO SHOW - TR")
+                                            ) && (
+                                              <div className="relative">
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActionMenuOpen(
+                                                      actionMenuOpen === index
+                                                        ? null
+                                                        : index
+                                                    );
+                                                  }}
+                                                  className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                  title="Manage Actions"
+                                                >
+                                                  <MdManageAccounts size={8} className="sm:w-3 sm:h-3" />
+                                                  <span className="hidden sm:inline">Manage</span>
+                                                  <FaChevronDown size={8} className="sm:w-3 sm:h-3" />
+                                                </button>
+
+                                                {actionMenuOpen === index && (
+                                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50" data-dropdown-menu>
+                                                    <div className="py-1">
+                                                      <button
+                                                        onClick={() => {
+                                                          // Extract time from the booking data
+                                                          let timeSlot = "00:00";
+                                                          if (extractedData.summary) {
+                                                            const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                            if (timeMatch) {
+                                                              timeSlot = timeMatch[1];
+                                                            }
+                                                          }
+                                                          if (timeSlot === "00:00" && extractedData.start_time) {
+                                                            const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                            if (timeFromStart) {
+                                                              timeSlot = timeFromStart[1];
+                                                            }
+                                                          }
+                                                          if (timeSlot === "00:00") {
+                                                            timeSlot = "09:00";
+                                                          }
+
+                                                          setCancelPopup({
+                                                            isOpen: true,
+                                                            type: "booking",
+                                                            data: extractedData,
+                                                            date: bookingDate,
+                                                            time: timeSlot,
+                                                            reason: "",
+                                                            studentDetails: {
+                                                              learner_name: extractedData.learner_name,
+                                                              jlid: extractedData.jlid,
+                                                              name: extractedData.learner_name,
+                                                              jetlearner_id: extractedData.jlid,
+                                                            },
+                                                            teacherDetails: getTeacherByTeacherId(extractedData.teacherid) || selectedTeacher,
+                                                          });
+                                                          setActionMenuOpen(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                                      >
+                                                        <FaTimes size={10} />
+                                                        Cancel/No Show
+                                                      </button>
+                                                      <button
+                                                        onClick={() => {
+                                                          // Open Edit/Reschedule popup with current booking data
+                                                          setEditReschedulePopup({
+                                                            isOpen: true,
+                                                            data: extractedData,
+                                                            date: bookingDate,
+                                                            time: timeRange,
+                                                          });
+                                                          setActionMenuOpen(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
+                                                      >
+                                                        <FaCalendarAlt size={10} />
+                                                        Edit/Reschedule Booking
+                                                      </button>
+                                                      <button
+                                                        onClick={() => {
+                                                          // Show confirmation popup for delete booking
+                                                          setConfirmationPopup({
+                                                            isOpen: true,
+                                                            type: "delete-booking",
+                                                            title: "Confirm Delete",
+                                                            message: "Are you sure you want to delete the booking?",
+                                                            data: extractedData,
+                                                            date: bookingDate,
+                                                            time: timeRange,
+                                                            eventId: extractedData.event_id || null,
+                                                            onConfirm: async () => {
+                                                              try {
+                                                                // TODO: Implement delete booking API call
+                                                                console.log("Delete booking:", extractedData);
+                                                                
+                                                                // Close the action menu
+                                                                setActionMenuOpen(null);
+                                                                
+                                                                // Show success message
+                                                                setSuccessMessage({
+                                                                  show: true,
+                                                                  message: "Booking Successfully Deleted !!",
+                                                                  type: "delete",
+                                                                });
+                                                                
+                                                                // Close success message after delay
+                                                                setTimeout(() => {
+                                                                  setSuccessMessage({
+                                                                    show: false,
+                                                                    message: "",
+                                                                    type: "",
+                                                                  });
+                                                                }, 2000);
+                                                              } catch (error) {
+                                                                console.error("Error deleting booking:", error);
+                                                                alert("Failed to delete booking. Please try again.");
+                                                              }
+                                                            },
+                                                          });
+                                                          setActionMenuOpen(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                                      >
+                                                        <FaTrash size={10} />
+                                                        Delete Booking
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+
+                                          {/* Black Dot Actions */}
+                                          {extractedData.summary &&
+                                            (extractedData.summary.trim() === "B&R" ||
+                                              extractedData.summary.trim() === "CBT/PL" ||
+                                              extractedData.summary.trim() === "CBT/UL" ||
+                                              extractedData.summary.trim() === "CBP/PL" ||
+                                              extractedData.summary.trim() === "CBP/UL" ||
+                                              extractedData.summary.trim() === "CBO" ||
+                                              extractedData.summary.trim() === "NO SHOW - LR" ||
+                                              extractedData.summary.trim() === "NO SHOW - TR" ||
+                                              extractedData.summary.trim() === "MAKE UP" ||
+                                              extractedData.summary.trim() === "MAKE UP - S" ||
+                                              extractedData.summary.includes("B&R") ||
+                                              extractedData.summary.includes("CBT/PL") ||
+                                              extractedData.summary.includes("CBT/UL") ||
+                                              extractedData.summary.includes("CBP/PL") ||
+                                              extractedData.summary.includes("CBP/UL") ||
+                                              extractedData.summary.includes("CBO") ||
+                                              extractedData.summary.includes("NO SHOW - LR") ||
+                                              extractedData.summary.includes("NO SHOW - TR")) && (
+                                              <div className="relative">
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActionMenuOpen(
+                                                      actionMenuOpen === index
+                                                        ? null
+                                                        : index
+                                                    );
+                                                  }}
+                                                  className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                  title="Manage Actions"
+                                                >
+                                                  <MdManageAccounts size={8} className="sm:w-3 sm:h-3" />
+                                                  <span className="hidden sm:inline">Manage</span>
+                                                  <FaChevronDown size={8} className="sm:w-3 sm:h-3" />
+                                                </button>
+
+                                                {actionMenuOpen === index && (
+                                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50" data-dropdown-menu>
+                                                    <div className="py-1">
+                                                      <button
+                                                        onClick={() => {
+                                                          // Show confirmation popup for delete events
+                                                          setConfirmationPopup({
+                                                            isOpen: true,
+                                                            type: "delete-events",
+                                                            title: "Confirm Delete",
+                                                            message: "Are you sure you want to delete this event?",
+                                                            data: extractedData,
+                                                            date: bookingDate,
+                                                            time: timeRange,
+                                                            eventId: extractedData.event_id || null,
+                                                            onConfirm: async () => {
+                                                              try {
+                                                                // TODO: Implement delete event API call
+                                                                console.log("Delete event:", extractedData);
+                                                                
+                                                                // Close the action menu
+                                                                setActionMenuOpen(null);
+                                                                
+                                                                // Show success message
+                                                                setSuccessMessage({
+                                                                  show: true,
+                                                                  message: "Event Successfully Deleted !!",
+                                                                  type: "delete",
+                                                                });
+                                                                
+                                                                // Close success message after delay
+                                                                setTimeout(() => {
+                                                                  setSuccessMessage({
+                                                                    show: false,
+                                                                    message: "",
+                                                                    type: "",
+                                                                  });
+                                                                }, 2000);
+                                                              } catch (error) {
+                                                                console.error("Error deleting event:", error);
+                                                                alert("Failed to delete event. Please try again.");
+                                                              }
+                                                            },
+                                                          });
+                                                          setActionMenuOpen(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                                      >
+                                                        <FaTrash size={10} />
+                                                        Delete Events
+                                                      </button>
+                                                      <button
+                                                        onClick={() => {
+                                                          // Open Edit/Reschedule popup with current booking data
+                                                          setEditReschedulePopup({
+                                                            isOpen: true,
+                                                            data: extractedData,
+                                                            date: bookingDate,
+                                                            time: timeRange,
+                                                          });
+                                                          setActionMenuOpen(null);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
+                                                      >
+                                                        <FaCalendarAlt size={10} />
+                                                        Edit/Reschedule Booking
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                        </div>
                                       </div>
                                     </td>
                                   </tr>
@@ -4370,8 +5638,19 @@ function App() {
                         return (
                           <div
                             key={`${formatDate(date)}-${time}`}
-                            className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor}`}
+                            className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor} relative`}
                           >
+                            {/* Show + icon for gray blocks (no availability) when teacher is selected and slot hasn't been clicked */}
+                            {available === 0 && booked === 0 && selectedTeacher && !clickedSlots.has(`${formatDate(date)}-${time}`) && (
+                              <button
+                                onClick={() => handleAddAvailability(date, time)}
+                                className="absolute top-1 right-1 w-5 h-5 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
+                                title="Add availability for this time slot"
+                              >
+                                <FaPlus size={8} />
+                              </button>
+                            )}
+
                             <div
                               className={`font-medium text-gray-800 ${
                                 available > 0
@@ -4485,7 +5764,68 @@ function App() {
 
       <DetailsPopup />
       <CancelPopup />
+      <BookingDetailsPopup />
+      <EditReschedulePopup />
+      <ConfirmationPopup />
       <SuccessMessage />
+      
+      {/* Individual Slot Toasters */}
+      {Object.entries(slotToasters).map(([slotKey, toasterData]) => (
+        <div
+          key={slotKey}
+          className="fixed top-4 right-4 z-50 bg-white border border-gray-300 rounded-lg shadow-lg px-4 py-3 animate-in slide-in-from-right duration-300"
+          style={{
+            top: `${4 + Object.keys(slotToasters).indexOf(slotKey) * 60}px`
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <FaCalendarAlt className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-900">
+                  Add Availability for {selectedTeacher?.full_name}
+                </span>
+                <span className="text-xs text-gray-600">
+                  Date: {toasterData.date ? formatDisplayDate(toasterData.date) : "N/A"}
+                </span>
+                <span className="text-xs text-gray-600">
+                  Time: {toasterData.time || "N/A"}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleSaveAvailability(slotKey)}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded transition-colors duration-200"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  // Remove from clicked slots to make plus icon clickable again
+                  setClickedSlots(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(slotKey);
+                    return newSet;
+                  });
+                  
+                  // Close this specific toaster
+                  setSlotToasters(prev => {
+                    const newToasters = { ...prev };
+                    delete newToasters[slotKey];
+                    return newToasters;
+                  });
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FaTimes className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

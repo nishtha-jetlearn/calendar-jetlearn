@@ -136,6 +136,7 @@ const UnifiedModalComponent = function UnifiedModal({
   const [scheduleEntries, setScheduleEntries] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [attendeesError, setAttendeesError] = useState("");
+  const [attendeesList, setAttendeesList] = useState([]);
 
   // Generate available dates based on teacher availability
   const generateAvailableDates = () => {
@@ -476,10 +477,31 @@ const UnifiedModalComponent = function UnifiedModal({
     return teacher ? teacher.full_name : "Unassigned";
   };
 
-  // Email validation function
+  // Common email domains for validation
+  const COMMON_EMAIL_DOMAINS = [
+    'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'
+  ];
+
+  // Email validation function - only accepts common domains
   const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
+    if (!email.includes('@')) return false;
+    
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return false;
+    
+    // Check if domain is in the allowed list
+    return COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
+  };
+
+  // Check if email has invalid domain for red underline styling
+  const hasInvalidDomain = (email) => {
+    if (!email.includes('@')) return false;
+    
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return false;
+    
+    // Return true if domain is not in allowed list
+    return !COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
   };
 
   // Validate attendees emails
@@ -493,7 +515,10 @@ const UnifiedModalComponent = function UnifiedModal({
 
     for (const email of emailList) {
       if (!validateEmail(email)) {
-        return { isValid: false, error: `Invalid email format: ${email}` };
+        return { 
+          isValid: false, 
+          error: `Invalid email domain: ${email}` 
+        };
       }
     }
 
@@ -502,9 +527,53 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Handle attendees change with validation
   const handleAttendeesChange = (value) => {
-    setAttendees(value);
-    const validation = validateAttendees(value);
-    setAttendeesError(validation.error);
+    // Convert to lowercase automatically
+    const lowercaseValue = value.toLowerCase();
+    setAttendees(lowercaseValue);
+    // Clear error when user starts typing
+    if (attendeesError) {
+      setAttendeesError("");
+    }
+  };
+
+  // Handle adding email to attendees list
+  const handleAddEmail = () => {
+    const email = attendees.trim().toLowerCase();
+    if (!email) return;
+
+    // Strict email validation - only allow valid emails with common domains
+    if (!validateEmail(email)) {
+      setAttendeesError("Please enter a valid email with allowed domains (gmail.com, yahoo.com, hotmail.com, outlook.com)");
+      return;
+    }
+
+    // Check if email already exists in the list
+    if (attendeesList.some(item => item.email.toLowerCase() === email.toLowerCase())) {
+      setAttendeesError("Email already exists in the list");
+      return;
+    }
+
+    // Add email to the list (always store in lowercase)
+    const newEmail = {
+      id: Date.now(),
+      email: email.toLowerCase()
+    };
+    setAttendeesList([...attendeesList, newEmail]);
+    setAttendees("");
+    setAttendeesError("");
+  };
+
+  // Handle removing email from attendees list
+  const handleRemoveEmail = (emailId) => {
+    setAttendeesList(attendeesList.filter(item => item.id !== emailId));
+  };
+
+  // Handle key press in attendees input
+  const handleAttendeesKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddEmail();
+    }
   };
 
   // Add schedule entry
@@ -628,10 +697,9 @@ const UnifiedModalComponent = function UnifiedModal({
       return;
     }
 
-    // Validate attendees emails
-    const attendeesValidation = validateAttendees(attendees);
-    if (!attendeesValidation.isValid) {
-      alert(attendeesValidation.error);
+    // Validate attendees list
+    if (attendeesList.length === 0) {
+      alert("Please add at least one attendee email.");
       return;
     }
 
@@ -680,7 +748,7 @@ const UnifiedModalComponent = function UnifiedModal({
       const bookingData = {
         bookingType,
         platformCredentials,
-        attendees: attendees.trim(),
+        attendees: attendeesList.map(item => item.email).join(", "),
         schedule,
         ...(bookingType === "paid" && {
           subject: selectedSubject,
@@ -717,6 +785,7 @@ const UnifiedModalComponent = function UnifiedModal({
     setScheduleEntries([]);
     setSelectedStudents([]);
     setAttendeesError("");
+    setAttendeesList([]);
   };
 
   const selectStudentFromSearch = (student) => {
@@ -837,26 +906,76 @@ const UnifiedModalComponent = function UnifiedModal({
                       <label className="block text-xs font-medium text-gray-700 mb-0.5">
                         Attendees (Email ID)
                       </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={attendees}
-                          onChange={(e) =>
-                            handleAttendeesChange(e.target.value)
-                          }
-                          placeholder="Enter email addresses separated by commas or enter"
-                          className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
-                            attendeesError
-                              ? "border-red-300"
-                              : "border-gray-300"
-                          }`}
-                        />
+                      <div className="space-y-1.5">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={attendees}
+                            onChange={(e) =>
+                              handleAttendeesChange(e.target.value)
+                            }
+                            onKeyPress={handleAttendeesKeyPress}
+                            placeholder="Enter email address and press Enter"
+                            className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
+                              attendeesError
+                                ? "border-red-300"
+                                : hasInvalidDomain(attendees) && attendees.includes('@')
+                                ? "border-red-300"
+                                : "border-gray-300"
+                            }`}
+                            style={{
+                              borderBottom: hasInvalidDomain(attendees) && attendees.includes('@') 
+                                ? '2px solid #ef4444' 
+                                : undefined
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddEmail}
+                            disabled={!attendees.trim() || !validateEmail(attendees)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-green-500 text-white p-1 rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <FaPlus size={10} />
+                          </button>
+                        </div>
+                        
+
+
                         {attendeesError && (
-                          <div className="flex items-center gap-1 mt-1 text-red-600">
+                          <div className="flex items-center gap-1 text-red-600">
                             <FaExclamationTriangle size={10} />
                             <span className="text-xs">{attendeesError}</span>
                           </div>
                         )}
+
+                        {/* Attendees List */}
+                        <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                          {attendeesList.map((emailItem) => (
+                            <div
+                              key={emailItem.id}
+                              className="bg-white rounded p-2 border border-green-200 shadow-sm flex justify-between items-center"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <FaUserCheck size={12} className="text-green-600" />
+                                <span className="text-xs font-medium text-gray-900 truncate">
+                                  {emailItem.email}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveEmail(emailItem.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
+                              >
+                                <FaTrash size={10} />
+                              </button>
+                            </div>
+                          ))}
+                          {attendeesList.length === 0 && (
+                            <div className="text-center py-2 text-gray-500">
+                              <FaUserCheck size={16} className="mx-auto mb-1 text-gray-300" />
+                              <p className="text-xs">No attendees added</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 

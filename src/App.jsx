@@ -2995,59 +2995,99 @@ function App() {
         return;
       }
 
-      const bookingData = {
-        bookingType: "paid", // Always use paid for Edit/Reschedule
-        attendees,
-        schedule: scheduleEntries,
-        classType: selectedClassType,
-        classCount: selectedClassCount,
-        recording: selectedRecording.join(", "),
-        description: editReschedulePopup.data?.description || "",
-        eventId: editReschedulePopup.data?.event_id || null, // Include event_id for API call
-      };
+      // Extract JL IDs from selected students
+      const jl_uid = selectedStudents.map(student => student.jetlearner_id);
 
-      // Call the existing booking function with event_id
-      handleBookStudent(
-        selectedStudents[0].deal_name || selectedStudents[0].name,
-        selectedStudents,
-        bookingData
-      );
-
-      // Also update backend data if available
-      if (editReschedulePopup.data?.event_id) {
-        try {
-          const updateResponse = await fetch(`/api/update-booking/${editReschedulePopup.data.event_id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              attendees,
-              schedule: scheduleEntries,
-              class_type: selectedClassType,
-              class_count: selectedClassCount,
-              recording: selectedRecording,
-              description: editReschedulePopup.data?.description || "",
-              students: selectedStudents,
-            }),
-          });
-
-          if (updateResponse.ok) {
-            const result = await updateResponse.json();
-            console.log("✅ Backend booking updated:", result);
-          }
-        } catch (error) {
-          console.error("❌ Error updating backend booking:", error);
+      // Extract teacher UID from the booking data or selected teacher
+      let teacher_uid = null;
+      if (editReschedulePopup.data?.summary) {
+        const tlMatch = editReschedulePopup.data.summary.match(/\b(TJL)[A-Za-z0-9]+\b/g);
+        if (tlMatch && tlMatch.length > 0) {
+          teacher_uid = tlMatch[0];
         }
       }
+      
+      // Fallback to selected teacher if not found in summary
+      if (!teacher_uid && selectedTeacher?.uid) {
+        teacher_uid = selectedTeacher.uid;
+      }
 
-      // Close the popup
-      setEditReschedulePopup({
-        isOpen: false,
-        data: null,
-        date: null,
-        time: null,
-      });
+      if (!teacher_uid) {
+        alert("Teacher UID not found. Please ensure a teacher is selected.");
+        return;
+      }
+
+      // Prepare the API payload according to the curl example
+      const apiPayload = {
+        event_id: editReschedulePopup.data?.event_id || "",
+        jl_uid: jl_uid,
+        teacher_uid: teacher_uid,
+        platform_credentials: editReschedulePopup.data?.description || "",
+        schedule: scheduleEntries,
+        class_type: selectedClassType || "Paid",
+        tags: selectedRecording.length > 0 ? selectedRecording : [],
+        updated_by: user?.email || "",
+        upcoming_events: "true" // Default to true as per example
+      };
+
+      console.log("📤 Sending UPDATE/EDIT Class API request:");
+      console.log("🚀 URL: https://live.jetlearn.com/api/update-class/");
+      console.log("📊 Payload:", JSON.stringify(apiPayload, null, 2));
+
+      try {
+        const response = await fetch("https://live.jetlearn.com/api/update-class/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(apiPayload),
+        });
+
+        if (!response.ok) {
+          let errorMsg = `HTTP error! status: ${response.status}`;
+          try {
+            const errJson = await response.json();
+            if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
+          } catch {}
+          throw new Error(errorMsg);
+        }
+
+        const result = await response.json();
+        console.log("✅ UPDATE/EDIT Class API Response:", result);
+
+        // Check if update was successful
+        if (result.status === "success" || result.success) {
+          // Show success message
+          setSuccessMessage({
+            show: true,
+            message: "Booking Successfully Updated !!",
+            type: "booking",
+          });
+
+          // Close the popup after a short delay
+          setTimeout(() => {
+            setEditReschedulePopup({
+              isOpen: false,
+              data: null,
+              date: null,
+              time: null,
+            });
+            setSuccessMessage({
+              show: false,
+              message: "",
+              type: "",
+            });
+          }, 2000);
+
+          // Refresh the data after successful update
+          await fetchListViewBookingDetails();
+        } else {
+          throw new Error(result.message || "Update failed");
+        }
+      } catch (error) {
+        console.error("❌ Error updating booking:", error);
+        alert(`Failed to update booking: ${error.message}`);
+      }
     };
 
     return (
@@ -5827,63 +5867,89 @@ function App() {
       <ConfirmationPopup />
       <SuccessMessage />
       
-      {/* Individual Slot Toasters */}
-      {Object.entries(slotToasters).map(([slotKey, toasterData]) => (
-        <div
-          key={slotKey}
-          className="fixed top-4 right-4 z-50 bg-white border border-gray-300 rounded-lg shadow-lg px-4 py-3 animate-in slide-in-from-right duration-300"
-          style={{
-            top: `${4 + Object.keys(slotToasters).indexOf(slotKey) * 60}px`
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0">
-              <FaCalendarAlt className="w-4 h-4 text-blue-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-gray-900">
-                  Add Availability for {selectedTeacher?.full_name}
-                </span>
-                <span className="text-xs text-gray-600">
-                  Date: {toasterData.date ? formatDisplayDate(toasterData.date) : "N/A"}
-                </span>
-                <span className="text-xs text-gray-600">
-                  Time: {toasterData.time || "N/A"}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleSaveAvailability(slotKey)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded transition-colors duration-200"
-              >
-                Save
-              </button>
+      {/* Combined Slot Toasters Container */}
+      {Object.keys(slotToasters).length > 0 && (
+        <div className="fixed top-4 right-4 z-50 bg-white border border-gray-300 rounded-lg shadow-lg max-w-md max-h-[80vh] overflow-y-auto">
+          <div className="p-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <FaCalendarAlt className="w-4 h-4 text-blue-600" />
+                Add Availability Toasters ({Object.keys(slotToasters).length})
+              </h3>
               <button
                 onClick={() => {
-                  // Remove from clicked slots to make plus icon clickable again
-                  setClickedSlots(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(slotKey);
-                    return newSet;
-                  });
-                  
-                  // Close this specific toaster
-                  setSlotToasters(prev => {
-                    const newToasters = { ...prev };
-                    delete newToasters[slotKey];
-                    return newToasters;
-                  });
+                  // Clear all toasters
+                  setSlotToasters({});
+                  // Clear all clicked slots
+                  setClickedSlots(new Set());
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                title="Close all toasters"
               >
                 <FaTimes className="w-4 h-4" />
               </button>
             </div>
           </div>
+          <div className="p-2 space-y-2">
+            {Object.entries(slotToasters).map(([slotKey, toasterData]) => (
+              <div
+                key={slotKey}
+                className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <FaCalendarAlt className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-gray-900">
+                        Add Availability for {selectedTeacher?.full_name}
+                      </span>
+                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                        <span>
+                          Date: {toasterData.date ? formatDisplayDate(toasterData.date) : "N/A"}
+                        </span>
+                        <span>
+                          Time: {toasterData.time || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSaveAvailability(slotKey)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded transition-colors duration-200"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Remove from clicked slots to make plus icon clickable again
+                        setClickedSlots(prev => {
+                          const newSet = new Set(prev);
+                          newSet.delete(slotKey);
+                          return newSet;
+                        });
+                        
+                        // Close this specific toaster
+                        setSlotToasters(prev => {
+                          const newToasters = { ...prev };
+                          delete newToasters[slotKey];
+                          return newToasters;
+                        });
+                      }}
+                      className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                      title="Remove this toaster"
+                    >
+                      <FaTimes className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }

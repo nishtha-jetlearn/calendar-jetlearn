@@ -29,6 +29,7 @@ import {
   FaCheck,
   FaSync,
   FaDownload,
+  FaSave,
 } from "react-icons/fa";
 import { MdManageAccounts } from "react-icons/md";
 import UnifiedModal from "./components/UnifiedModal";
@@ -2201,7 +2202,96 @@ function App() {
     }
   };
 
-  // Handle saving availability
+  // Handle saving all availability toasters at once
+  const handleSaveAllAvailability = async () => {
+    const toasterEntries = Object.entries(slotToasters);
+    if (toasterEntries.length === 0) {
+      alert("No availability to save.");
+      return;
+    }
+
+    try {
+      // Prepare all schedules for the API
+      const schedules = [];
+      const teacherId = selectedTeacher?.uid;
+
+      if (!teacherId) {
+        alert("No teacher selected for adding availability.");
+        return;
+      }
+
+      for (const [slotKey, toasterData] of toasterEntries) {
+        if (!toasterData || !toasterData.date || !toasterData.time) {
+          console.warn("Skipping invalid toaster data:", toasterData);
+          continue;
+        }
+
+        // Format date to YYYY-MM-DD format
+        const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
+        const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        schedules.push([formattedDate, toasterData.time]);
+      }
+
+      if (schedules.length === 0) {
+        alert("No valid availability data to save.");
+        return;
+      }
+
+      // Prepare payload for add-teacher-availability API
+      const payload = {
+        teacher_uid: teacherId,
+        schedule: schedules
+      };
+
+      console.log("📤 Sending add-teacher-availability API request for all toasters:");
+      console.log("🚀 Payload:", payload);
+      console.log("🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/");
+
+      const response = await fetch(
+        "https://live.jetlearn.com/api/add-teacher-availability/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
+        } catch {}
+        throw new Error(errorMsg);
+      }
+
+      const result = await response.json();
+      console.log("✅ Add Teacher Availability API Response:", result);
+      
+      // Clear all toasters but keep clicked slots to hide plus icons permanently
+      setSlotToasters({});
+      // Don't clear clickedSlots - keep them to hide plus icons after saving
+      // setClickedSlots(new Set());
+
+      // Show success message
+      setSuccessMessage({
+        show: true,
+        message: `Successfully added ${schedules.length} availability slots!`,
+        type: "availability",
+      });
+
+      // Refresh the weekly data
+      await refreshWeeklyDataForTeacher(selectedTeacher);
+    } catch (error) {
+      console.error("❌ Error adding availability:", error);
+      alert("Failed to add availability. Please try again.");
+    }
+  };
+
+  // Handle saving availability (kept for backward compatibility)
   const handleSaveAvailability = async (slotKey) => {
     const toasterData = slotToasters[slotKey];
     if (!toasterData || !toasterData.date || !toasterData.time || !toasterData.teacherId) {
@@ -5917,12 +6007,6 @@ function App() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleSaveAvailability(slotKey)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded transition-colors duration-200"
-                    >
-                      Save
-                    </button>
-                    <button
                       onClick={() => {
                         // Remove from clicked slots to make plus icon clickable again
                         setClickedSlots(prev => {
@@ -5947,6 +6031,16 @@ function App() {
                 </div>
               </div>
             ))}
+          </div>
+          {/* Single Save All Button */}
+          <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+            <button
+              onClick={() => handleSaveAllAvailability()}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition-colors duration-200 flex items-center justify-center gap-2"
+            >
+              <FaSave className="w-4 h-4" />
+              Save All ({Object.keys(slotToasters).length})
+            </button>
           </div>
         </div>
       )}

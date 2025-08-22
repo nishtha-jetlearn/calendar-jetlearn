@@ -912,7 +912,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
@@ -1658,7 +1658,7 @@ function App() {
   const clearTeacherFilter = () => {
     console.log("🗑️ Clearing teacher filter...");
     setSelectedTeacher(null);
-    
+
     // Clear clicked slots when teacher filter is cleared
     setClickedSlots(new Set());
 
@@ -1722,7 +1722,7 @@ function App() {
     console.log("🗑️ Clearing all filters...");
     setSelectedTeacher(null);
     setSelectedStudent(null);
-    
+
     // Clear clicked slots when filters are cleared
     setClickedSlots(new Set());
 
@@ -1956,7 +1956,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
@@ -2013,7 +2013,7 @@ function App() {
       if (eventId) {
         console.log("🎯 Using delete-class API for availability cancellation");
         const deleteResult = await handleDeleteClass(eventId, upcomingEvents);
-        
+
         if (deleteResult.success) {
           // Refresh the data after canceling
           await fetchListViewBookingDetails();
@@ -2037,7 +2037,7 @@ function App() {
         return;
       }
 
-      const response = await fetch("https://live.jetlearn.com/api/delete-class", {
+      const response = await fetch("https://live.jetlearn.com/api/delete-class/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2099,7 +2099,7 @@ function App() {
       if (eventId) {
         console.log("🎯 Using delete-class API for booking cancellation");
         const deleteResult = await handleDeleteClass(eventId, upcomingEvents);
-        
+
         if (deleteResult.success) {
           // Determine message type based on reason
           const isNoShow = reason.includes("NO SHOW");
@@ -2143,7 +2143,7 @@ function App() {
 
       // Fallback to old API if no eventId (for backward compatibility)
       console.log("⚠️ No eventId provided, using fallback API");
-      
+
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
       console.log(dateObj);
@@ -2274,7 +2274,7 @@ function App() {
 
     // Create a unique key for this slot
     const slotKey = `${formatDate(date)}-${time}`;
-    
+
     // Add to clicked slots to prevent plus icon from showing again
     setClickedSlots(prev => new Set([...prev, slotKey]));
 
@@ -2302,7 +2302,7 @@ function App() {
       // Format date to YYYY-MM-DD format
       const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
       const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
-      
+
       // Remove from clicked slots to make plus icon clickable again
       setClickedSlots(prev => {
         const newSet = new Set(prev);
@@ -2316,7 +2316,7 @@ function App() {
         delete newToasters[slotKey];
         return newToasters;
       });
-      
+
       // Show success message
       setSuccessMessage({
         show: true,
@@ -2359,7 +2359,7 @@ function App() {
         // Format date to YYYY-MM-DD format
         const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
         const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
-        
+
         schedules.push([formattedDate, toasterData.time]);
       }
 
@@ -2368,41 +2368,41 @@ function App() {
         return;
       }
 
-       // Extract offset hours and minutes from "(GMT+02:00)"
-    const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
-    const offsetHours = parseInt(match[1], 10); // +02
-    const offsetMinutes = parseInt(match[2], 10); // 00
+      // Extract offset hours and minutes from "(GMT+02:00)"
+      const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+      const offsetHours = parseInt(match[1], 10); // +02
+      const offsetMinutes = parseInt(match[2], 10); // 00
 
-    console.log("offsetHours", offsetHours);
-    console.log("offsetMinutes", offsetMinutes);  
-    console.log("match", match);
-    console.log("schedules", schedules);
+      console.log("offsetHours", offsetHours);
+      console.log("offsetMinutes", offsetMinutes);
+      console.log("match", match);
+      console.log("schedules", schedules);
 
-    const formattedSchedule = schedules.map(([date, time]) => {
-      // Parse DD-MM-YYYY
-      const [year, month, day] = date.split("-").map(Number);
-      const [hour, minute] = time.split(":").map(Number);
+      const formattedSchedule = schedules.map(([date, time]) => {
+        // Parse DD-MM-YYYY
+        const [year, month, day] = date.split("-").map(Number);
+        const [hour, minute] = time.split(":").map(Number);
 
-      // Create a date as if it were in the given offset
-      const localDate = new Date(
-        Date.UTC(
-          year,
-          month - 1,
-          day,
-          hour - offsetHours,
-          minute - offsetMinutes
-        )
-      );
+        // Create a date as if it were in the given offset
+        const localDate = new Date(
+          Date.UTC(
+            year,
+            month - 1,
+            day,
+            hour - offsetHours,
+            minute - offsetMinutes
+          )
+        );
 
-      // Convert to UTC string
-      const utcYear = localDate.getUTCFullYear();
-      const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, "0");
-      const utcDay = String(localDate.getUTCDate()).padStart(2, "0");
-      const utcHour = String(localDate.getUTCHours()).padStart(2, "0");
-      const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
+        // Convert to UTC string
+        const utcYear = localDate.getUTCFullYear();
+        const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, "0");
+        const utcDay = String(localDate.getUTCDate()).padStart(2, "0");
+        const utcHour = String(localDate.getUTCHours()).padStart(2, "0");
+        const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
 
-      return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
-    });
+        return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
+      });
 
       // Prepare payload for add-teacher-availability API
       const payload = {
@@ -2430,13 +2430,13 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
       const result = await response.json();
       console.log("✅ Add Teacher Availability API Response:", result);
-      
+
       // Clear all toasters but keep clicked slots to hide plus icons permanently
       setSlotToasters({});
       // Don't clear clickedSlots - keep them to hide plus icons after saving
@@ -2469,7 +2469,7 @@ function App() {
       // Format date to YYYY-MM-DD format
       const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
       const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
-      
+
       // Prepare payload for add-teacher-availability API
       const payload = {
         teacher_uid: toasterData.teacherId,
@@ -2496,13 +2496,13 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
+        } catch { }
         throw new Error(errorMsg);
       }
 
       const result = await response.json();
       console.log("✅ Add Teacher Availability API Response:", result);
-      
+
       // Keep the slot in clickedSlots to hide the plus icon permanently after saving
       // This ensures the plus icon doesn't show again for this slot
       // setClickedSlots(prev => {
@@ -2599,6 +2599,7 @@ function App() {
         end_time: event.end_time,
         creator: event.creator,
         summary: event.summary,
+        
       };
     } else if (type === "booking") {
       // Parse summary to extract fields
@@ -2798,11 +2799,10 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`${buttonClass} ${
-            currentPage === 1
+          className={`${buttonClass} ${currentPage === 1
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
+            }`}
         >
           <FaChevronLeft size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2815,13 +2815,12 @@ function App() {
               typeof page === "number" ? onPageChange(page) : null
             }
             disabled={page === "..."}
-            className={`${buttonClass} ${
-              page === currentPage
+            className={`${buttonClass} ${page === currentPage
                 ? "bg-blue-600 text-white"
                 : page === "..."
-                ? "bg-transparent text-gray-500 cursor-default"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+                  ? "bg-transparent text-gray-500 cursor-default"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+              }`}
           >
             {page}
           </button>
@@ -2831,11 +2830,10 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`${buttonClass} ${
-            currentPage === totalPages
+          className={`${buttonClass} ${currentPage === totalPages
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-          }`}
+            }`}
         >
           <FaChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -3066,7 +3064,7 @@ function App() {
 
       try {
         console.log("🔍 Fetching backend data for event_id:", editReschedulePopup.data.event_id);
-        
+
         const response = await fetch(`/api/booking-details/${editReschedulePopup.data.event_id}`, {
           method: "GET",
           headers: {
@@ -3083,9 +3081,9 @@ function App() {
 
         if (result.status === "success" && result.data) {
           setBackendData(result.data);
-          
+
           console.log("✅ Backend data received, updating form fields:", result.data);
-          
+
           // Update form fields with backend data (backend data takes priority)
           if (result.data.description) {
             // Update the description in the popup data
@@ -3093,40 +3091,40 @@ function App() {
             setEditReschedulePopup(prev => ({ ...prev, data: updatedData }));
             console.log("📝 Updated description:", result.data.description);
           }
-          
+
           if (result.data.attendees) {
             setAttendees(result.data.attendees);
             console.log("📧 Updated attendees:", result.data.attendees);
           }
-          
+
           if (result.data.class_type) {
             setSelectedClassType(result.data.class_type);
             console.log("📚 Updated class type:", result.data.class_type);
           }
-          
+
           if (result.data.class_count) {
             setSelectedClassCount(result.data.class_count.toString());
             console.log("🔢 Updated class count:", result.data.class_count);
           }
-          
+
           if (result.data.recording && Array.isArray(result.data.recording)) {
             setSelectedRecording(result.data.recording);
             console.log("🎥 Updated recording options:", result.data.recording);
           }
-          
+
           if (result.data.schedule && Array.isArray(result.data.schedule)) {
             setScheduleEntries(result.data.schedule);
             console.log("📅 Updated schedule:", result.data.schedule);
           }
-          
+
           if (result.data.students && Array.isArray(result.data.students)) {
             setSelectedStudents(result.data.students);
             console.log("👥 Updated students:", result.data.students);
           }
-          
+
           console.log("✅ Form fields updated with backend data");
         }
-        
+
         // Mark form as initialized
         setIsFormInitialized(true);
       } catch (error) {
@@ -3143,17 +3141,17 @@ function App() {
       if (editReschedulePopup.data) {
         // Extract existing booking data and populate form
         const bookingData = editReschedulePopup.data;
-        
+
         console.log("🔍 Populating form with booking data:", bookingData);
-        
+
         // Set attendees from existing data
         setAttendees(bookingData.attendees || "");
         console.log("📧 Set attendees:", bookingData.attendees || "");
-        
+
         // Set class details if available
         setSelectedClassType(bookingData.classType || bookingData.class_type || "");
         setSelectedClassCount(bookingData.classCount || bookingData.class_count || "");
-        
+
         // Handle recording options - support both string and array formats
         let recordingOptions = [];
         if (bookingData.recording) {
@@ -3165,17 +3163,17 @@ function App() {
         }
         setSelectedRecording(recordingOptions);
         console.log("🎥 Set recording options:", recordingOptions);
-        
+
         // Initialize schedule entries with current booking
         const currentSchedule = [[
-          formatDate(editReschedulePopup.date), 
+          formatDate(editReschedulePopup.date),
           editReschedulePopup.time
         ]];
         setScheduleEntries(currentSchedule);
         setSelectedScheduleDate(formatDate(editReschedulePopup.date));
         setSelectedScheduleTime(editReschedulePopup.time);
         console.log("📅 Set schedule:", currentSchedule);
-        
+
         // Set students if available - handle multiple formats
         let studentList = [];
         if (bookingData.students && Array.isArray(bookingData.students)) {
@@ -3224,7 +3222,7 @@ function App() {
     const addScheduleEntry = () => {
       if (selectedScheduleDate && selectedScheduleTime) {
         const newEntry = [selectedScheduleDate, selectedScheduleTime];
-        if (scheduleEntries.length < 3 && !scheduleEntries.some(entry => 
+        if (scheduleEntries.length < 3 && !scheduleEntries.some(entry =>
           entry[0] === selectedScheduleDate && entry[1] === selectedScheduleTime
         )) {
           setScheduleEntries([...scheduleEntries, newEntry]);
@@ -3262,7 +3260,7 @@ function App() {
           teacher_uid = tlMatch[0];
         }
       }
-      
+
       // Fallback to selected teacher if not found in summary
       if (!teacher_uid && selectedTeacher?.uid) {
         teacher_uid = selectedTeacher.uid;
@@ -3304,7 +3302,7 @@ function App() {
           try {
             const errJson = await response.json();
             if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-          } catch {}
+          } catch { }
           throw new Error(errorMsg);
         }
 
@@ -3385,9 +3383,9 @@ function App() {
           <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
             {/* Hidden event_id field */}
             {editReschedulePopup.data?.event_id && (
-                          <input
-                type="hidden" 
-                value={editReschedulePopup.data.event_id} 
+              <input
+                type="hidden"
+                value={editReschedulePopup.data.event_id}
                 id="edit_event_id"
               />
             )}
@@ -3398,8 +3396,8 @@ function App() {
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
                   <span className="text-sm text-blue-700">Loading backend data...</span>
-                        </div>
-                        </div>
+                </div>
+              </div>
             )}
 
             {backendDataError && (
@@ -3407,7 +3405,7 @@ function App() {
                 <div className="flex items-center gap-2">
                   <FaExclamationTriangle className="text-red-600" size={14} />
                   <span className="text-sm text-red-700">{backendDataError}</span>
-                        </div>
+                </div>
               </div>
             )}
 
@@ -3424,10 +3422,10 @@ function App() {
                     disabled={isLoadingBackendData}
                     className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
                   >
-                                         <FaSync size={10} />
+                    <FaSync size={10} />
                     Refresh
                   </button>
-                          </div>
+                </div>
                 <div className="text-xs text-green-800 space-y-1">
                   <div><strong>Event ID:</strong> {backendData.event_id || 'N/A'}</div>
                   <div><strong>Booking ID:</strong> {backendData.booking_id || 'N/A'}</div>
@@ -3438,8 +3436,8 @@ function App() {
                   {backendData.updated_at && (
                     <div><strong>Updated:</strong> {new Date(backendData.updated_at).toLocaleString()}</div>
                   )}
-                        </div>
-                      </div>
+                </div>
+              </div>
             )}
 
             {/* Manual Refresh Button when no backend data */}
@@ -3455,10 +3453,10 @@ function App() {
                     <FaDownload size={10} />
                     Load Backend Data
                   </button>
-                    </div>
+                </div>
               </div>
             )}
-            
+
             {/* Form Loading Indicator */}
             {!isFormInitialized && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -3468,19 +3466,19 @@ function App() {
                 </div>
               </div>
             )}
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
               {/* Left Column - Essential Booking Details */}
               <div className="space-y-3">
                 {/* Description */}
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
-                      <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                     <div className="p-0.5 bg-blue-100 rounded">
                       <FaEdit size={14} className="text-blue-600" />
-                        </div>
+                    </div>
                     Description
-                      </h3>
-                          <textarea
+                  </h3>
+                  <textarea
                     value={editReschedulePopup.data?.description || ""}
                     onChange={(e) => {
                       // Update the description in the data
@@ -3488,10 +3486,10 @@ function App() {
                       setEditReschedulePopup(prev => ({ ...prev, data: updatedData }));
                     }}
                     placeholder="Enter booking description..."
-                            className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                            rows={3}
-                          />
-                        </div>
+                    className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={3}
+                  />
+                </div>
 
                 {/* Class Type and Details */}
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
@@ -3502,68 +3500,68 @@ function App() {
                     Class Details
                   </h3>
 
-                    <div className="space-y-2">
-                      {/* Class Type */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Class Type
-                        </label>
-                        <select
-                          value={selectedClassType}
-                          onChange={(e) => setSelectedClassType(e.target.value)}
-                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select Class Type</option>
-                          <option value="1:1">1:1</option>
-                          <option value="1:2">1:2</option>
-                          <option value="batch">Batch</option>
-                        </select>
-                      </div>
+                  <div className="space-y-2">
+                    {/* Class Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Class Type
+                      </label>
+                      <select
+                        value={selectedClassType}
+                        onChange={(e) => setSelectedClassType(e.target.value)}
+                        className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Select Class Type</option>
+                        <option value="1:1">1:1</option>
+                        <option value="1:2">1:2</option>
+                        <option value="batch">Batch</option>
+                      </select>
+                    </div>
 
-                      {/* Class Count */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Class Count
-                        </label>
-                        <input
-                          type="number"
-                          value={selectedClassCount}
-                          onChange={(e) => setSelectedClassCount(e.target.value)}
-                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100 cursor-not-allowed"
-                          disabled
-                          min="1"
-                          max="50"
-                          placeholder="Enter class count"
-                        />
-                      </div>
+                    {/* Class Count */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Class Count
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedClassCount}
+                        onChange={(e) => setSelectedClassCount(e.target.value)}
+                        className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100 cursor-not-allowed"
+                        disabled
+                        min="1"
+                        max="50"
+                        placeholder="Enter class count"
+                      />
+                    </div>
 
-                      {/* Recording Options */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                    {/* Recording Options */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
                         Add More Details
-                        </label>
-                        <div className="space-y-1">
-                          {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map((option) => (
-                            <label key={option} className="flex items-center gap-2 text-xs">
-                              <input
-                                type="checkbox"
-                                checked={selectedRecording.includes(option)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedRecording([...selectedRecording, option]);
-                                  } else {
-                                    setSelectedRecording(selectedRecording.filter(item => item !== option));
-                                  }
-                                }}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              {option}
-                            </label>
-                          ))}
+                      </label>
+                      <div className="space-y-1">
+                        {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map((option) => (
+                          <label key={option} className="flex items-center gap-2 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={selectedRecording.includes(option)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedRecording([...selectedRecording, option]);
+                                } else {
+                                  setSelectedRecording(selectedRecording.filter(item => item !== option));
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            {option}
+                          </label>
+                        ))}
                       </div>
                     </div>
-                        </div>
-                      </div>
+                  </div>
+                </div>
 
                 {/* Attendees */}
                 <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
@@ -3580,16 +3578,16 @@ function App() {
                     className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     rows={2}
                   />
-                    </div>
+                </div>
 
                 {/* Update Button */}
-                    <button
-                      onClick={handleSubmit}
+                <button
+                  onClick={handleSubmit}
                   className="w-full p-2 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
-                    >
+                >
                   <FaEdit size={12} />
-                      Update Booking
-                    </button>
+                  Update Booking
+                </button>
               </div>
 
               {/* Right Column - Learners and Schedule */}
@@ -3758,9 +3756,9 @@ function App() {
                     )}
                   </div>
                 </div>
-                    </div>
-                      </div>
-                              </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -3832,9 +3830,9 @@ function App() {
 
             {/* Hidden event_id field */}
             {confirmationPopup.eventId && (
-              <input 
-                type="hidden" 
-                value={confirmationPopup.eventId} 
+              <input
+                type="hidden"
+                value={confirmationPopup.eventId}
                 id="event_id"
               />
             )}
@@ -3899,44 +3897,44 @@ function App() {
     // Filter data by the specific time slot, respecting grid counts
     const filteredAvailabilityData = availabilityAPI.response
       ? filterDataByTime(
-          availabilityAPI.response,
-          detailsPopup.time,
-          gridAvailableCount
-        )
+        availabilityAPI.response,
+        detailsPopup.time,
+        gridAvailableCount
+      )
       : [];
 
     const filteredBookingData = bookingApiResponse.data
       ? filterDataByTime(
-          bookingApiResponse.data,
-          detailsPopup.time,
-          gridBookedCount
-        )
+        bookingApiResponse.data,
+        detailsPopup.time,
+        gridBookedCount
+      )
       : [];
 
     // Get paginated data for current popup
     const currentData =
       detailsPopup.type === "availability"
         ? getPaginatedData(
-            filteredAvailabilityData,
-            popupPagination.currentPage,
-            popupPagination.itemsPerPage
-          )
+          filteredAvailabilityData,
+          popupPagination.currentPage,
+          popupPagination.itemsPerPage
+        )
         : getPaginatedData(
-            filteredBookingData,
-            popupPagination.currentPage,
-            popupPagination.itemsPerPage
-          );
+          filteredBookingData,
+          popupPagination.currentPage,
+          popupPagination.itemsPerPage
+        );
 
     const totalPages =
       detailsPopup.type === "availability"
         ? getTotalPages(
-            filteredAvailabilityData.length,
-            popupPagination.itemsPerPage
-          )
+          filteredAvailabilityData.length,
+          popupPagination.itemsPerPage
+        )
         : getTotalPages(
-            filteredBookingData.length,
-            popupPagination.itemsPerPage
-          );
+          filteredBookingData.length,
+          popupPagination.itemsPerPage
+        );
 
     // Debug logging
     console.log("🔍 Popup Debug Info:", {
@@ -4370,7 +4368,7 @@ function App() {
         const actionType = cancelPopup.type === "availability" ? "cancel-availability" : "delete-booking";
         const actionText = cancelPopup.type === "availability" ? "cancel" : "delete";
         const itemText = cancelPopup.type === "availability" ? "availability" : "booking";
-        
+
         setConfirmationPopup({
           isOpen: true,
           type: actionType,
@@ -4381,40 +4379,40 @@ function App() {
           time: cancelPopup.time,
           eventId: cancelPopup.data?.event_id || null,
           onConfirm: async () => {
-      try {
-        if (cancelPopup.type === "availability") {
-          await handleCancelAvailability(
-            cancelPopup.date,
-            cancelPopup.time,
-            cancelPopup.teacherDetails?.uid,
+            try {
+              if (cancelPopup.type === "availability") {
+                await handleCancelAvailability(
+                  cancelPopup.date,
+                  cancelPopup.time,
+                  cancelPopup.teacherDetails?.uid,
                   cancelPopup.reason,
                   cancelPopup.data?.event_id || null,
                   cancelPopup.upcomingEvents
-          );
-        } else if (cancelPopup.type === "booking") {
-          await handleCancelBooking(
-            cancelPopup.date,
-            cancelPopup.time,
-            cancelPopup.data,
+                );
+              } else if (cancelPopup.type === "booking") {
+                await handleCancelBooking(
+                  cancelPopup.date,
+                  cancelPopup.time,
+                  cancelPopup.data,
                   cancelPopup.reason,
                   cancelPopup.data?.event_id || null,
                   cancelPopup.upcomingEvents
-          );
-        }
+                );
+              }
 
               // Close the cancel popup
-        setCancelPopup({
-          isOpen: false,
-          type: null,
-          data: null,
-          date: null,
-          time: null,
-          reason: "",
-          studentDetails: null,
-          teacherDetails: null,
-        });
-      } catch (error) {
-        console.error("Error canceling:", error);
+              setCancelPopup({
+                isOpen: false,
+                type: null,
+                data: null,
+                date: null,
+                time: null,
+                reason: "",
+                studentDetails: null,
+                teacherDetails: null,
+              });
+            } catch (error) {
+              console.error("Error canceling:", error);
             }
           },
         });
@@ -4914,13 +4912,12 @@ function App() {
                   }
                 }}
                 disabled={!selectedTeacher && !selectedStudent}
-                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
-                  !selectedTeacher && !selectedStudent
+                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${!selectedTeacher && !selectedStudent
                     ? "opacity-50 cursor-not-allowed text-gray-400"
                     : currentView === "list"
-                    ? "bg-blue-500 text-white shadow-sm"
-                    : "text-blue-100 hover:text-white"
-                }`}
+                      ? "bg-blue-500 text-white shadow-sm"
+                      : "text-blue-100 hover:text-white"
+                  }`}
                 title={
                   !selectedTeacher && !selectedStudent
                     ? "Select a Teacher or Student to enable List View"
@@ -4969,11 +4966,10 @@ function App() {
                     });
                   }
                 }}
-                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
-                  currentView === "week"
+                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${currentView === "week"
                     ? "bg-blue-500 text-white shadow-sm"
                     : "text-blue-100 hover:text-white"
-                }`}
+                  }`}
               >
                 <FaCalendarWeek size={10} />
                 <span className="hidden sm:inline">Week View</span>
@@ -5271,14 +5267,13 @@ function App() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
                                         <div
-                                          className={`w-3 h-3 rounded-full mr-3 ${
-                                            extractedData.summary &&
-                                            (extractedData.summary
-                                              .toLowerCase()
-                                              .includes("availability") ||
-                                              extractedData.summary
+                                          className={`w-3 h-3 rounded-full mr-3 ${extractedData.summary &&
+                                              (extractedData.summary
                                                 .toLowerCase()
-                                                .includes("hours"))
+                                                .includes("availability") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("hours"))
                                               ? "bg-green-500"
                                               : extractedData.summary &&
                                                 (extractedData.summary
@@ -5287,55 +5282,55 @@ function App() {
                                                   extractedData.summary
                                                     .toLowerCase()
                                                     .includes("off"))
-                                              ? "bg-yellow-500"
-                                              : extractedData.summary &&
-                                                (extractedData.summary.trim() ===
-                                                  "B&R" ||
-                                                  extractedData.summary.trim() ===
+                                                ? "bg-yellow-500"
+                                                : extractedData.summary &&
+                                                  (extractedData.summary.trim() ===
+                                                    "B&R" ||
+                                                    extractedData.summary.trim() ===
                                                     "CBT/PL" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "CBT/UL" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "CBP/PL" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "CBP/UL" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "CBO" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "NO SHOW - LR" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "NO SHOW - TR" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "MAKE UP" ||
-                                                  extractedData.summary.trim() ===
+                                                    extractedData.summary.trim() ===
                                                     "MAKE UP - S" ||
-                                                  extractedData.summary.includes(
-                                                    "B&R"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBT/PL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBT/UL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBP/PL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBP/UL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBO"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "NO SHOW - LR"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "NO SHOW - TR"
-                                                  ))
-                                              ? "bg-black"
-                                              : "bg-red-500"
-                                          }`}
+                                                    extractedData.summary.includes(
+                                                      "B&R"
+                                                    ) ||
+                                                    extractedData.summary.includes(
+                                                      "CBT/PL"
+                                                    ) ||
+                                                    extractedData.summary.includes(
+                                                      "CBT/UL"
+                                                    ) ||
+                                                    extractedData.summary.includes(
+                                                      "CBP/PL"
+                                                    ) ||
+                                                    extractedData.summary.includes(
+                                                      "CBP/UL"
+                                                    ) ||
+                                                    extractedData.summary.includes(
+                                                      "CBO"
+                                                    ) ||
+                                                    extractedData.summary.includes(
+                                                      "NO SHOW - LR"
+                                                    ) ||
+                                                    extractedData.summary.includes(
+                                                      "NO SHOW - TR"
+                                                    ))
+                                                  ? "bg-black"
+                                                  : "bg-red-500"
+                                            }`}
                                         ></div>
                                         <div className="flex-1">
                                           <div className="text-sm font-medium text-gray-900">
@@ -5470,7 +5465,7 @@ function App() {
                                                                   extractedData.event_id || null,
                                                                   confirmationPopup.upcomingEvents
                                                                 );
-                                                                
+
                                                                 // Close the action menu
                                                                 setActionMenuOpen(null);
                                                               } catch (error) {
@@ -5629,27 +5624,27 @@ function App() {
                                                                 console.log("🚀 Calling delete-class API for booking deletion");
                                                                 console.log("📊 Event ID:", extractedData.event_id);
                                                                 console.log("📊 Upcoming events:", confirmationPopup.upcomingEvents);
-                                                                
+
                                                                 if (!extractedData.event_id) {
                                                                   throw new Error("No event_id available for deletion");
                                                                 }
-                                                                
+
                                                                 const deleteResult = await handleDeleteClass(
-                                                                  extractedData.event_id, 
+                                                                  extractedData.event_id,
                                                                   confirmationPopup.upcomingEvents
                                                                 );
-                                                                
+
                                                                 if (deleteResult.success) {
                                                                   // Close the action menu
                                                                   setActionMenuOpen(null);
-                                                                  
+
                                                                   // Show success message
                                                                   setSuccessMessage({
                                                                     show: true,
                                                                     message: "Booking Successfully Deleted !!",
                                                                     type: "delete",
                                                                   });
-                                                                  
+
                                                                   // Close success message after delay
                                                                   setTimeout(() => {
                                                                     setSuccessMessage({
@@ -5658,7 +5653,7 @@ function App() {
                                                                       type: "",
                                                                     });
                                                                   }, 2000);
-                                                                  
+
                                                                   // Refresh the data after deletion
                                                                   await fetchListViewBookingDetails();
                                                                 }
@@ -5741,27 +5736,27 @@ function App() {
                                                                 console.log("🚀 Calling delete-class API for event deletion");
                                                                 console.log("📊 Event ID:", extractedData.event_id);
                                                                 console.log("📊 Upcoming events:", confirmationPopup.upcomingEvents);
-                                                                
+
                                                                 if (!extractedData.event_id) {
                                                                   throw new Error("No event_id available for deletion");
                                                                 }
-                                                                
+
                                                                 const deleteResult = await handleDeleteClass(
-                                                                  extractedData.event_id, 
+                                                                  extractedData.event_id,
                                                                   confirmationPopup.upcomingEvents
                                                                 );
-                                                                
+
                                                                 if (deleteResult.success) {
                                                                   // Close the action menu
                                                                   setActionMenuOpen(null);
-                                                                  
+
                                                                   // Show success message
                                                                   setSuccessMessage({
                                                                     show: true,
                                                                     message: "Event Successfully Deleted !!",
                                                                     type: "delete",
                                                                   });
-                                                                  
+
                                                                   // Close success message after delay
                                                                   setTimeout(() => {
                                                                     setSuccessMessage({
@@ -5770,7 +5765,7 @@ function App() {
                                                                       type: "",
                                                                     });
                                                                   }, 2000);
-                                                                  
+
                                                                   // Refresh the data after deletion
                                                                   await fetchListViewBookingDetails();
                                                                 }
@@ -5842,7 +5837,7 @@ function App() {
                                 -{" "}
                                 {Math.min(
                                   pagination.currentPage *
-                                    pagination.itemsPerPage,
+                                  pagination.itemsPerPage,
                                   parsedBookings.length
                                 )}{" "}
                                 of {parsedBookings.length} bookings
@@ -6036,11 +6031,10 @@ function App() {
                             )}
 
                             <div
-                              className={`font-medium text-gray-800 ${
-                                available > 0
+                              className={`font-medium text-gray-800 ${available > 0
                                   ? "cursor-pointer hover:text-blue-600 hover:underline"
                                   : ""
-                              }`}
+                                }`}
                               onClick={() => {
                                 console.log("🖱️ Availability div clicked:", {
                                   available,
@@ -6064,11 +6058,10 @@ function App() {
                             </div>
 
                             <div
-                              className={`font-medium text-gray-800 ${
-                                booked > 0
+                              className={`font-medium text-gray-800 ${booked > 0
                                   ? "cursor-pointer hover:text-green-600 hover:underline"
                                   : ""
-                              }`}
+                                }`}
                               onClick={() => {
                                 console.log("🖱️ Booking div clicked:", {
                                   booked,
@@ -6152,7 +6145,7 @@ function App() {
       <EditReschedulePopup />
       <ConfirmationPopup />
       <SuccessMessage />
-      
+
       {/* Combined Slot Toasters Container */}
       {Object.keys(slotToasters).length > 0 && (
         <div className="fixed top-4 right-4 z-50 bg-white border border-gray-300 rounded-lg shadow-lg max-w-md max-h-[80vh] overflow-y-auto">
@@ -6210,7 +6203,7 @@ function App() {
                           newSet.delete(slotKey);
                           return newSet;
                         });
-                        
+
                         // Close this specific toaster
                         setSlotToasters(prev => {
                           const newToasters = { ...prev };

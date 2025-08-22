@@ -1922,6 +1922,60 @@ function App() {
     }
   };
 
+  // Handle delete class API call
+  const handleDeleteClass = async (eventId, upcomingEvents = false) => {
+    try {
+      console.log("🚀 Calling delete-class API:", {
+        eventId,
+        upcomingEvents,
+      });
+
+      // Prepare payload for delete-class API
+      const payload = {
+        event_id: eventId,
+        upcoming_events: upcomingEvents.toString() // Convert boolean to string
+      };
+
+      console.log("📤 Sending delete-class API request:");
+      console.log("🚀 URL: https://live.jetlearn.com/api/delete-class/");
+      console.log("📊 Payload:", JSON.stringify(payload, null, 2));
+
+      const response = await fetch(
+        "https://live.jetlearn.com/api/delete-class/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        let errorMsg = `HTTP error! status: ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
+        } catch {}
+        throw new Error(errorMsg);
+      }
+
+      const result = await response.json();
+      console.log("✅ Delete Class API Response:", result);
+
+      // Check if deletion was successful
+      if (result.status === "success" || result.success) {
+        console.log("✅ Class deleted successfully");
+        return { success: true, data: result };
+      } else {
+        throw new Error(result.message || "Delete failed");
+      }
+    } catch (error) {
+      console.error("❌ Error calling delete-class API:", error);
+      throw error;
+    }
+  };
+
   // Handle cancel availability
   const handleCancelAvailability = async (
     date,
@@ -1955,8 +2009,35 @@ function App() {
         return;
       }
 
-      // Call API to cancel availability
-      const response = await fetch("/api/cancel-availability/", {
+      // If eventId is provided, use delete-class API
+      if (eventId) {
+        console.log("🎯 Using delete-class API for availability cancellation");
+        const deleteResult = await handleDeleteClass(eventId, upcomingEvents);
+        
+        if (deleteResult.success) {
+          // Refresh the data after canceling
+          await fetchListViewBookingDetails();
+
+          // Show success message
+          setSuccessMessage({
+            show: true,
+            message: "Availability Successfully Cancelled !!",
+            type: "cancel",
+          });
+
+          // Close success message after delay
+          setTimeout(() => {
+            setSuccessMessage({
+              show: false,
+              message: "",
+              type: "",
+            });
+          }, 2000);
+        }
+        return;
+      }
+
+      const response = await fetch("https://live.jetlearn.com/api/delete-class", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2014,6 +2095,55 @@ function App() {
         upcomingEvents,
       });
 
+      // If eventId is provided, use delete-class API
+      if (eventId) {
+        console.log("🎯 Using delete-class API for booking cancellation");
+        const deleteResult = await handleDeleteClass(eventId, upcomingEvents);
+        
+        if (deleteResult.success) {
+          // Determine message type based on reason
+          const isNoShow = reason.includes("NO SHOW");
+          const messageType = isNoShow ? "no-show" : "cancel";
+          const messageText = isNoShow
+            ? "No Show Successfully Recorded !!"
+            : "Booking Successfully Cancelled !!";
+
+          // Show success message
+          setSuccessMessage({
+            show: true,
+            message: messageText,
+            type: messageType,
+          });
+
+          // Close the cancel popup after a short delay
+          setTimeout(() => {
+            setCancelPopup({
+              isOpen: false,
+              type: null,
+              data: null,
+              date: null,
+              time: null,
+              reason: "",
+              studentDetails: null,
+              teacherDetails: null,
+              upcomingEvents: false,
+            });
+            setSuccessMessage({
+              show: false,
+              message: "",
+              type: "",
+            });
+          }, 2000);
+
+          // Refresh the data after canceling
+          await fetchListViewBookingDetails();
+        }
+        return;
+      }
+
+      // Fallback to old API if no eventId (for backward compatibility)
+      console.log("⚠️ No eventId provided, using fallback API");
+      
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
       console.log(dateObj);
@@ -2238,10 +2368,46 @@ function App() {
         return;
       }
 
+       // Extract offset hours and minutes from "(GMT+02:00)"
+    const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+    const offsetHours = parseInt(match[1], 10); // +02
+    const offsetMinutes = parseInt(match[2], 10); // 00
+
+    console.log("offsetHours", offsetHours);
+    console.log("offsetMinutes", offsetMinutes);  
+    console.log("match", match);
+    console.log("schedules", schedules);
+
+    const formattedSchedule = schedules.map(([date, time]) => {
+      // Parse DD-MM-YYYY
+      const [year, month, day] = date.split("-").map(Number);
+      const [hour, minute] = time.split(":").map(Number);
+
+      // Create a date as if it were in the given offset
+      const localDate = new Date(
+        Date.UTC(
+          year,
+          month - 1,
+          day,
+          hour - offsetHours,
+          minute - offsetMinutes
+        )
+      );
+
+      // Convert to UTC string
+      const utcYear = localDate.getUTCFullYear();
+      const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, "0");
+      const utcDay = String(localDate.getUTCDate()).padStart(2, "0");
+      const utcHour = String(localDate.getUTCHours()).padStart(2, "0");
+      const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
+
+      return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
+    });
+
       // Prepare payload for add-teacher-availability API
       const payload = {
         teacher_uid: teacherId,
-        schedule: schedules
+        schedule: formattedSchedule
       };
 
       console.log("📤 Sending add-teacher-availability API request for all toasters:");
@@ -5261,7 +5427,7 @@ function App() {
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
                                                       >
                                                         <FaUsers size={10} />
-                                                        Manage Button
+                                                        Manage Booking
                                                       </button>
                                                       <button
                                                         onClick={() => {
@@ -5459,31 +5625,46 @@ function App() {
                                                             upcomingEvents: false,
                                                             onConfirm: async () => {
                                                               try {
-                                                                // TODO: Implement delete booking API call
-                                                                console.log("Delete booking:", extractedData);
-                                                                console.log("Upcoming events:", confirmationPopup.upcomingEvents);
+                                                                // Call delete-class API
+                                                                console.log("🚀 Calling delete-class API for booking deletion");
+                                                                console.log("📊 Event ID:", extractedData.event_id);
+                                                                console.log("📊 Upcoming events:", confirmationPopup.upcomingEvents);
                                                                 
-                                                                // Close the action menu
-                                                                setActionMenuOpen(null);
+                                                                if (!extractedData.event_id) {
+                                                                  throw new Error("No event_id available for deletion");
+                                                                }
                                                                 
-                                                                // Show success message
-                                                                setSuccessMessage({
-                                                                  show: true,
-                                                                  message: "Booking Successfully Deleted !!",
-                                                                  type: "delete",
-                                                                });
+                                                                const deleteResult = await handleDeleteClass(
+                                                                  extractedData.event_id, 
+                                                                  confirmationPopup.upcomingEvents
+                                                                );
                                                                 
-                                                                // Close success message after delay
-                                                                setTimeout(() => {
+                                                                if (deleteResult.success) {
+                                                                  // Close the action menu
+                                                                  setActionMenuOpen(null);
+                                                                  
+                                                                  // Show success message
                                                                   setSuccessMessage({
-                                                                    show: false,
-                                                                    message: "",
-                                                                    type: "",
+                                                                    show: true,
+                                                                    message: "Booking Successfully Deleted !!",
+                                                                    type: "delete",
                                                                   });
-                                                                }, 2000);
+                                                                  
+                                                                  // Close success message after delay
+                                                                  setTimeout(() => {
+                                                                    setSuccessMessage({
+                                                                      show: false,
+                                                                      message: "",
+                                                                      type: "",
+                                                                    });
+                                                                  }, 2000);
+                                                                  
+                                                                  // Refresh the data after deletion
+                                                                  await fetchListViewBookingDetails();
+                                                                }
                                                               } catch (error) {
                                                                 console.error("Error deleting booking:", error);
-                                                                alert("Failed to delete booking. Please try again.");
+                                                                alert(`Failed to delete booking: ${error.message}`);
                                                               }
                                                             },
                                                           });
@@ -5556,31 +5737,46 @@ function App() {
                                                             upcomingEvents: false,
                                                             onConfirm: async () => {
                                                               try {
-                                                                // TODO: Implement delete event API call
-                                                                console.log("Delete event:", extractedData);
-                                                                console.log("Upcoming events:", confirmationPopup.upcomingEvents);
+                                                                // Call delete-class API for event deletion
+                                                                console.log("🚀 Calling delete-class API for event deletion");
+                                                                console.log("📊 Event ID:", extractedData.event_id);
+                                                                console.log("📊 Upcoming events:", confirmationPopup.upcomingEvents);
                                                                 
-                                                                // Close the action menu
-                                                                setActionMenuOpen(null);
+                                                                if (!extractedData.event_id) {
+                                                                  throw new Error("No event_id available for deletion");
+                                                                }
                                                                 
-                                                                // Show success message
-                                                                setSuccessMessage({
-                                                                  show: true,
-                                                                  message: "Event Successfully Deleted !!",
-                                                                  type: "delete",
-                                                                });
+                                                                const deleteResult = await handleDeleteClass(
+                                                                  extractedData.event_id, 
+                                                                  confirmationPopup.upcomingEvents
+                                                                );
                                                                 
-                                                                // Close success message after delay
-                                                                setTimeout(() => {
+                                                                if (deleteResult.success) {
+                                                                  // Close the action menu
+                                                                  setActionMenuOpen(null);
+                                                                  
+                                                                  // Show success message
                                                                   setSuccessMessage({
-                                                                    show: false,
-                                                                    message: "",
-                                                                    type: "",
+                                                                    show: true,
+                                                                    message: "Event Successfully Deleted !!",
+                                                                    type: "delete",
                                                                   });
-                                                                }, 2000);
+                                                                  
+                                                                  // Close success message after delay
+                                                                  setTimeout(() => {
+                                                                    setSuccessMessage({
+                                                                      show: false,
+                                                                      message: "",
+                                                                      type: "",
+                                                                    });
+                                                                  }, 2000);
+                                                                  
+                                                                  // Refresh the data after deletion
+                                                                  await fetchListViewBookingDetails();
+                                                                }
                                                               } catch (error) {
                                                                 console.error("Error deleting event:", error);
-                                                                alert("Failed to delete event. Please try again.");
+                                                                alert(`Failed to delete event: ${error.message}`);
                                                               }
                                                             },
                                                           });

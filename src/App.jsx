@@ -3197,7 +3197,7 @@ function App() {
         setIsFormInitialized(true);
       } catch (error) {
         console.error("❌ Error fetching backend booking data:", error);
-        setBackendDataError("Failed to fetch booking data from backend");
+        setBackendDataError("");
         setIsFormInitialized(true); // Still mark as initialized even if backend fails
       } finally {
         setIsLoadingBackendData(false);
@@ -3554,27 +3554,6 @@ function App() {
                 </div>
               </div>
             )}
-
-            {/* Manual Refresh Button when no backend data */}
-            {!backendData &&
-              !isLoadingBackendData &&
-              editReschedulePopup.data?.event_id && (
-                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
-                      No backend data loaded
-                    </span>
-                    <button
-                      onClick={fetchBackendBookingData}
-                      disabled={isLoadingBackendData}
-                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
-                    >
-                      <FaDownload size={10} />
-                      Load Backend Data
-                    </button>
-                  </div>
-                </div>
-              )}
 
             {/* Form Loading Indicator */}
             {!isFormInitialized && (

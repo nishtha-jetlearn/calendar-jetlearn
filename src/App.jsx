@@ -2630,6 +2630,106 @@ function App() {
     return filteredData;
   };
 
+  // Function to process booking data for edit popup
+  const processBookingDataForEdit = (extractedData, bookingDate, timeRange) => {
+    const summary = extractedData.summary || "";
+
+    // Extract recording keywords from summary
+    const recordingKeywords = [];
+    if (summary.includes("DNREC")) recordingKeywords.push("DNREC");
+    if (summary.includes("MAKE UP")) recordingKeywords.push("MAKE UP");
+    if (summary.includes("MAKE UP - S")) recordingKeywords.push("MAKE UP - S");
+    if (summary.includes("Reserved")) recordingKeywords.push("Reserved");
+
+    // Extract learner IDs starting with JL from summary
+    const jlMatches = summary.match(/\bJL[A-Za-z0-9]+\b/g) || [];
+    const extractedLearners = jlMatches.map((jlId) => {
+      // Find the learner in students array
+      const existingLearner = students.find((s) => s.jetlearner_id === jlId);
+      if (existingLearner) {
+        return existingLearner;
+      } else {
+        // Create learner object if not found
+        return {
+          jetlearner_id: jlId,
+          name: jlId,
+          deal_name: jlId,
+        };
+      }
+    });
+
+    // Extract teacher ID starting with TL from summary
+    const tlMatch = summary.match(/\bTL[A-Za-z0-9]+\b/);
+    const teacherId = tlMatch ? tlMatch[0] : extractedData.teacherid || "";
+
+    // Extract attendees from summary or existing data
+    let extractedAttendees = "";
+    if (extractedData.attendees) {
+      extractedAttendees = extractedData.attendees;
+    } else {
+      // Try to extract email addresses from summary
+      const emailMatches = summary.match(
+        /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g
+      );
+      if (emailMatches) {
+        extractedAttendees = emailMatches.join(", ");
+      }
+    }
+
+    // Determine class type based on summary keywords
+    let classType = "1:1"; // default
+    if (summary.includes("1:2")) {
+      classType = "1:2";
+    } else if (summary.includes("batch") || summary.includes("Batch")) {
+      classType = "batch";
+    }
+
+    // Determine booking type
+    const bookingType = summary.includes("Trial") ? "Trial" : "Paid";
+
+    // Extract course information from JL ID (last character)
+    const courseInfo = [];
+    jlMatches.forEach((jlId) => {
+      const lastChar = jlId.slice(-1).toUpperCase();
+      if (lastChar === "C") {
+        courseInfo.push(`${jlId}: Coding`);
+      } else if (lastChar === "M") {
+        courseInfo.push(`${jlId}: Maths`);
+      }
+    });
+
+    return {
+      ...extractedData,
+      // Pre-populate description from summary
+      description: summary,
+      // Pre-populate class type based on keywords
+      class_type: classType,
+      // Pre-populate booking type
+      booking_type: bookingType,
+      // Pre-populate course information
+      course_info: courseInfo,
+      // Pre-populate student data (use extracted learners or fallback to original)
+      student:
+        extractedLearners.length > 0
+          ? extractedLearners[0]
+          : {
+              jetlearner_id: extractedData.jlid,
+              name: extractedData.learner_name,
+              deal_name: extractedData.learner_name,
+            },
+      // Pre-populate all extracted learners
+      students: extractedLearners,
+      // Pre-populate schedule
+      schedule: [[formatDate(bookingDate), timeRange]],
+      // Pre-populate recording keywords
+      recording: recordingKeywords,
+      // Pre-populate other fields
+      attendees: extractedAttendees,
+      class_count: "1",
+      teacher_id: teacherId,
+    };
+  };
+
   // Function to extract specific fields from event data
   const extractEventFields = (event, type) => {
     if (type === "availability") {
@@ -3060,10 +3160,10 @@ function App() {
     if (!editReschedulePopup.isOpen) return null;
 
     // State for the edit/reschedule form
-    const [bookingType, setBookingType] = useState("trial");
-    const [platformCredentials, setPlatformCredentials] = useState("");
     const [attendees, setAttendees] = useState("");
+    const [attendeeInput, setAttendeeInput] = useState("");
     const [scheduleEntries, setScheduleEntries] = useState([]);
+    const [upcomingEvents, setUpcomingEvents] = useState(false);
     const [selectedScheduleDate, setSelectedScheduleDate] = useState("");
     const [selectedScheduleTime, setSelectedScheduleTime] = useState("");
     const [selectedStudents, setSelectedStudents] = useState([]);
@@ -3071,23 +3171,12 @@ function App() {
     const [studentSearchResults, setStudentSearchResults] = useState([]);
     const [showStudentSearch, setShowStudentSearch] = useState(false);
 
-    // For paid booking type
-    const [selectedSubject, setSelectedSubject] = useState("");
+    // Class details
     const [selectedClassType, setSelectedClassType] = useState("");
     const [selectedClassCount, setSelectedClassCount] = useState("");
     const [selectedRecording, setSelectedRecording] = useState([]);
-    const [batchNumber, setBatchNumber] = useState("");
 
-    // New state for editable summary fields
-    const [studentName, setStudentName] = useState("");
-    const [jlId, setJlId] = useState("");
-    const [lessonType, setLessonType] = useState("");
-    const [tjlId, setTjlId] = useState("");
-
-    // New state for backend data
-    const [backendData, setBackendData] = useState(null);
-    const [isLoadingBackendData, setIsLoadingBackendData] = useState(false);
-    const [backendDataError, setBackendDataError] = useState(null);
+    // Form initialization state
     const [isFormInitialized, setIsFormInitialized] = useState(false);
 
     const formatTime = (time) => {
@@ -3097,180 +3186,56 @@ function App() {
       return `${time} - ${String(endHour).padStart(2, "0")}:${minutes}`;
     };
 
-    // Function to fetch backend data for the booking
+    // Function to fetch backend data for the booking (removed - using extracted data only)
     const fetchBackendBookingData = async () => {
-      if (!editReschedulePopup.data?.event_id) {
-        console.log("No event_id available for fetching backend data");
-        return;
-      }
-
-      setIsLoadingBackendData(true);
-      setBackendDataError(null);
-
-      try {
-        console.log(
-          "🔍 Fetching backend data for event_id:",
-          editReschedulePopup.data.event_id
-        );
-
-        const response = await fetch(
-          `/api/booking-details/${editReschedulePopup.data.event_id}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log("✅ Backend booking data received:", result);
-
-        if (result.status === "success" && result.data) {
-          setBackendData(result.data);
-
-          console.log(
-            "✅ Backend data received, updating form fields:",
-            result.data
-          );
-
-          // Update form fields with backend data (backend data takes priority)
-          if (result.data.description) {
-            // Update the description in the popup data
-            const updatedData = {
-              ...editReschedulePopup.data,
-              description: result.data.description,
-            };
-            setEditReschedulePopup((prev) => ({ ...prev, data: updatedData }));
-            console.log("📝 Updated description:", result.data.description);
-          }
-
-          if (result.data.attendees) {
-            setAttendees(result.data.attendees);
-            console.log("📧 Updated attendees:", result.data.attendees);
-          }
-
-          if (result.data.class_type) {
-            setSelectedClassType(result.data.class_type);
-            console.log("📚 Updated class type:", result.data.class_type);
-          }
-
-          if (result.data.class_count) {
-            setSelectedClassCount(result.data.class_count.toString());
-            console.log("🔢 Updated class count:", result.data.class_count);
-          }
-
-          if (result.data.recording && Array.isArray(result.data.recording)) {
-            setSelectedRecording(result.data.recording);
-            console.log("🎥 Updated recording options:", result.data.recording);
-          }
-
-          if (result.data.schedule && Array.isArray(result.data.schedule)) {
-            setScheduleEntries(result.data.schedule);
-            console.log("📅 Updated schedule:", result.data.schedule);
-          }
-
-          if (result.data.students && Array.isArray(result.data.students)) {
-            setSelectedStudents(result.data.students);
-            console.log("👥 Updated students:", result.data.students);
-          }
-
-          console.log("✅ Form fields updated with backend data");
-        }
-
-        // Mark form as initialized
-        setIsFormInitialized(true);
-      } catch (error) {
-        console.error("❌ Error fetching backend booking data:", error);
-        setBackendDataError("Failed to fetch booking data from backend");
-        setIsFormInitialized(true); // Still mark as initialized even if backend fails
-      } finally {
-        setIsLoadingBackendData(false);
-      }
+      // This function is no longer needed as we use extracted data from the calendar event
+      console.log(
+        "ℹ️ Backend data fetching removed - using extracted data only"
+      );
+      setIsFormInitialized(true);
     };
 
-    // Initialize form with existing booking data
+    // Initialize form with pre-processed data
     React.useEffect(() => {
       if (editReschedulePopup.data) {
-        // Extract existing booking data and populate form
         const bookingData = editReschedulePopup.data;
 
-        console.log("🔍 Populating form with booking data:", bookingData);
-
-        // Set attendees from existing data
+        // Set form fields directly from pre-processed data
+        setSelectedClassType(bookingData.class_type || "");
+        setSelectedClassCount(bookingData.class_count || "1");
         setAttendees(bookingData.attendees || "");
-        console.log("📧 Set attendees:", bookingData.attendees || "");
+        setSelectedRecording(bookingData.recording || []);
 
-        // Set class details if available
-        setSelectedClassType(
-          bookingData.classType || bookingData.class_type || ""
-        );
-        setSelectedClassCount(
-          bookingData.classCount || bookingData.class_count || ""
-        );
-
-        // Handle recording options - support both string and array formats
-        let recordingOptions = [];
-        if (bookingData.recording) {
-          if (Array.isArray(bookingData.recording)) {
-            recordingOptions = bookingData.recording;
-          } else if (typeof bookingData.recording === "string") {
-            recordingOptions = bookingData.recording
-              .split(", ")
-              .filter((item) => item.trim());
+        // Set schedule from pre-processed data
+        if (bookingData.schedule && Array.isArray(bookingData.schedule)) {
+          setScheduleEntries(bookingData.schedule);
+          if (bookingData.schedule.length > 0) {
+            setSelectedScheduleDate(bookingData.schedule[0][0] || "");
+            setSelectedScheduleTime(bookingData.schedule[0][1] || "");
           }
         }
-        setSelectedRecording(recordingOptions);
-        console.log("🎥 Set recording options:", recordingOptions);
 
-        // Initialize schedule entries with current booking
-        const currentSchedule = [
-          [formatDate(editReschedulePopup.date), editReschedulePopup.time],
-        ];
-        setScheduleEntries(currentSchedule);
-        setSelectedScheduleDate(formatDate(editReschedulePopup.date));
-        setSelectedScheduleTime(editReschedulePopup.time);
-        console.log("📅 Set schedule:", currentSchedule);
-
-        // Set students if available - handle multiple formats
-        let studentList = [];
+        // Set students from pre-processed data
         if (bookingData.students && Array.isArray(bookingData.students)) {
-          studentList = bookingData.students;
-        } else if (bookingData.jlid) {
-          const existingStudent = students.find(
-            (s) => s.jetlearner_id === bookingData.jlid
-          );
-          if (existingStudent) {
-            studentList = [existingStudent];
-          }
+          // Use all extracted students
+          setSelectedStudents(bookingData.students);
         } else if (bookingData.student) {
-          studentList = [bookingData.student];
+          // Fallback to single student
+          setSelectedStudents([bookingData.student]);
+        } else if (bookingData.jlid && bookingData.learner_name) {
+          // Fallback to extracted data if student object not available
+          const student = {
+            jetlearner_id: bookingData.jlid,
+            name: bookingData.learner_name,
+            deal_name: bookingData.learner_name,
+          };
+          setSelectedStudents([student]);
         }
-        setSelectedStudents(studentList);
-        console.log("👥 Set students:", studentList);
 
-        // Fetch backend data if event_id is available
-        if (bookingData.event_id) {
-          console.log(
-            "🔄 Fetching backend data for event_id:",
-            bookingData.event_id
-          );
-          fetchBackendBookingData();
-        } else {
-          console.log("⚠️ No event_id available, using frontend data only");
-          setIsFormInitialized(true);
-        }
+        setIsFormInitialized(true);
+        console.log("✅ Form initialized instantly with pre-processed data");
       }
-    }, [
-      editReschedulePopup.data,
-      editReschedulePopup.date,
-      editReschedulePopup.time,
-      students,
-    ]);
+    }, [editReschedulePopup.data]);
 
     // Handle student search
     const handleStudentSearch = (searchTerm) => {
@@ -3318,6 +3283,12 @@ function App() {
       setScheduleEntries(scheduleEntries.filter((_, i) => i !== index));
     };
 
+    // Helper function to get hidden field values for API
+    const getHiddenFieldValue = (fieldId) => {
+      const element = document.getElementById(fieldId);
+      return element ? element.value : "";
+    };
+
     // Handle form submission
     const handleSubmit = async () => {
       if (selectedStudents.length === 0) {
@@ -3335,17 +3306,21 @@ function App() {
 
       // Extract teacher UID from the booking data or selected teacher
       let teacher_uid = null;
-      if (editReschedulePopup.data?.summary) {
-        const tlMatch = editReschedulePopup.data.summary.match(
-          /\b(TJL)[A-Za-z0-9]+\b/g
-        );
+
+      // First try to use the pre-extracted teacher_id
+      if (editReschedulePopup.data?.teacher_id) {
+        teacher_uid = editReschedulePopup.data.teacher_id;
+      }
+      // Fallback to extracting from summary
+      else if (editReschedulePopup.data?.summary) {
+        const tlMatch =
+          editReschedulePopup.data.summary.match(/\bTL[A-Za-z0-9]+\b/g);
         if (tlMatch && tlMatch.length > 0) {
           teacher_uid = tlMatch[0];
         }
       }
-
-      // Fallback to selected teacher if not found in summary
-      if (!teacher_uid && selectedTeacher?.uid) {
+      // Fallback to selected teacher if not found
+      else if (selectedTeacher?.uid) {
         teacher_uid = selectedTeacher.uid;
       }
 
@@ -3354,22 +3329,51 @@ function App() {
         return;
       }
 
+      // Get values from hidden fields as backup
+      const hiddenEventId = getHiddenFieldValue("edit_event_id");
+      const hiddenTeacherId = getHiddenFieldValue("edit_teacher_id");
+      const hiddenStudentIds = getHiddenFieldValue("edit_student_ids");
+      const hiddenClassType = getHiddenFieldValue("edit_class_type");
+      const hiddenRecordingOptions = getHiddenFieldValue(
+        "edit_recording_options"
+      );
+      const hiddenBookingType = getHiddenFieldValue("edit_booking_type");
+      const hiddenCourseInfo = getHiddenFieldValue("edit_course_info");
+
       // Prepare the API payload according to the curl example
       const apiPayload = {
-        event_id: editReschedulePopup.data?.event_id || "",
+        event_id: editReschedulePopup.data?.event_id || hiddenEventId || "",
         jl_uid: jl_uid,
-        teacher_uid: teacher_uid,
+        teacher_uid: teacher_uid || hiddenTeacherId || "",
         platform_credentials: editReschedulePopup.data?.description || "",
         schedule: scheduleEntries,
-        class_type: selectedClassType || "Paid",
-        tags: selectedRecording.length > 0 ? selectedRecording : [],
+        class_type: selectedClassType || hiddenClassType || "1:1",
+        booking_type: editReschedulePopup.data?.booking_type || "Paid",
+        tags:
+          selectedRecording.length > 0
+            ? selectedRecording
+            : hiddenRecordingOptions
+            ? JSON.parse(hiddenRecordingOptions)
+            : [],
+        attendees: attendees.split(",").filter((email) => email.trim()),
         updated_by: user?.email || "",
-        upcoming_events: "true", // Default to true as per example
+        upcoming_events: upcomingEvents ? "true" : "false",
       };
 
       console.log("📤 Sending UPDATE/EDIT Class API request:");
-      console.log("🚀 URL: https://live.jetlearn.com/api/update-class/");
       console.log("📊 Payload:", JSON.stringify(apiPayload, null, 2));
+      console.log("🔍 API Payload Breakdown:");
+      console.log("  - event_id:", apiPayload.event_id);
+      console.log("  - jl_uid:", apiPayload.jl_uid);
+      console.log("  - teacher_uid:", apiPayload.teacher_uid);
+      console.log("  - platform_credentials:", apiPayload.platform_credentials);
+      console.log("  - schedule:", apiPayload.schedule);
+      console.log("  - class_type:", apiPayload.class_type);
+      console.log("  - booking_type:", apiPayload.booking_type);
+      console.log("  - tags:", apiPayload.tags);
+      console.log("  - attendees:", apiPayload.attendees);
+      console.log("  - updated_by:", apiPayload.updated_by);
+      console.log("  - upcoming_events:", apiPayload.upcoming_events);
 
       try {
         const response = await fetch(
@@ -3468,102 +3472,94 @@ function App() {
           </div>
 
           <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
-            {/* Hidden event_id field */}
+            {/* Hidden fields for API integration */}
             {editReschedulePopup.data?.event_id && (
-              <input
-                type="hidden"
-                value={editReschedulePopup.data.event_id}
-                id="edit_event_id"
-              />
-            )}
-
-            {/* Backend Data Loading and Error States */}
-            {isLoadingBackendData && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                  <span className="text-sm text-blue-700">
-                    Loading backend data...
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {backendDataError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <FaExclamationTriangle className="text-red-600" size={14} />
-                  <span className="text-sm text-red-700">
-                    {backendDataError}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Backend Data Display */}
-            {backendData && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-green-900">
-                    <FaCheckCircle size={14} className="text-green-600" />
-                    Backend Data Loaded
-                  </h3>
-                  <button
-                    onClick={fetchBackendBookingData}
-                    disabled={isLoadingBackendData}
-                    className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
-                  >
-                    <FaSync size={10} />
-                    Refresh
-                  </button>
-                </div>
-                <div className="text-xs text-green-800 space-y-1">
-                  <div>
-                    <strong>Event ID:</strong> {backendData.event_id || "N/A"}
-                  </div>
-                  <div>
-                    <strong>Booking ID:</strong>{" "}
-                    {backendData.booking_id || "N/A"}
-                  </div>
-                  <div>
-                    <strong>Status:</strong> {backendData.status || "N/A"}
-                  </div>
-                  {backendData.created_at && (
-                    <div>
-                      <strong>Created:</strong>{" "}
-                      {new Date(backendData.created_at).toLocaleString()}
-                    </div>
+              <>
+                <input
+                  type="hidden"
+                  value={editReschedulePopup.data.event_id}
+                  id="edit_event_id"
+                  name="event_id"
+                />
+                <input
+                  type="hidden"
+                  value={editReschedulePopup.data.teacher_id || ""}
+                  id="edit_teacher_id"
+                  name="teacher_id"
+                />
+                <input
+                  type="hidden"
+                  value={JSON.stringify(
+                    selectedStudents.map((s) => s.jetlearner_id)
                   )}
-                  {backendData.updated_at && (
-                    <div>
-                      <strong>Updated:</strong>{" "}
-                      {new Date(backendData.updated_at).toLocaleString()}
-                    </div>
+                  id="edit_student_ids"
+                  name="student_ids"
+                />
+                <input
+                  type="hidden"
+                  value={selectedClassType}
+                  id="edit_class_type"
+                  name="class_type"
+                />
+                <input
+                  type="hidden"
+                  value={JSON.stringify(selectedRecording)}
+                  id="edit_recording_options"
+                  name="recording_options"
+                />
+                <input
+                  type="hidden"
+                  value={editReschedulePopup.data.booking_type || ""}
+                  id="edit_booking_type"
+                  name="booking_type"
+                />
+                <input
+                  type="hidden"
+                  value={JSON.stringify(
+                    editReschedulePopup.data.course_info || []
                   )}
+                  id="edit_course_info"
+                  name="course_info"
+                />
+              </>
+            )}
+
+            {/* Compact Booking Information Display */}
+            {editReschedulePopup.data?.event_id && (
+              <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+                  <div>
+                    <strong>Event ID:</strong>{" "}
+                    {editReschedulePopup.data.event_id || "N/A"}
+                  </div>
+                  <div>
+                    <strong>Class Type:</strong>{" "}
+                    {editReschedulePopup.data.class_type || "N/A"}
+                  </div>
+                  <div>
+                    <strong>Booking Type:</strong>{" "}
+                    {editReschedulePopup.data.booking_type ||
+                      (editReschedulePopup.data.summary?.includes("Trial")
+                        ? "Trial"
+                        : "Paid")}
+                  </div>
+                  <div>
+                    <strong>Course:</strong>{" "}
+                    {editReschedulePopup.data.course_info &&
+                    editReschedulePopup.data.course_info.length > 0
+                      ? editReschedulePopup.data.course_info[0].includes(
+                          "Coding"
+                        )
+                        ? "Coding"
+                        : "Maths"
+                      : "N/A"}
+                  </div>
+                  <div className="col-span-2">
+                    <strong>Teacher:</strong> {selectedTeacher?.full_name}
+                  </div>
                 </div>
               </div>
             )}
-
-            {/* Manual Refresh Button when no backend data */}
-            {!backendData &&
-              !isLoadingBackendData &&
-              editReschedulePopup.data?.event_id && (
-                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
-                      No backend data loaded
-                    </span>
-                    <button
-                      onClick={fetchBackendBookingData}
-                      disabled={isLoadingBackendData}
-                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
-                    >
-                      <FaDownload size={10} />
-                      Load Backend Data
-                    </button>
-                  </div>
-                </div>
-              )}
 
             {/* Form Loading Indicator */}
             {!isFormInitialized && (
@@ -3577,343 +3573,363 @@ function App() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-              {/* Left Column - Essential Booking Details */}
-              <div className="space-y-3">
-                {/* Description */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                    <div className="p-0.5 bg-blue-100 rounded">
-                      <FaEdit size={14} className="text-blue-600" />
+            {/* Description - Full Width */}
+            <div className="mb-3">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                  <div className="p-0.5 bg-blue-100 rounded">
+                    <FaEdit size={14} className="text-blue-600" />
+                  </div>
+                  Description
+                </h3>
+                <textarea
+                  value={editReschedulePopup.data?.description || ""}
+                  onChange={(e) => {
+                    // Update the description in the data
+                    const updatedData = {
+                      ...editReschedulePopup.data,
+                      description: e.target.value,
+                    };
+                    setEditReschedulePopup((prev) => ({
+                      ...prev,
+                      data: updatedData,
+                    }));
+                  }}
+                  placeholder="Enter booking description..."
+                  className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
+                  rows={4}
+                />
+              </div>
+            </div>
+
+            {/* Schedule and Learners - Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3">
+              {/* Schedule Display */}
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                  <div className="p-0.5 bg-orange-100 rounded">
+                    <FaCalendarAlt size={14} className="text-orange-600" />
+                  </div>
+                  Schedule
+                </h3>
+
+                <div className="space-y-2">
+                  {scheduleEntries.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <FaCalendarAlt
+                        size={20}
+                        className="mx-auto mb-2 text-gray-300"
+                      />
+                      <p className="text-xs">No schedule entries</p>
                     </div>
-                    Description
-                  </h3>
-                  <textarea
-                    value={editReschedulePopup.data?.description || ""}
-                    onChange={(e) => {
-                      // Update the description in the data
-                      const updatedData = {
-                        ...editReschedulePopup.data,
-                        description: e.target.value,
-                      };
-                      setEditReschedulePopup((prev) => ({
-                        ...prev,
-                        data: updatedData,
-                      }));
-                    }}
-                    placeholder="Enter booking description..."
-                    className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    rows={3}
-                  />
+                  ) : (
+                    <div className="space-y-1">
+                      {scheduleEntries.map((entry, index) => (
+                        <div
+                          key={index}
+                          className="p-2 bg-white rounded-md border border-gray-200"
+                        >
+                          <span className="text-xs text-gray-700">
+                            {entry[0]} at {entry[1]}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Class Type and Details */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                    <div className="p-0.5 bg-green-100 rounded">
-                      <FaBook size={14} className="text-green-600" />
-                    </div>
-                    Class Details
-                  </h3>
+              {/* Learners List */}
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                  <div className="p-0.5 bg-purple-100 rounded">
+                    <FaGraduationCap size={14} className="text-purple-600" />
+                  </div>
+                  Learners List ({selectedStudents.length}/10)
+                </h3>
 
-                  <div className="space-y-2">
-                    {/* Class Type */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                        Class Type
-                      </label>
-                      <select
-                        value={selectedClassType}
-                        onChange={(e) => setSelectedClassType(e.target.value)}
-                        className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select Class Type</option>
-                        <option value="1:1">1:1</option>
-                        <option value="1:2">1:2</option>
-                        <option value="batch">Batch</option>
-                      </select>
-                    </div>
-
-                    {/* Class Count */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                        Class Count
-                      </label>
+                <div className="space-y-2">
+                  {/* Student Search */}
+                  <div className="relative">
+                    <div className="flex items-center border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+                      <FaSearch className="text-gray-400 ml-2" size={12} />
                       <input
-                        type="number"
-                        value={selectedClassCount}
-                        onChange={(e) => setSelectedClassCount(e.target.value)}
-                        className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100 cursor-not-allowed"
-                        disabled
-                        min="1"
-                        max="50"
-                        placeholder="Enter class count"
+                        type="text"
+                        value={studentSearchTerm}
+                        onChange={(e) => handleStudentSearch(e.target.value)}
+                        placeholder="Search Learners..."
+                        className="flex-1 p-2 text-xs border-none outline-none bg-transparent"
                       />
                     </div>
 
-                    {/* Recording Options */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                        Add More Details
-                      </label>
-                      <div className="space-y-1">
-                        {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map(
-                          (option) => (
-                            <label
-                              key={option}
-                              className="flex items-center gap-2 text-xs"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedRecording.includes(option)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedRecording([
-                                      ...selectedRecording,
-                                      option,
-                                    ]);
-                                  } else {
-                                    setSelectedRecording(
-                                      selectedRecording.filter(
-                                        (item) => item !== option
-                                      )
-                                    );
-                                  }
-                                }}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              {option}
-                            </label>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Attendees */}
-                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                    <div className="p-0.5 bg-purple-100 rounded">
-                      <FaUsers size={14} className="text-purple-600" />
-                    </div>
-                    Attendees
-                  </h3>
-                  <textarea
-                    value={attendees}
-                    onChange={(e) => setAttendees(e.target.value)}
-                    placeholder="Enter email addresses separated by commas or enter"
-                    className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    rows={2}
-                  />
-                </div>
-
-                {/* Update Button */}
-                <button
-                  onClick={handleSubmit}
-                  className="w-full p-2 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <FaEdit size={12} />
-                  Update Booking
-                </button>
-              </div>
-
-              {/* Right Column - Learners and Schedule */}
-              <div className="space-y-3">
-                {/* Learners List */}
-                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                    <div className="p-0.5 bg-purple-100 rounded">
-                      <FaGraduationCap size={14} className="text-purple-600" />
-                    </div>
-                    Learners List ({selectedStudents.length}/10)
-                  </h3>
-
-                  <div className="space-y-2">
-                    {/* Student Search */}
-                    <div className="relative">
-                      <div className="flex items-center border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
-                        <FaSearch className="text-gray-400 ml-2" size={12} />
-                        <input
-                          type="text"
-                          value={studentSearchTerm}
-                          onChange={(e) => handleStudentSearch(e.target.value)}
-                          placeholder="Search Learners..."
-                          className="flex-1 p-2 text-xs border-none outline-none bg-transparent"
-                        />
-                      </div>
-
-                      {/* Search Results Dropdown */}
-                      {showStudentSearch && studentSearchResults.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                          {studentSearchResults.map((student) => (
-                            <button
-                              key={student.jetlearner_id}
-                              onClick={() => {
-                                if (
-                                  !selectedStudents.find(
-                                    (s) =>
-                                      s.jetlearner_id === student.jetlearner_id
-                                  )
-                                ) {
-                                  setSelectedStudents([
-                                    ...selectedStudents,
-                                    student,
-                                  ]);
-                                }
-                                setStudentSearchTerm("");
-                                setShowStudentSearch(false);
-                              }}
-                              className="w-full text-left p-2 text-xs hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="font-medium text-gray-900">
-                                {student.deal_name || student.name}
-                              </div>
-                              <div className="text-gray-500">
-                                ID: {student.jetlearner_id}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Selected Students List */}
-                    {selectedStudents.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500">
-                        <FaGraduationCap
-                          size={20}
-                          className="mx-auto mb-2 text-gray-300"
-                        />
-                        <p className="text-xs">No learners selected</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {selectedStudents.map((student) => (
-                          <div
+                    {/* Search Results Dropdown */}
+                    {showStudentSearch && studentSearchResults.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                        {studentSearchResults.map((student) => (
+                          <button
                             key={student.jetlearner_id}
+                            onClick={() => {
+                              if (
+                                !selectedStudents.find(
+                                  (s) =>
+                                    s.jetlearner_id === student.jetlearner_id
+                                )
+                              ) {
+                                setSelectedStudents([
+                                  ...selectedStudents,
+                                  student,
+                                ]);
+                              }
+                              setStudentSearchTerm("");
+                              setShowStudentSearch(false);
+                            }}
+                            className="w-full text-left p-2 text-xs hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="font-medium text-gray-900">
+                              {student.deal_name || student.name}
+                            </div>
+                            <div className="text-gray-500">
+                              ID: {student.jetlearner_id}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Selected Students List */}
+                  {selectedStudents.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <FaGraduationCap
+                        size={20}
+                        className="mx-auto mb-2 text-gray-300"
+                      />
+                      <p className="text-xs">No learners selected</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {selectedStudents.map((student) => (
+                        <div
+                          key={student.jetlearner_id}
+                          className="flex items-center justify-between p-2 bg-white rounded-md border border-gray-200"
+                        >
+                          <span className="text-xs text-gray-700">
+                            {student.deal_name || student.name}
+                          </span>
+                          <button
+                            onClick={() =>
+                              setSelectedStudents(
+                                selectedStudents.filter(
+                                  (s) =>
+                                    s.jetlearner_id !== student.jetlearner_id
+                                )
+                              )
+                            }
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <FaTimes size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Attendees and More Details - Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3">
+              {/* Attendees */}
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                  <div className="p-0.5 bg-purple-100 rounded">
+                    <FaUsers size={14} className="text-purple-600" />
+                  </div>
+                  Attendees (
+                  {attendees.split(",").filter((email) => email.trim()).length}
+                  /10)
+                </h3>
+
+                <div className="space-y-2">
+                  {/* Add Attendee Input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={attendeeInput}
+                      onChange={(e) => setAttendeeInput(e.target.value)}
+                      placeholder="Enter email address"
+                      className="flex-1 p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const newEmail = attendeeInput.trim();
+                          if (
+                            newEmail &&
+                            !attendees
+                              .split(",")
+                              .map((email) => email.trim())
+                              .includes(newEmail)
+                          ) {
+                            const currentAttendees = attendees
+                              .split(",")
+                              .filter((email) => email.trim());
+                            if (currentAttendees.length < 10) {
+                              const updatedAttendees = [
+                                ...currentAttendees,
+                                newEmail,
+                              ].join(", ");
+                              setAttendees(updatedAttendees);
+                              setAttendeeInput("");
+                            }
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        const newEmail = attendeeInput.trim();
+                        if (
+                          newEmail &&
+                          !attendees
+                            .split(",")
+                            .map((email) => email.trim())
+                            .includes(newEmail)
+                        ) {
+                          const currentAttendees = attendees
+                            .split(",")
+                            .filter((email) => email.trim());
+                          if (currentAttendees.length < 10) {
+                            const updatedAttendees = [
+                              ...currentAttendees,
+                              newEmail,
+                            ].join(", ");
+                            setAttendees(updatedAttendees);
+                            setAttendeeInput("");
+                          }
+                        }
+                      }}
+                      className="px-3 py-2 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center gap-1"
+                    >
+                      <FaPlus size={10} />
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Attendees List */}
+                  {attendees.split(",").filter((email) => email.trim())
+                    .length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                      <FaUsers
+                        size={20}
+                        className="mx-auto mb-2 text-gray-300"
+                      />
+                      <p className="text-xs">No attendees added</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {attendees
+                        .split(",")
+                        .filter((email) => email.trim())
+                        .map((email, index) => (
+                          <div
+                            key={index}
                             className="flex items-center justify-between p-2 bg-white rounded-md border border-gray-200"
                           >
                             <span className="text-xs text-gray-700">
-                              {student.deal_name || student.name}
+                              {email.trim()}
                             </span>
                             <button
-                              onClick={() =>
-                                setSelectedStudents(
-                                  selectedStudents.filter(
-                                    (s) =>
-                                      s.jetlearner_id !== student.jetlearner_id
-                                  )
-                                )
-                              }
+                              onClick={() => {
+                                const currentAttendees = attendees
+                                  .split(",")
+                                  .filter((email) => email.trim());
+                                const updatedAttendees = currentAttendees
+                                  .filter((_, i) => i !== index)
+                                  .join(", ");
+                                setAttendees(updatedAttendees);
+                              }}
                               className="text-red-500 hover:text-red-700 p-1"
                             >
                               <FaTimes size={10} />
                             </button>
                           </div>
                         ))}
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Schedule List */}
-                <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                    <div className="p-0.5 bg-orange-100 rounded">
-                      <FaCalendarAlt size={14} className="text-orange-600" />
-                    </div>
-                    Schedule List ({scheduleEntries.length}/3)
-                  </h3>
+              {/* More Details */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                  <div className="p-0.5 bg-green-100 rounded">
+                    <FaBook size={14} className="text-green-600" />
+                  </div>
+                  More Details
+                </h3>
 
-                  <div className="space-y-2">
-                    {/* Date and Time Selection */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Date
-                        </label>
-                        <select
-                          value={selectedScheduleDate}
-                          onChange={(e) =>
-                            setSelectedScheduleDate(e.target.value)
-                          }
-                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select Date</option>
-                          {weekDates.map((date) => (
-                            <option
-                              key={formatDate(date)}
-                              value={formatDate(date)}
-                            >
-                              {formatDate(date)} ({getDayName(date)})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
-                          Time
-                        </label>
-                        <select
-                          value={selectedScheduleTime}
-                          onChange={(e) =>
-                            setSelectedScheduleTime(e.target.value)
-                          }
-                          className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select Time</option>
-                          {TIME_SLOTS.map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Add Schedule Entry Button */}
-                    <button
-                      onClick={addScheduleEntry}
-                      className="w-full p-2 bg-orange-600 text-white text-xs font-medium rounded-md hover:bg-orange-700 transition-colors duration-200 flex items-center justify-center gap-2"
-                    >
-                      <FaPlus size={12} />
-                      Add Schedule Entry {scheduleEntries.length}/3
-                    </button>
-
-                    {/* Schedule Entries List */}
-                    {scheduleEntries.length === 0 ? (
-                      <div className="text-center py-4 text-gray-500">
-                        <FaCalendarAlt
-                          size={20}
-                          className="mx-auto mb-2 text-gray-300"
-                        />
-                        <p className="text-xs">No schedule entries added</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {scheduleEntries.map((entry, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-2 bg-white rounded-md border border-gray-200"
+                <div className="space-y-2">
+                  {/* Recording Options */}
+                  <div>
+                    <div className="space-y-1">
+                      {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map(
+                        (option) => (
+                          <label
+                            key={option}
+                            className="flex items-center gap-2 text-xs"
                           >
-                            <span className="text-xs text-gray-700">
-                              {entry[0]} at {entry[1]}
-                            </span>
-                            <button
-                              onClick={() => removeScheduleEntry(index)}
-                              className="text-red-500 hover:text-red-700 p-1"
-                            >
-                              <FaTrash size={10} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                            <input
+                              type="checkbox"
+                              checked={selectedRecording.includes(option)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedRecording([
+                                    ...selectedRecording,
+                                    option,
+                                  ]);
+                                } else {
+                                  setSelectedRecording(
+                                    selectedRecording.filter(
+                                      (item) => item !== option
+                                    )
+                                  );
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            {option}
+                          </label>
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Upcoming Events Checkbox */}
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={upcomingEvents}
+                  onChange={(e) => setUpcomingEvents(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-gray-700">
+                  Do you want to do it for upcoming events as well?
+                </span>
+              </label>
+            </div>
+
+            {/* Update Button */}
+            <button
+              onClick={handleSubmit}
+              className="w-full p-2 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
+            >
+              <FaEdit size={12} />
+              Update Booking
+            </button>
           </div>
         </div>
       </div>
@@ -5862,11 +5878,24 @@ function App() {
                                                       </button>
                                                       <button
                                                         onClick={() => {
-                                                          // Open Edit/Reschedule popup with current booking data
+                                                          // Process booking data for edit popup
+                                                          const processedData =
+                                                            processBookingDataForEdit(
+                                                              extractedData,
+                                                              bookingDate,
+                                                              timeRange
+                                                            );
+
+                                                          console.log(
+                                                            "📝 Edit button clicked - Processed data:",
+                                                            processedData
+                                                          );
+
+                                                          // Open Edit/Reschedule popup with processed data
                                                           setEditReschedulePopup(
                                                             {
                                                               isOpen: true,
-                                                              data: extractedData,
+                                                              data: processedData,
                                                               date: bookingDate,
                                                               time: timeRange,
                                                             }
@@ -6177,11 +6206,24 @@ function App() {
                                                       </button>
                                                       <button
                                                         onClick={() => {
-                                                          // Open Edit/Reschedule popup with current booking data
+                                                          // Process booking data for edit popup
+                                                          const processedData =
+                                                            processBookingDataForEdit(
+                                                              extractedData,
+                                                              bookingDate,
+                                                              timeRange
+                                                            );
+
+                                                          console.log(
+                                                            "📝 Edit button clicked - Processed data:",
+                                                            processedData
+                                                          );
+
+                                                          // Open Edit/Reschedule popup with processed data
                                                           setEditReschedulePopup(
                                                             {
                                                               isOpen: true,
-                                                              data: extractedData,
+                                                              data: processedData,
                                                               date: bookingDate,
                                                               time: timeRange,
                                                             }

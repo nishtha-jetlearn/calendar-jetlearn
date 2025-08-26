@@ -328,6 +328,9 @@ function App() {
   // New state to track clicked slots (to prevent plus icon from showing again until deleted)
   const [clickedSlots, setClickedSlots] = useState(new Set());
 
+  // Global repeat occurrence for all toasters
+  const [globalRepeatOccurrence, setGlobalRepeatOccurrence] = useState(1);
+
   // State for action menu dropdown
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
@@ -2296,7 +2299,6 @@ function App() {
         date: date,
         time: time,
         teacherId: selectedTeacher.uid,
-        repeatOccurrence: 1, // Default to 1 occurrence
       },
     }));
   };
@@ -2381,8 +2383,8 @@ function App() {
             ? toasterData.date
             : new Date(toasterData.date);
         
-        // Get repeat occurrence count (default to 1 if not set)
-        const repeatCount = toasterData.repeatOccurrence || 1;
+        // Use global repeat occurrence for all toasters
+        const repeatCount = globalRepeatOccurrence;
         
         // Create schedules for each occurrence
         for (let i = 0; i < repeatCount; i++) {
@@ -2481,13 +2483,14 @@ function App() {
       // Calculate total schedules created
       const totalSchedules = schedules.length;
       const totalToasters = toasterEntries.length;
+      const totalSlots = totalToasters * globalRepeatOccurrence;
       
-      // Show success message
-      setSuccessMessage({
-        show: true,
-        message: `Successfully added ${totalSchedules} availability slots from ${totalToasters} toaster${totalToasters > 1 ? 's' : ''}!`,
-        type: "availability",
-      });
+              // Show success message
+        setSuccessMessage({
+          show: true,
+          message: `Successfully added ${totalSlots} availability slots from ${totalToasters} toaster${totalToasters > 1 ? 's' : ''}!`,
+          type: "availability",
+        });
 
       // Refresh the weekly data
       await refreshWeeklyDataForTeacher(selectedTeacher);
@@ -2767,6 +2770,17 @@ function App() {
   function formatDateDDMMMYYYY(date) {
     // Ensure date is a Date object
     const dateObj = date instanceof Date ? date : new Date(date);
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      // Return current date as fallback if invalid date is provided
+      const today = new Date();
+      const day = today.getDate().toString().padStart(2, "0");
+      const month = today.toLocaleString("en-US", { month: "short" }); // "Jul"
+      const year = today.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+    
     const day = dateObj.getDate().toString().padStart(2, "0");
     const month = dateObj.toLocaleString("en-US", { month: "short" }); // "Jul"
     const year = dateObj.getFullYear();
@@ -3081,6 +3095,197 @@ function App() {
     const [studentSearchTerm, setStudentSearchTerm] = useState("");
     const [studentSearchResults, setStudentSearchResults] = useState([]);
     const [showStudentSearch, setShowStudentSearch] = useState(false);
+    
+    // Local state for description to avoid performance issues
+    const [description, setDescription] = useState("");
+
+    // Generate available dates based on teacher availability (same logic as UnifiedModal)
+    const generateAvailableDates = () => {
+      // Priority 1: Use listViewBookingDetails data (green dots from list view)
+      if (listViewBookingDetails && listViewBookingDetails.data) {
+        const availableDates = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const parsedBookings = parseBookingDetails(listViewBookingDetails.data);
+
+        // Get unique dates that have green dots
+        const greenDotDates = new Set();
+
+        parsedBookings.forEach((booking) => {
+          const bookingDate =
+            booking.date ||
+            (booking.start_time
+              ? new Date(booking.start_time).toISOString().split("T")[0]
+              : null);
+
+          if (bookingDate) {
+            const dateObj = new Date(bookingDate);
+
+            // Only include future dates
+            if (dateObj >= today) {
+              // Check if this booking has a green dot (availability or hours)
+              if (isGreenDotBooking(booking)) {
+                greenDotDates.add(bookingDate);
+              }
+            }
+          }
+        });
+
+        if (greenDotDates.size > 0) {
+          return Array.from(greenDotDates).sort();
+        }
+      }
+
+      // Priority 2: Use teacherAvailability data
+      if (weeklyApiData && selectedTeacher?.uid) {
+        const availableDates = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Process teacher availability data to get available dates
+        Object.keys(weeklyApiData).forEach((dateKey) => {
+          const dateData = weeklyApiData[dateKey];
+          let hasAvailableSlots = false;
+
+          if (dateData && typeof dateData === "object") {
+            // Check any time with availability > 0
+            const timeEntries = Object.values(dateData);
+            hasAvailableSlots = timeEntries.some((slot) => {
+              if (!slot || typeof slot !== "object") return false;
+              // Support either boolean available or numeric availability
+              if (typeof slot.available === "boolean") return slot.available;
+              if (typeof slot.availability === "number")
+                return slot.availability > 0;
+              return false;
+            });
+          }
+
+          if (hasAvailableSlots) {
+            const [day, month, year] = dateKey.split("-");
+            const availabilityDate = new Date(
+              parseInt(year),
+              parseInt(month) - 1,
+              parseInt(day)
+            );
+
+            if (availabilityDate >= today) {
+              availableDates.push(availabilityDate.toISOString().split("T")[0]);
+            }
+          }
+        });
+
+        if (availableDates.length > 0) {
+          return availableDates.sort();
+        }
+      }
+
+      // Fallback to next 30 days if no availability data
+      const dates = [];
+      const today = new Date();
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        dates.push(date.toISOString().split("T")[0]);
+      }
+      return dates;
+    };
+
+    // Generate available times based on teacher availability for selected date
+    const generateAvailableTimes = (selectedDate) => {
+      if (!selectedDate) {
+        return TIME_SLOTS;
+      }
+
+      // Priority 1: Use listViewBookingDetails data (green dots from list view)
+      if (listViewBookingDetails && listViewBookingDetails.data) {
+        const availableTimes = [];
+        const parsedBookings = parseBookingDetails(listViewBookingDetails.data);
+
+        // Get times for the selected date that have green dots
+        parsedBookings.forEach((booking) => {
+          const bookingDate =
+            booking.date ||
+            (booking.start_time
+              ? new Date(booking.start_time).toISOString().split("T")[0]
+              : null);
+          const bookingTime =
+            booking.time ||
+            (booking.start_time ? booking.start_time.slice(11, 16) : null);
+
+          if (bookingDate === selectedDate && bookingTime) {
+            // Check if this booking has a green dot (availability or hours)
+            if (isGreenDotBooking(booking)) {
+              availableTimes.push(bookingTime);
+            }
+          }
+        });
+
+        if (availableTimes.length > 0) {
+          return [...new Set(availableTimes)].sort(); // Remove duplicates and sort
+        }
+      }
+
+      // Priority 2: Use teacherAvailability data
+      if (weeklyApiData && selectedTeacher?.uid) {
+        // Convert selected date to DD-MM-YYYY format for matching
+        const dateObj = new Date(selectedDate);
+        const day = dateObj.getDate().toString().padStart(2, "0");
+        const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+        const year = dateObj.getFullYear();
+        const formattedDate = `${day}-${month}-${year}`;
+
+        const availableTimes = [];
+
+        const dateAvailability = weeklyApiData[formattedDate];
+        if (dateAvailability) {
+          Object.entries(dateAvailability).forEach(([timeKey, slot]) => {
+            if (!slot || typeof slot !== "object") return;
+            if (typeof slot.available === "boolean" && slot.available) {
+              availableTimes.push(timeKey);
+            } else if (
+              typeof slot.availability === "number" &&
+              slot.availability > 0
+            ) {
+              availableTimes.push(timeKey);
+            }
+          });
+        }
+
+        if (availableTimes.length > 0) {
+          return availableTimes.sort();
+        }
+      }
+
+      // Fallback to default time slots
+      return TIME_SLOTS;
+    };
+
+    // Helper function to check if booking has green dot (same as UnifiedModal)
+    const isGreenDotBooking = (booking) => {
+      if (!booking.summary) return false;
+      const summary = booking.summary.toLowerCase();
+      return (
+        summary.includes("availability") ||
+        summary.includes("hours") ||
+        summary.includes("available")
+      );
+    };
+
+    // Get available dates and times
+    const availableDates = generateAvailableDates();
+    const availableTimes = generateAvailableTimes(selectedScheduleDate);
+
+    // Update available times when selected date changes
+    useEffect(() => {
+      if (selectedScheduleDate) {
+        const times = generateAvailableTimes(selectedScheduleDate);
+        // If current selected time is not in available times, clear it
+        if (selectedScheduleTime && !times.includes(selectedScheduleTime)) {
+          setSelectedScheduleTime("");
+        }
+      }
+    }, [selectedScheduleDate]);
 
     // For paid booking type
     const [selectedSubject, setSelectedSubject] = useState("");
@@ -3212,6 +3417,9 @@ function App() {
 
         console.log("🔍 Populating form with booking data:", bookingData);
 
+        // Set local description state for better performance
+        setDescription(bookingData.description || "");
+
         // Set attendees from existing data
         setAttendees(bookingData.attendees || "");
         console.log("📧 Set attendees:", bookingData.attendees || "");
@@ -3243,7 +3451,13 @@ function App() {
           [formatDate(editReschedulePopup.date), editReschedulePopup.time],
         ];
         setScheduleEntries(currentSchedule);
-        setSelectedScheduleDate(formatDate(editReschedulePopup.date));
+        
+        // Set initial date and time, but use filtered dates if available
+        const initialDate = formatDate(editReschedulePopup.date);
+        const availableDates = generateAvailableDates();
+        const initialDateInAvailable = availableDates.includes(initialDate);
+        
+        setSelectedScheduleDate(initialDateInAvailable ? initialDate : "");
         setSelectedScheduleTime(editReschedulePopup.time);
         console.log("📅 Set schedule:", currentSchedule);
 
@@ -3308,12 +3522,19 @@ function App() {
     // Add schedule entry
     const addScheduleEntry = () => {
       if (selectedScheduleDate && selectedScheduleTime) {
-        const newEntry = [selectedScheduleDate, selectedScheduleTime];
+        // Convert YYYY-MM-DD to DD-MM-YYYY format for consistency
+        const dateObj = new Date(selectedScheduleDate);
+        const day = dateObj.getDate().toString().padStart(2, "0");
+        const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+        const year = dateObj.getFullYear();
+        const formattedDate = `${day}-${month}-${year}`;
+        
+        const newEntry = [formattedDate, selectedScheduleTime];
         if (
           scheduleEntries.length < 3 &&
           !scheduleEntries.some(
             (entry) =>
-              entry[0] === selectedScheduleDate &&
+              entry[0] === formattedDate &&
               entry[1] === selectedScheduleTime
           )
         ) {
@@ -3579,22 +3800,17 @@ function App() {
                     Description
                   </h3>
                   <textarea
-                    value={editReschedulePopup.data?.description || ""}
-                    onChange={(e) => {
-                      // Update the description in the data
-                      const updatedData = {
-                        ...editReschedulePopup.data,
-                        description: e.target.value,
-                      };
-                      setEditReschedulePopup((prev) => ({
-                        ...prev,
-                        data: updatedData,
-                      }));
-                    }}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     placeholder="Enter booking description..."
                     className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     rows={3}
                   />
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-xs text-gray-400">
+                      {description.length}/1000
+                    </span>
+                  </div>
                 </div>
 
                 {/* Class Type and Details */}
@@ -3831,14 +4047,31 @@ function App() {
                           className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select Date</option>
-                          {weekDates.map((date) => (
-                            <option
-                              key={formatDate(date)}
-                              value={formatDate(date)}
-                            >
-                              {formatDate(date)} ({getDayName(date)})
+                          {availableDates.length > 0 ? (
+                            availableDates.map((date) => {
+                              const dateObj = new Date(date);
+                              const day = dateObj
+                                .getDate()
+                                .toString()
+                                .padStart(2, "0");
+                              const month = (dateObj.getMonth() + 1)
+                                .toString()
+                                .padStart(2, "0");
+                              const year = dateObj.getFullYear();
+                              const formattedDate = `${day}-${month}-${year}`;
+                              return (
+                                <option key={date} value={date}>
+                                  {formattedDate} ({getDayName(formattedDate)})
+                                </option>
+                              );
+                            })
+                          ) : (
+                            <option value="" disabled>
+                              {listViewBookingDetails?.data
+                                ? "No green dots in list view"
+                                : "No available dates for selected teacher"}
                             </option>
-                          ))}
+                          )}
                         </select>
                       </div>
                       <div>
@@ -3853,11 +4086,19 @@ function App() {
                           className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select Time</option>
-                          {TIME_SLOTS.map((time) => (
-                            <option key={time} value={time}>
-                              {time}
+                          {availableTimes.length > 0 ? (
+                            availableTimes.map((time) => (
+                              <option key={time} value={time}>
+                                {time}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>
+                              {listViewBookingDetails?.data
+                                ? "No green dots for selected date in list view"
+                                : "No available times for selected date"}
                             </option>
-                          ))}
+                          )}
                         </select>
                       </div>
                     </div>
@@ -6535,15 +6776,10 @@ function App() {
       {Object.keys(slotToasters).length > 0 && (
         <div className="fixed top-4 right-4 z-50 bg-white border border-gray-300 rounded-lg shadow-lg max-w-md max-h-[80vh] overflow-y-auto">
           <div className="p-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <FaCalendarAlt className="w-4 h-4 text-blue-600" />
-                Add Availability Toasters ({Object.keys(slotToasters).length}) - {(() => {
-                  const totalSchedules = Object.values(slotToasters).reduce((total, toaster) => {
-                    return total + (toaster.repeatOccurrence || 1);
-                  }, 0);
-                  return `${totalSchedules} total slots`;
-                })()}
+                Add Availability Toasters ({Object.keys(slotToasters).length}) - {Object.keys(slotToasters).length * globalRepeatOccurrence} total slots
               </h3>
               <button
                 onClick={() => {
@@ -6557,6 +6793,25 @@ function App() {
               >
                 <FaTimes className="w-4 h-4" />
               </button>
+            </div>
+            {/* Global Repeat Occurrence Input */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-600 font-medium">
+                Repeat Occurrence for all slots:
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="52"
+                value={globalRepeatOccurrence}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1;
+                  setGlobalRepeatOccurrence(Math.max(1, Math.min(52, value)));
+                }}
+                className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                title="Number of weeks to repeat all availabilities"
+              />
+              <span className="text-xs text-gray-500">weeks</span>
             </div>
           </div>
           <div className="p-2 space-y-2">
@@ -6582,31 +6837,6 @@ function App() {
                             : "N/A"}
                         </span>
                         <span>Time: {toasterData.time || "N/A"}</span>
-                      </div>
-                      {/* Repeat Occurrence Input */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <label className="text-xs text-gray-600 font-medium">
-                          Repeat Occurrence:
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="52"
-                          value={toasterData.repeatOccurrence || 1}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value) || 1;
-                            setSlotToasters((prev) => ({
-                              ...prev,
-                              [slotKey]: {
-                                ...prev[slotKey],
-                                repeatOccurrence: Math.max(1, Math.min(52, value)),
-                              },
-                            }));
-                          }}
-                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          title="Number of weeks to repeat this availability"
-                        />
-                        <span className="text-xs text-gray-500">weeks</span>
                       </div>
                     </div>
                   </div>
@@ -6644,12 +6874,7 @@ function App() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition-colors duration-200 flex items-center justify-center gap-2"
             >
               <FaSave className="w-4 h-4" />
-              Save All ({(() => {
-                const totalSchedules = Object.values(slotToasters).reduce((total, toaster) => {
-                  return total + (toaster.repeatOccurrence || 1);
-                }, 0);
-                return `${totalSchedules} slots`;
-              })()})
+              Save All ({Object.keys(slotToasters).length * globalRepeatOccurrence} slots)
             </button>
           </div>
         </div>

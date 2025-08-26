@@ -328,6 +328,9 @@ function App() {
   // New state to track clicked slots (to prevent plus icon from showing again until deleted)
   const [clickedSlots, setClickedSlots] = useState(new Set());
 
+  // Global repeat occurrence state for all toasters
+  const [globalRepeatOccurrence, setGlobalRepeatOccurrence] = useState(1);
+
   // State for action menu dropdown
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
@@ -2383,7 +2386,15 @@ function App() {
             : new Date(toasterData.date);
         const formattedDate = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
 
-        schedules.push([formattedDate, toasterData.time]);
+        // Generate multiple schedule entries based on global repeat occurrence
+        for (let i = 0; i < globalRepeatOccurrence; i++) {
+          // Calculate the date for this occurrence (add i weeks)
+          const occurrenceDate = new Date(dateObj);
+          occurrenceDate.setDate(occurrenceDate.getDate() + (i * 7)); // Add i weeks
+          const occurrenceFormattedDate = occurrenceDate.toISOString().split("T")[0];
+
+          schedules.push([occurrenceFormattedDate, toasterData.time]);
+        }
       }
 
       if (schedules.length === 0) {
@@ -6590,7 +6601,7 @@ function App() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <FaCalendarAlt className="w-4 h-4 text-blue-600" />
-                Add Availability Toasters ({Object.keys(slotToasters).length})
+                Add Availability Toasters ({Object.keys(slotToasters).length * globalRepeatOccurrence})
               </h3>
               <button
                 onClick={() => {
@@ -6604,6 +6615,25 @@ function App() {
               >
                 <FaTimes className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+          {/* Global Repeat Occurrence Input */}
+          <div className="p-3 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">
+                Repeat Occurrence for All:
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="52"
+                value={globalRepeatOccurrence}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1;
+                  setGlobalRepeatOccurrence(Math.max(1, Math.min(52, value)));
+                }}
+                className="w-20 px-3 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
           </div>
           <div className="p-2 space-y-2">
@@ -6666,7 +6696,7 @@ function App() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition-colors duration-200 flex items-center justify-center gap-2"
             >
               <FaSave className="w-4 h-4" />
-              Save All ({Object.keys(slotToasters).length})
+              Save All ({Object.keys(slotToasters).length * globalRepeatOccurrence})
             </button>
           </div>
         </div>

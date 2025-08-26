@@ -137,6 +137,7 @@ const UnifiedModalComponent = function UnifiedModal({
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [attendeesError, setAttendeesError] = useState("");
   const [attendeesList, setAttendeesList] = useState([]);
+  const [showDomainSuggestions, setShowDomainSuggestions] = useState(false);
 
   // Generate available dates based on teacher availability
   const generateAvailableDates = () => {
@@ -485,26 +486,41 @@ const UnifiedModalComponent = function UnifiedModal({
     "outlook.com",
   ];
 
-  // Email validation function - only accepts common domains
+  // Email validation function - accepts any valid email format
   const validateEmail = (email) => {
     if (!email.includes("@")) return false;
 
     const [localPart, domain] = email.split("@");
     if (!localPart || !domain) return false;
 
-    // Check if domain is in the allowed list
-    return COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
+    // Basic email validation - check for valid format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
-  // Check if email has invalid domain for red underline styling
-  const hasInvalidDomain = (email) => {
+  // Check if email has common domain for suggestion styling
+  const hasCommonDomain = (email) => {
     if (!email.includes("@")) return false;
 
     const [localPart, domain] = email.split("@");
     if (!localPart || !domain) return false;
 
-    // Return true if domain is not in allowed list
-    return !COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
+    // Return true if domain is in common domains list
+    return COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
+  };
+
+  // Get domain suggestions based on partial input
+  const getDomainSuggestions = (email) => {
+    if (!email.includes("@")) return [];
+
+    const [localPart, domain] = email.split("@");
+    if (!localPart || !domain) return [];
+
+    const suggestions = COMMON_EMAIL_DOMAINS.filter(commonDomain =>
+      commonDomain.startsWith(domain.toLowerCase())
+    );
+
+    return suggestions.slice(0, 3); // Limit to 3 suggestions
   };
 
   // Validate attendees emails
@@ -520,7 +536,7 @@ const UnifiedModalComponent = function UnifiedModal({
       if (!validateEmail(email)) {
         return {
           isValid: false,
-          error: `Invalid email domain: ${email}`,
+          error: `Invalid email format: ${email}`,
         };
       }
     }
@@ -537,6 +553,8 @@ const UnifiedModalComponent = function UnifiedModal({
     if (attendeesError) {
       setAttendeesError("");
     }
+    // Show domain suggestions if user is typing after @
+    setShowDomainSuggestions(lowercaseValue.includes("@") && lowercaseValue.split("@")[1]?.length > 0);
   };
 
   // Handle adding email to attendees list
@@ -544,11 +562,9 @@ const UnifiedModalComponent = function UnifiedModal({
     const email = attendees.trim().toLowerCase();
     if (!email) return;
 
-    // Strict email validation - only allow valid emails with common domains
+    // Basic email validation - allow any valid email format
     if (!validateEmail(email)) {
-      setAttendeesError(
-        "Please enter a valid email with allowed domains (gmail.com, yahoo.com, hotmail.com, outlook.com)"
-      );
+      setAttendeesError("Please enter a valid email format");
       return;
     }
 
@@ -583,6 +599,22 @@ const UnifiedModalComponent = function UnifiedModal({
       e.preventDefault();
       handleAddEmail();
     }
+  };
+
+  // Handle domain suggestion selection
+  const handleDomainSuggestion = (suggestion) => {
+    const [localPart] = attendees.split("@");
+    const newEmail = `${localPart}@${suggestion}`;
+    setAttendees(newEmail);
+    setShowDomainSuggestions(false);
+  };
+
+  // Handle input blur to hide suggestions
+  const handleAttendeesBlur = () => {
+    // Delay hiding suggestions to allow for clicks on suggestions
+    setTimeout(() => {
+      setShowDomainSuggestions(false);
+    }, 150);
   };
 
   // Add schedule entry
@@ -924,20 +956,21 @@ const UnifiedModalComponent = function UnifiedModal({
                               handleAttendeesChange(e.target.value)
                             }
                             onKeyPress={handleAttendeesKeyPress}
+                            onBlur={handleAttendeesBlur}
                             placeholder="Enter email address and press Enter"
                             className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
                               attendeesError
                                 ? "border-red-300"
-                                : hasInvalidDomain(attendees) &&
+                                : hasCommonDomain(attendees) &&
                                   attendees.includes("@")
-                                ? "border-red-300"
+                                ? "border-green-300"
                                 : "border-gray-300"
                             }`}
                             style={{
                               borderBottom:
-                                hasInvalidDomain(attendees) &&
+                                hasCommonDomain(attendees) &&
                                 attendees.includes("@")
-                                  ? "2px solid #ef4444"
+                                  ? "2px solid #10b981"
                                   : undefined,
                             }}
                           />
@@ -952,6 +985,31 @@ const UnifiedModalComponent = function UnifiedModal({
                             <FaPlus size={10} />
                           </button>
                         </div>
+
+                        {/* Domain Suggestions */}
+                        {showDomainSuggestions && attendees.includes("@") && (
+                          <div className="bg-white border border-gray-200 rounded shadow-lg max-h-24 overflow-y-auto">
+                            {getDomainSuggestions(attendees).map((suggestion, index) => (
+                              <div
+                                key={index}
+                                onClick={() => handleDomainSuggestion(suggestion)}
+                                className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <FaUserCheck size={10} className="text-green-600" />
+                                  <span className="text-xs text-gray-700">
+                                    {attendees.split("@")[0]}@{suggestion}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                            {getDomainSuggestions(attendees).length === 0 && (
+                              <div className="p-2 text-gray-500">
+                                <span className="text-xs">No suggestions available</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {attendeesError && (
                           <div className="flex items-center gap-1 text-red-600">

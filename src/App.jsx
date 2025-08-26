@@ -435,8 +435,8 @@ function App() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       // Check if click is outside the dropdown menu
-      const dropdownMenus = document.querySelectorAll('[data-dropdown-menu]');
-      const isClickInsideDropdown = Array.from(dropdownMenus).some(menu =>
+      const dropdownMenus = document.querySelectorAll("[data-dropdown-menu]");
+      const isClickInsideDropdown = Array.from(dropdownMenus).some((menu) =>
         menu.contains(event.target)
       );
 
@@ -445,9 +445,9 @@ function App() {
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
     return () => {
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     };
   }, [actionMenuOpen]);
 
@@ -912,7 +912,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch { }
+        } catch {}
         throw new Error(errorMsg);
       }
 
@@ -1933,7 +1933,7 @@ function App() {
       // Prepare payload for delete-class API
       const payload = {
         event_id: eventId,
-        upcoming_events: upcomingEvents.toString() // Convert boolean to string
+        upcoming_events: upcomingEvents.toString(), // Convert boolean to string
       };
 
       console.log("📤 Sending delete-class API request:");
@@ -1956,7 +1956,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch { }
+        } catch {}
         throw new Error(errorMsg);
       }
 
@@ -1983,7 +1983,7 @@ function App() {
     teacherId = null,
     reason = "",
     eventId = null,
-    upcomingEvents = false
+    upcomingEvents
   ) => {
     try {
       console.log("🚀 Canceling availability for:", {
@@ -2037,21 +2037,24 @@ function App() {
         return;
       }
 
-      const response = await fetch("https://live.jetlearn.com/api/delete-class/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: dateObj.toISOString().split("T")[0], // YYYY-MM-DD format
-          time: time,
-          teacherId: teacherId,
-          timezone: selectedTimezone,
-          reason: reason,
-          eventId: eventId, // Include event_id in API call
-          upcoming_events: upcomingEvents, // Include upcoming_events parameter
-        }),
-      });
+      const response = await fetch(
+        "https://live.jetlearn.com/api/delete-class/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            date: dateObj.toISOString().split("T")[0], // YYYY-MM-DD format
+            time: time,
+            teacherId: teacherId,
+            timezone: selectedTimezone,
+            reason: reason,
+            eventId: eventId, // Include event_id in API call
+            upcoming_events: upcomingEvents, // Include upcoming_events parameter
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -2085,7 +2088,14 @@ function App() {
   };
 
   // Handle cancel booking
-  const handleCancelBooking = async (date, time, bookingData, reason = "", eventId = null, upcomingEvents = false) => {
+  const handleCancelBooking = async (
+    date,
+    time,
+    bookingData,
+    reason = "",
+    eventId = null,
+    upcomingEvents = false
+  ) => {
     try {
       console.log("🚀 Canceling booking for:", {
         date,
@@ -2276,42 +2286,50 @@ function App() {
     const slotKey = `${formatDate(date)}-${time}`;
 
     // Add to clicked slots to prevent plus icon from showing again
-    setClickedSlots(prev => new Set([...prev, slotKey]));
+    setClickedSlots((prev) => new Set([...prev, slotKey]));
 
     // Create individual toaster for this slot
-    setSlotToasters(prev => ({
+    setSlotToasters((prev) => ({
       ...prev,
       [slotKey]: {
         show: true,
         date: date,
         time: time,
         teacherId: selectedTeacher.uid,
-      }
+      },
     }));
   };
 
   // Handle deleting availability
   const handleDeleteAvailability = async (slotKey) => {
     const toasterData = slotToasters[slotKey];
-    if (!toasterData || !toasterData.date || !toasterData.time || !toasterData.teacherId) {
+    if (
+      !toasterData ||
+      !toasterData.date ||
+      !toasterData.time ||
+      !toasterData.teacherId
+    ) {
       alert("Missing required data for deleting availability.");
       return;
     }
 
     try {
       // Format date to YYYY-MM-DD format
-      const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
-      const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const dateObj =
+        toasterData.date instanceof Date
+          ? toasterData.date
+          : new Date(toasterData.date);
+      const formattedDate = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
 
       // Remove from clicked slots to make plus icon clickable again
-      setClickedSlots(prev => {
+      setClickedSlots((prev) => {
         const newSet = new Set(prev);
         newSet.delete(slotKey);
         return newSet;
       });
 
       // Close toaster
-      setSlotToasters(prev => {
+      setSlotToasters((prev) => {
         const newToasters = { ...prev };
         delete newToasters[slotKey];
         return newToasters;
@@ -2357,8 +2375,11 @@ function App() {
         }
 
         // Format date to YYYY-MM-DD format
-        const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
-        const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const dateObj =
+          toasterData.date instanceof Date
+            ? toasterData.date
+            : new Date(toasterData.date);
+        const formattedDate = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
 
         schedules.push([formattedDate, toasterData.time]);
       }
@@ -2407,12 +2428,16 @@ function App() {
       // Prepare payload for add-teacher-availability API
       const payload = {
         teacher_uid: teacherId,
-        schedule: formattedSchedule
+        schedule: formattedSchedule,
       };
 
-      console.log("📤 Sending add-teacher-availability API request for all toasters:");
+      console.log(
+        "📤 Sending add-teacher-availability API request for all toasters:"
+      );
       console.log("🚀 Payload:", payload);
-      console.log("🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/");
+      console.log(
+        "🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/"
+      );
 
       const response = await fetch(
         "https://live.jetlearn.com/api/add-teacher-availability/",
@@ -2430,7 +2455,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch { }
+        } catch {}
         throw new Error(errorMsg);
       }
 
@@ -2460,25 +2485,35 @@ function App() {
   // Handle saving availability (kept for backward compatibility)
   const handleSaveAvailability = async (slotKey) => {
     const toasterData = slotToasters[slotKey];
-    if (!toasterData || !toasterData.date || !toasterData.time || !toasterData.teacherId) {
+    if (
+      !toasterData ||
+      !toasterData.date ||
+      !toasterData.time ||
+      !toasterData.teacherId
+    ) {
       alert("Missing required data for adding availability.");
       return;
     }
 
     try {
       // Format date to YYYY-MM-DD format
-      const dateObj = toasterData.date instanceof Date ? toasterData.date : new Date(toasterData.date);
-      const formattedDate = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const dateObj =
+        toasterData.date instanceof Date
+          ? toasterData.date
+          : new Date(toasterData.date);
+      const formattedDate = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
 
       // Prepare payload for add-teacher-availability API
       const payload = {
         teacher_uid: toasterData.teacherId,
-        schedule: [[formattedDate, toasterData.time]]
+        schedule: [[formattedDate, toasterData.time]],
       };
 
       console.log("📤 Sending add-teacher-availability API request:");
       console.log("🚀 Payload:", payload);
-      console.log("🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/");
+      console.log(
+        "🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/"
+      );
 
       const response = await fetch(
         "https://live.jetlearn.com/api/add-teacher-availability/",
@@ -2496,7 +2531,7 @@ function App() {
         try {
           const errJson = await response.json();
           if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch { }
+        } catch {}
         throw new Error(errorMsg);
       }
 
@@ -2512,7 +2547,7 @@ function App() {
       // });
 
       // Close toaster and show success message
-      setSlotToasters(prev => {
+      setSlotToasters((prev) => {
         const newToasters = { ...prev };
         delete newToasters[slotKey];
         return newToasters;
@@ -2599,15 +2634,16 @@ function App() {
         end_time: event.end_time,
         creator: event.creator,
         summary: event.summary,
-        
+        event_id: event.event_id,
+        class_type: event.class_type,
       };
     } else if (type === "booking") {
       // Parse summary to extract fields
       const summary = event.summary || "";
       const parts = summary.split(" : ");
 
-      let learnerName = "N/A";
-      let jlid = "N/A";
+      let learnerName = event.student_name || "N/A";
+      let jlid = event.student_id || "N/A";
       let teacherName = "N/A";
 
       if (parts.length >= 2) {
@@ -2640,6 +2676,8 @@ function App() {
         jlid: jlid,
         learner_name: learnerName,
         teacher_name: teacherName,
+        event_id: event.event_id,
+        class_type: event.class_type,
       };
     }
 
@@ -2657,19 +2695,19 @@ function App() {
     // Handle different data formats
     if (Array.isArray(data)) {
       // Direct array format
-      console.log("📋 Processing as array format");
+
       bookings.push(...data);
     } else if (typeof data === "object") {
       // Object format with dates as keys
-      console.log("📋 Processing as object format");
+      // console.log("📋 Processing as object format");
       Object.entries(data).forEach(([date, timeSlots]) => {
-        console.log(`📅 Processing date: ${date}`, timeSlots);
+        // console.log(`📅 Processing date: ${date}`, timeSlots);
         if (typeof timeSlots === "object") {
           Object.entries(timeSlots).forEach(([time, slotData]) => {
-            console.log(`⏰ Processing time: ${time}`, slotData);
+            //  console.log(`⏰ Processing time: ${time}`, slotData);
             if (slotData && slotData.events && Array.isArray(slotData.events)) {
               slotData.events.forEach((event) => {
-                console.log("📋 Adding event:", event);
+                //console.log("📋 Adding event:", event);
                 bookings.push({
                   ...event,
                   date: date,
@@ -2682,7 +2720,7 @@ function App() {
       });
     }
 
-    console.log("📊 Final parsed bookings:", bookings);
+    //console.log("📊 Final parsed bookings:", bookings);
 
     // Sort bookings by date and time
     return bookings.sort((a, b) => {
@@ -2799,10 +2837,11 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`${buttonClass} ${currentPage === 1
+          className={`${buttonClass} ${
+            currentPage === 1
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+          }`}
         >
           <FaChevronLeft size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -2815,12 +2854,13 @@ function App() {
               typeof page === "number" ? onPageChange(page) : null
             }
             disabled={page === "..."}
-            className={`${buttonClass} ${page === currentPage
+            className={`${buttonClass} ${
+              page === currentPage
                 ? "bg-blue-600 text-white"
                 : page === "..."
-                  ? "bg-transparent text-gray-500 cursor-default"
-                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-              }`}
+                ? "bg-transparent text-gray-500 cursor-default"
+                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+            }`}
           >
             {page}
           </button>
@@ -2830,10 +2870,11 @@ function App() {
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={`${buttonClass} ${currentPage === totalPages
+          className={`${buttonClass} ${
+            currentPage === totalPages
               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
+          }`}
         >
           <FaChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
@@ -3063,14 +3104,20 @@ function App() {
       setBackendDataError(null);
 
       try {
-        console.log("🔍 Fetching backend data for event_id:", editReschedulePopup.data.event_id);
+        console.log(
+          "🔍 Fetching backend data for event_id:",
+          editReschedulePopup.data.event_id
+        );
 
-        const response = await fetch(`/api/booking-details/${editReschedulePopup.data.event_id}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await fetch(
+          `/api/booking-details/${editReschedulePopup.data.event_id}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -3082,13 +3129,19 @@ function App() {
         if (result.status === "success" && result.data) {
           setBackendData(result.data);
 
-          console.log("✅ Backend data received, updating form fields:", result.data);
+          console.log(
+            "✅ Backend data received, updating form fields:",
+            result.data
+          );
 
           // Update form fields with backend data (backend data takes priority)
           if (result.data.description) {
             // Update the description in the popup data
-            const updatedData = { ...editReschedulePopup.data, description: result.data.description };
-            setEditReschedulePopup(prev => ({ ...prev, data: updatedData }));
+            const updatedData = {
+              ...editReschedulePopup.data,
+              description: result.data.description,
+            };
+            setEditReschedulePopup((prev) => ({ ...prev, data: updatedData }));
             console.log("📝 Updated description:", result.data.description);
           }
 
@@ -3149,26 +3202,31 @@ function App() {
         console.log("📧 Set attendees:", bookingData.attendees || "");
 
         // Set class details if available
-        setSelectedClassType(bookingData.classType || bookingData.class_type || "");
-        setSelectedClassCount(bookingData.classCount || bookingData.class_count || "");
+        setSelectedClassType(
+          bookingData.classType || bookingData.class_type || ""
+        );
+        setSelectedClassCount(
+          bookingData.classCount || bookingData.class_count || ""
+        );
 
         // Handle recording options - support both string and array formats
         let recordingOptions = [];
         if (bookingData.recording) {
           if (Array.isArray(bookingData.recording)) {
             recordingOptions = bookingData.recording;
-          } else if (typeof bookingData.recording === 'string') {
-            recordingOptions = bookingData.recording.split(", ").filter(item => item.trim());
+          } else if (typeof bookingData.recording === "string") {
+            recordingOptions = bookingData.recording
+              .split(", ")
+              .filter((item) => item.trim());
           }
         }
         setSelectedRecording(recordingOptions);
         console.log("🎥 Set recording options:", recordingOptions);
 
         // Initialize schedule entries with current booking
-        const currentSchedule = [[
-          formatDate(editReschedulePopup.date),
-          editReschedulePopup.time
-        ]];
+        const currentSchedule = [
+          [formatDate(editReschedulePopup.date), editReschedulePopup.time],
+        ];
         setScheduleEntries(currentSchedule);
         setSelectedScheduleDate(formatDate(editReschedulePopup.date));
         setSelectedScheduleTime(editReschedulePopup.time);
@@ -3179,7 +3237,9 @@ function App() {
         if (bookingData.students && Array.isArray(bookingData.students)) {
           studentList = bookingData.students;
         } else if (bookingData.jlid) {
-          const existingStudent = students.find(s => s.jetlearner_id === bookingData.jlid);
+          const existingStudent = students.find(
+            (s) => s.jetlearner_id === bookingData.jlid
+          );
           if (existingStudent) {
             studentList = [existingStudent];
           }
@@ -3191,14 +3251,22 @@ function App() {
 
         // Fetch backend data if event_id is available
         if (bookingData.event_id) {
-          console.log("🔄 Fetching backend data for event_id:", bookingData.event_id);
+          console.log(
+            "🔄 Fetching backend data for event_id:",
+            bookingData.event_id
+          );
           fetchBackendBookingData();
         } else {
           console.log("⚠️ No event_id available, using frontend data only");
           setIsFormInitialized(true);
         }
       }
-    }, [editReschedulePopup.data, editReschedulePopup.date, editReschedulePopup.time, students]);
+    }, [
+      editReschedulePopup.data,
+      editReschedulePopup.date,
+      editReschedulePopup.time,
+      students,
+    ]);
 
     // Handle student search
     const handleStudentSearch = (searchTerm) => {
@@ -3206,9 +3274,13 @@ function App() {
       if (searchTerm.trim().length > 0) {
         const filtered = allAvailableStudents.filter(
           (student) =>
-            student.deal_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.deal_name
+              ?.toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
             student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.jetlearner_id?.toLowerCase().includes(searchTerm.toLowerCase())
+            student.jetlearner_id
+              ?.toLowerCase()
+              .includes(searchTerm.toLowerCase())
         );
         setStudentSearchResults(filtered.slice(0, 5));
         setShowStudentSearch(true);
@@ -3222,9 +3294,14 @@ function App() {
     const addScheduleEntry = () => {
       if (selectedScheduleDate && selectedScheduleTime) {
         const newEntry = [selectedScheduleDate, selectedScheduleTime];
-        if (scheduleEntries.length < 3 && !scheduleEntries.some(entry =>
-          entry[0] === selectedScheduleDate && entry[1] === selectedScheduleTime
-        )) {
+        if (
+          scheduleEntries.length < 3 &&
+          !scheduleEntries.some(
+            (entry) =>
+              entry[0] === selectedScheduleDate &&
+              entry[1] === selectedScheduleTime
+          )
+        ) {
           setScheduleEntries([...scheduleEntries, newEntry]);
           setSelectedScheduleDate("");
           setSelectedScheduleTime("");
@@ -3250,12 +3327,14 @@ function App() {
       }
 
       // Extract JL IDs from selected students
-      const jl_uid = selectedStudents.map(student => student.jetlearner_id);
+      const jl_uid = selectedStudents.map((student) => student.jetlearner_id);
 
       // Extract teacher UID from the booking data or selected teacher
       let teacher_uid = null;
       if (editReschedulePopup.data?.summary) {
-        const tlMatch = editReschedulePopup.data.summary.match(/\b(TJL)[A-Za-z0-9]+\b/g);
+        const tlMatch = editReschedulePopup.data.summary.match(
+          /\b(TJL)[A-Za-z0-9]+\b/g
+        );
         if (tlMatch && tlMatch.length > 0) {
           teacher_uid = tlMatch[0];
         }
@@ -3281,7 +3360,7 @@ function App() {
         class_type: selectedClassType || "Paid",
         tags: selectedRecording.length > 0 ? selectedRecording : [],
         updated_by: user?.email || "",
-        upcoming_events: "true" // Default to true as per example
+        upcoming_events: "true", // Default to true as per example
       };
 
       console.log("📤 Sending UPDATE/EDIT Class API request:");
@@ -3289,20 +3368,23 @@ function App() {
       console.log("📊 Payload:", JSON.stringify(apiPayload, null, 2));
 
       try {
-        const response = await fetch("https://live.jetlearn.com/api/update-class/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(apiPayload),
-        });
+        const response = await fetch(
+          "https://live.jetlearn.com/api/update-class/",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(apiPayload),
+          }
+        );
 
         if (!response.ok) {
           let errorMsg = `HTTP error! status: ${response.status}`;
           try {
             const errJson = await response.json();
             if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-          } catch { }
+          } catch {}
           throw new Error(errorMsg);
         }
 
@@ -3358,7 +3440,8 @@ function App() {
                   <div className="flex items-center gap-1 sm:gap-2">
                     <FaClock size={14} className="flex-shrink-0" />
                     <span>
-                      {formatDateDDMMMYYYY(editReschedulePopup.date)} at {editReschedulePopup.time}
+                      {formatDateDDMMMYYYY(editReschedulePopup.date)} at{" "}
+                      {editReschedulePopup.time}
                     </span>
                     <span className="text-sm">{selectedTimezone}</span>
                   </div>
@@ -3395,7 +3478,9 @@ function App() {
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                  <span className="text-sm text-blue-700">Loading backend data...</span>
+                  <span className="text-sm text-blue-700">
+                    Loading backend data...
+                  </span>
                 </div>
               </div>
             )}
@@ -3404,7 +3489,9 @@ function App() {
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <FaExclamationTriangle className="text-red-600" size={14} />
-                  <span className="text-sm text-red-700">{backendDataError}</span>
+                  <span className="text-sm text-red-700">
+                    {backendDataError}
+                  </span>
                 </div>
               </div>
             )}
@@ -3427,42 +3514,61 @@ function App() {
                   </button>
                 </div>
                 <div className="text-xs text-green-800 space-y-1">
-                  <div><strong>Event ID:</strong> {backendData.event_id || 'N/A'}</div>
-                  <div><strong>Booking ID:</strong> {backendData.booking_id || 'N/A'}</div>
-                  <div><strong>Status:</strong> {backendData.status || 'N/A'}</div>
+                  <div>
+                    <strong>Event ID:</strong> {backendData.event_id || "N/A"}
+                  </div>
+                  <div>
+                    <strong>Booking ID:</strong>{" "}
+                    {backendData.booking_id || "N/A"}
+                  </div>
+                  <div>
+                    <strong>Status:</strong> {backendData.status || "N/A"}
+                  </div>
                   {backendData.created_at && (
-                    <div><strong>Created:</strong> {new Date(backendData.created_at).toLocaleString()}</div>
+                    <div>
+                      <strong>Created:</strong>{" "}
+                      {new Date(backendData.created_at).toLocaleString()}
+                    </div>
                   )}
                   {backendData.updated_at && (
-                    <div><strong>Updated:</strong> {new Date(backendData.updated_at).toLocaleString()}</div>
+                    <div>
+                      <strong>Updated:</strong>{" "}
+                      {new Date(backendData.updated_at).toLocaleString()}
+                    </div>
                   )}
                 </div>
               </div>
             )}
 
             {/* Manual Refresh Button when no backend data */}
-            {!backendData && !isLoadingBackendData && editReschedulePopup.data?.event_id && (
-              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">No backend data loaded</span>
-                  <button
-                    onClick={fetchBackendBookingData}
-                    disabled={isLoadingBackendData}
-                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
-                  >
-                    <FaDownload size={10} />
-                    Load Backend Data
-                  </button>
+            {!backendData &&
+              !isLoadingBackendData &&
+              editReschedulePopup.data?.event_id && (
+                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">
+                      No backend data loaded
+                    </span>
+                    <button
+                      onClick={fetchBackendBookingData}
+                      disabled={isLoadingBackendData}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors duration-200 flex items-center gap-1"
+                    >
+                      <FaDownload size={10} />
+                      Load Backend Data
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Form Loading Indicator */}
             {!isFormInitialized && (
               <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-600 border-t-transparent"></div>
-                  <span className="text-sm text-yellow-700">Loading booking details...</span>
+                  <span className="text-sm text-yellow-700">
+                    Loading booking details...
+                  </span>
                 </div>
               </div>
             )}
@@ -3482,8 +3588,14 @@ function App() {
                     value={editReschedulePopup.data?.description || ""}
                     onChange={(e) => {
                       // Update the description in the data
-                      const updatedData = { ...editReschedulePopup.data, description: e.target.value };
-                      setEditReschedulePopup(prev => ({ ...prev, data: updatedData }));
+                      const updatedData = {
+                        ...editReschedulePopup.data,
+                        description: e.target.value,
+                      };
+                      setEditReschedulePopup((prev) => ({
+                        ...prev,
+                        data: updatedData,
+                      }));
                     }}
                     placeholder="Enter booking description..."
                     className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -3541,23 +3653,35 @@ function App() {
                         Add More Details
                       </label>
                       <div className="space-y-1">
-                        {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map((option) => (
-                          <label key={option} className="flex items-center gap-2 text-xs">
-                            <input
-                              type="checkbox"
-                              checked={selectedRecording.includes(option)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedRecording([...selectedRecording, option]);
-                                } else {
-                                  setSelectedRecording(selectedRecording.filter(item => item !== option));
-                                }
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            {option}
-                          </label>
-                        ))}
+                        {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map(
+                          (option) => (
+                            <label
+                              key={option}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedRecording.includes(option)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedRecording([
+                                      ...selectedRecording,
+                                      option,
+                                    ]);
+                                  } else {
+                                    setSelectedRecording(
+                                      selectedRecording.filter(
+                                        (item) => item !== option
+                                      )
+                                    );
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              {option}
+                            </label>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -3622,8 +3746,16 @@ function App() {
                             <button
                               key={student.jetlearner_id}
                               onClick={() => {
-                                if (!selectedStudents.find(s => s.jetlearner_id === student.jetlearner_id)) {
-                                  setSelectedStudents([...selectedStudents, student]);
+                                if (
+                                  !selectedStudents.find(
+                                    (s) =>
+                                      s.jetlearner_id === student.jetlearner_id
+                                  )
+                                ) {
+                                  setSelectedStudents([
+                                    ...selectedStudents,
+                                    student,
+                                  ]);
                                 }
                                 setStudentSearchTerm("");
                                 setShowStudentSearch(false);
@@ -3645,7 +3777,10 @@ function App() {
                     {/* Selected Students List */}
                     {selectedStudents.length === 0 ? (
                       <div className="text-center py-4 text-gray-500">
-                        <FaGraduationCap size={20} className="mx-auto mb-2 text-gray-300" />
+                        <FaGraduationCap
+                          size={20}
+                          className="mx-auto mb-2 text-gray-300"
+                        />
                         <p className="text-xs">No learners selected</p>
                       </div>
                     ) : (
@@ -3659,7 +3794,14 @@ function App() {
                               {student.deal_name || student.name}
                             </span>
                             <button
-                              onClick={() => setSelectedStudents(selectedStudents.filter(s => s.jetlearner_id !== student.jetlearner_id))}
+                              onClick={() =>
+                                setSelectedStudents(
+                                  selectedStudents.filter(
+                                    (s) =>
+                                      s.jetlearner_id !== student.jetlearner_id
+                                  )
+                                )
+                              }
                               className="text-red-500 hover:text-red-700 p-1"
                             >
                               <FaTimes size={10} />
@@ -3689,12 +3831,17 @@ function App() {
                         </label>
                         <select
                           value={selectedScheduleDate}
-                          onChange={(e) => setSelectedScheduleDate(e.target.value)}
+                          onChange={(e) =>
+                            setSelectedScheduleDate(e.target.value)
+                          }
                           className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select Date</option>
                           {weekDates.map((date) => (
-                            <option key={formatDate(date)} value={formatDate(date)}>
+                            <option
+                              key={formatDate(date)}
+                              value={formatDate(date)}
+                            >
                               {formatDate(date)} ({getDayName(date)})
                             </option>
                           ))}
@@ -3706,7 +3853,9 @@ function App() {
                         </label>
                         <select
                           value={selectedScheduleTime}
-                          onChange={(e) => setSelectedScheduleTime(e.target.value)}
+                          onChange={(e) =>
+                            setSelectedScheduleTime(e.target.value)
+                          }
                           className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select Time</option>
@@ -3731,7 +3880,10 @@ function App() {
                     {/* Schedule Entries List */}
                     {scheduleEntries.length === 0 ? (
                       <div className="text-center py-4 text-gray-500">
-                        <FaCalendarAlt size={20} className="mx-auto mb-2 text-gray-300" />
+                        <FaCalendarAlt
+                          size={20}
+                          className="mx-auto mb-2 text-gray-300"
+                        />
                         <p className="text-xs">No schedule entries added</p>
                       </div>
                     ) : (
@@ -3770,20 +3922,9 @@ function App() {
 
     const handleConfirm = () => {
       if (confirmationPopup.onConfirm) {
-        confirmationPopup.onConfirm();
+        // Pass the current upcomingEvents value to the onConfirm function
+        confirmationPopup.onConfirm(confirmationPopup.upcomingEvents);
       }
-      setConfirmationPopup({
-        isOpen: false,
-        type: null,
-        title: "",
-        message: "",
-        data: null,
-        date: null,
-        time: null,
-        eventId: null,
-        onConfirm: null,
-        upcomingEvents: false,
-      });
     };
 
     const handleCancel = () => {
@@ -3797,7 +3938,7 @@ function App() {
         time: null,
         eventId: null,
         onConfirm: null,
-        upcomingEvents: false,
+        upcomingEvents: null,
       });
     };
 
@@ -3841,9 +3982,11 @@ function App() {
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input
+                  id="upcoming_events"
                   type="checkbox"
                   checked={confirmationPopup.upcomingEvents}
                   onChange={(e) => {
+                    console.log("target", e.target.checked);
                     setConfirmationPopup((prev) => ({
                       ...prev,
                       upcomingEvents: e.target.checked,
@@ -3897,44 +4040,44 @@ function App() {
     // Filter data by the specific time slot, respecting grid counts
     const filteredAvailabilityData = availabilityAPI.response
       ? filterDataByTime(
-        availabilityAPI.response,
-        detailsPopup.time,
-        gridAvailableCount
-      )
+          availabilityAPI.response,
+          detailsPopup.time,
+          gridAvailableCount
+        )
       : [];
 
     const filteredBookingData = bookingApiResponse.data
       ? filterDataByTime(
-        bookingApiResponse.data,
-        detailsPopup.time,
-        gridBookedCount
-      )
+          bookingApiResponse.data,
+          detailsPopup.time,
+          gridBookedCount
+        )
       : [];
 
     // Get paginated data for current popup
     const currentData =
       detailsPopup.type === "availability"
         ? getPaginatedData(
-          filteredAvailabilityData,
-          popupPagination.currentPage,
-          popupPagination.itemsPerPage
-        )
+            filteredAvailabilityData,
+            popupPagination.currentPage,
+            popupPagination.itemsPerPage
+          )
         : getPaginatedData(
-          filteredBookingData,
-          popupPagination.currentPage,
-          popupPagination.itemsPerPage
-        );
+            filteredBookingData,
+            popupPagination.currentPage,
+            popupPagination.itemsPerPage
+          );
 
     const totalPages =
       detailsPopup.type === "availability"
         ? getTotalPages(
-          filteredAvailabilityData.length,
-          popupPagination.itemsPerPage
-        )
+            filteredAvailabilityData.length,
+            popupPagination.itemsPerPage
+          )
         : getTotalPages(
-          filteredBookingData.length,
-          popupPagination.itemsPerPage
-        );
+            filteredBookingData.length,
+            popupPagination.itemsPerPage
+          );
 
     // Debug logging
     console.log("🔍 Popup Debug Info:", {
@@ -4365,20 +4508,27 @@ function App() {
     const handleCancelConfirm = async () => {
       try {
         // Show confirmation popup first
-        const actionType = cancelPopup.type === "availability" ? "cancel-availability" : "delete-booking";
-        const actionText = cancelPopup.type === "availability" ? "cancel" : "delete";
-        const itemText = cancelPopup.type === "availability" ? "availability" : "booking";
+        const actionType =
+          cancelPopup.type === "availability"
+            ? "cancel-availability"
+            : "delete-booking";
+        const actionText =
+          cancelPopup.type === "availability" ? "cancel" : "delete";
+        const itemText =
+          cancelPopup.type === "availability" ? "availability" : "booking";
 
         setConfirmationPopup({
           isOpen: true,
           type: actionType,
-          title: `Confirm ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,
+          title: `Confirm ${
+            actionText.charAt(0).toUpperCase() + actionText.slice(1)
+          }`,
           message: `Are you sure you want to ${actionText} the ${itemText}?`,
           data: cancelPopup.data,
           date: cancelPopup.date,
           time: cancelPopup.time,
           eventId: cancelPopup.data?.event_id || null,
-          onConfirm: async () => {
+          onConfirm: async (upcomingEvents) => {
             try {
               if (cancelPopup.type === "availability") {
                 await handleCancelAvailability(
@@ -4387,7 +4537,7 @@ function App() {
                   cancelPopup.teacherDetails?.uid,
                   cancelPopup.reason,
                   cancelPopup.data?.event_id || null,
-                  cancelPopup.upcomingEvents
+                  upcomingEvents || false
                 );
               } else if (cancelPopup.type === "booking") {
                 await handleCancelBooking(
@@ -4396,7 +4546,7 @@ function App() {
                   cancelPopup.data,
                   cancelPopup.reason,
                   cancelPopup.data?.event_id || null,
-                  cancelPopup.upcomingEvents
+                  upcomingEvents
                 );
               }
 
@@ -4912,12 +5062,13 @@ function App() {
                   }
                 }}
                 disabled={!selectedTeacher && !selectedStudent}
-                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${!selectedTeacher && !selectedStudent
+                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
+                  !selectedTeacher && !selectedStudent
                     ? "opacity-50 cursor-not-allowed text-gray-400"
                     : currentView === "list"
-                      ? "bg-blue-500 text-white shadow-sm"
-                      : "text-blue-100 hover:text-white"
-                  }`}
+                    ? "bg-blue-500 text-white shadow-sm"
+                    : "text-blue-100 hover:text-white"
+                }`}
                 title={
                   !selectedTeacher && !selectedStudent
                     ? "Select a Teacher or Student to enable List View"
@@ -4966,10 +5117,11 @@ function App() {
                     });
                   }
                 }}
-                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${currentView === "week"
+                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
+                  currentView === "week"
                     ? "bg-blue-500 text-white shadow-sm"
                     : "text-blue-100 hover:text-white"
-                  }`}
+                }`}
               >
                 <FaCalendarWeek size={10} />
                 <span className="hidden sm:inline">Week View</span>
@@ -5224,21 +5376,12 @@ function App() {
                                 const formatTimeFromAPI = (dateTimeString) => {
                                   if (!dateTimeString) return "N/A";
                                   try {
-                                    console.log(
-                                      "dateTimeString" + dateTimeString
-                                    );
                                     const formattedTime = dateTimeString.slice(
                                       11,
                                       16
                                     ); // "04:00"
 
-                                    console.log("formattedTime", formattedTime); // "14:30"
                                     return formattedTime;
-                                    // return date.toLocaleTimeString([], {
-                                    //   hour: "2-digit",
-                                    //   minute: "2-digit",
-                                    //   hour12: false,
-                                    // });
                                   } catch (error) {
                                     console.error(
                                       "Error formatting time:",
@@ -5267,13 +5410,14 @@ function App() {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
                                         <div
-                                          className={`w-3 h-3 rounded-full mr-3 ${extractedData.summary &&
-                                              (extractedData.summary
+                                          className={`w-3 h-3 rounded-full mr-3 ${
+                                            extractedData.summary &&
+                                            (extractedData.summary
+                                              .toLowerCase()
+                                              .includes("availability") ||
+                                              extractedData.summary
                                                 .toLowerCase()
-                                                .includes("availability") ||
-                                                extractedData.summary
-                                                  .toLowerCase()
-                                                  .includes("hours"))
+                                                .includes("hours"))
                                               ? "bg-green-500"
                                               : extractedData.summary &&
                                                 (extractedData.summary
@@ -5282,55 +5426,55 @@ function App() {
                                                   extractedData.summary
                                                     .toLowerCase()
                                                     .includes("off"))
-                                                ? "bg-yellow-500"
-                                                : extractedData.summary &&
-                                                  (extractedData.summary.trim() ===
-                                                    "B&R" ||
-                                                    extractedData.summary.trim() ===
+                                              ? "bg-yellow-500"
+                                              : extractedData.summary &&
+                                                (extractedData.summary.trim() ===
+                                                  "B&R" ||
+                                                  extractedData.summary.trim() ===
                                                     "CBT/PL" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "CBT/UL" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "CBP/PL" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "CBP/UL" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "CBO" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "NO SHOW - LR" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "NO SHOW - TR" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "MAKE UP" ||
-                                                    extractedData.summary.trim() ===
+                                                  extractedData.summary.trim() ===
                                                     "MAKE UP - S" ||
-                                                    extractedData.summary.includes(
-                                                      "B&R"
-                                                    ) ||
-                                                    extractedData.summary.includes(
-                                                      "CBT/PL"
-                                                    ) ||
-                                                    extractedData.summary.includes(
-                                                      "CBT/UL"
-                                                    ) ||
-                                                    extractedData.summary.includes(
-                                                      "CBP/PL"
-                                                    ) ||
-                                                    extractedData.summary.includes(
-                                                      "CBP/UL"
-                                                    ) ||
-                                                    extractedData.summary.includes(
-                                                      "CBO"
-                                                    ) ||
-                                                    extractedData.summary.includes(
-                                                      "NO SHOW - LR"
-                                                    ) ||
-                                                    extractedData.summary.includes(
-                                                      "NO SHOW - TR"
-                                                    ))
-                                                  ? "bg-black"
-                                                  : "bg-red-500"
-                                            }`}
+                                                  extractedData.summary.includes(
+                                                    "B&R"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBT/PL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBT/UL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBP/PL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBP/UL"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "CBO"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "NO SHOW - LR"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "NO SHOW - TR"
+                                                  ))
+                                              ? "bg-black"
+                                              : "bg-red-500"
+                                          }`}
                                         ></div>
                                         <div className="flex-1">
                                           <div className="text-sm font-medium text-gray-900">
@@ -5396,28 +5540,52 @@ function App() {
                                                   className="flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
                                                   title="Manage Actions"
                                                 >
-                                                  <MdManageAccounts size={8} className="sm:w-3 sm:h-3" />
-                                                  <span className="hidden sm:inline">Manage</span>
-                                                  <FaChevronDown size={8} className="sm:w-3 sm:h-3" />
+                                                  <MdManageAccounts
+                                                    size={8}
+                                                    className="sm:w-3 sm:h-3"
+                                                  />
+                                                  <span className="hidden sm:inline">
+                                                    Manage
+                                                  </span>
+                                                  <FaChevronDown
+                                                    size={8}
+                                                    className="sm:w-3 sm:h-3"
+                                                  />
                                                 </button>
 
                                                 {actionMenuOpen === index && (
-                                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50" data-dropdown-menu>
+                                                  <div
+                                                    className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                                    data-dropdown-menu
+                                                  >
                                                     <div className="py-1">
                                                       <button
                                                         onClick={() => {
                                                           // Open UnifiedModal for this time slot
-                                                          let timeSlot = timeRange;
-                                                          const slotData = getSlotCounts(bookingDate, timeSlot);
+                                                          let timeSlot =
+                                                            timeRange;
+                                                          const slotData =
+                                                            getSlotCounts(
+                                                              bookingDate,
+                                                              timeSlot
+                                                            );
                                                           setSelectedSlot({
                                                             date: bookingDate,
                                                             time: timeSlot,
-                                                            teacherid: slotData.teacherid || extractedData.teacherid || null,
-                                                            teacherDetails: slotData.teacherDetails,
-                                                            isFromAPI: slotData.isFromAPI || true,
+                                                            teacherid:
+                                                              slotData.teacherid ||
+                                                              extractedData.teacherid ||
+                                                              null,
+                                                            teacherDetails:
+                                                              slotData.teacherDetails,
+                                                            isFromAPI:
+                                                              slotData.isFromAPI ||
+                                                              true,
                                                           });
                                                           setModalOpen(true);
-                                                          setActionMenuOpen(null);
+                                                          setActionMenuOpen(
+                                                            null
+                                                          );
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
                                                       >
@@ -5427,54 +5595,91 @@ function App() {
                                                       <button
                                                         onClick={() => {
                                                           // Extract time from the booking data
-                                                          let timeSlot = "00:00";
-                                                          if (extractedData.summary) {
-                                                            const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                          let timeSlot =
+                                                            "00:00";
+                                                          if (
+                                                            extractedData.summary
+                                                          ) {
+                                                            const timeMatch =
+                                                              extractedData.summary.match(
+                                                                /(\d{1,2}:\d{2})/
+                                                              );
                                                             if (timeMatch) {
-                                                              timeSlot = timeMatch[1];
+                                                              timeSlot =
+                                                                timeMatch[1];
                                                             }
                                                           }
-                                                          if (timeSlot === "00:00" && extractedData.start_time) {
-                                                            const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                          if (
+                                                            timeSlot ===
+                                                              "00:00" &&
+                                                            extractedData.start_time
+                                                          ) {
+                                                            const timeFromStart =
+                                                              extractedData.start_time.match(
+                                                                /(\d{2}:\d{2})/
+                                                              );
                                                             if (timeFromStart) {
-                                                              timeSlot = timeFromStart[1];
+                                                              timeSlot =
+                                                                timeFromStart[1];
                                                             }
                                                           }
-                                                          if (timeSlot === "00:00") {
+                                                          if (
+                                                            timeSlot === "00:00"
+                                                          ) {
                                                             timeSlot = "09:00";
                                                           }
 
                                                           setConfirmationPopup({
                                                             isOpen: true,
                                                             type: "cancel-availability",
-                                                            title: "Confirm Cancel",
-                                                            message: "Are you sure you want to cancel the availability?",
+                                                            title:
+                                                              "Confirm Cancel",
+                                                            message:
+                                                              "Are you sure you want to cancel the availability?",
                                                             data: extractedData,
                                                             date: bookingDate,
                                                             time: timeSlot,
-                                                            eventId: extractedData.event_id || null,
-                                                            upcomingEvents: false,
-                                                            onConfirm: async () => {
+                                                            eventId:
+                                                              extractedData.event_id ||
+                                                              null,
+                                                            upcomingEvents:
+                                                              confirmationPopup.upcomingEvents,
+                                                            onConfirm: async (
+                                                              upcomingEvents
+                                                            ) => {
                                                               try {
                                                                 // Call the cancel availability function
                                                                 await handleCancelAvailability(
                                                                   bookingDate,
                                                                   timeSlot,
-                                                                  getTeacherByTeacherId(extractedData.teacherid)?.uid || selectedTeacher?.uid,
+                                                                  getTeacherByTeacherId(
+                                                                    extractedData.teacherid
+                                                                  )?.uid ||
+                                                                    selectedTeacher?.uid,
                                                                   "",
-                                                                  extractedData.event_id || null,
-                                                                  confirmationPopup.upcomingEvents
+                                                                  extractedData.event_id ||
+                                                                    null,
+                                                                  upcomingEvents
                                                                 );
 
                                                                 // Close the action menu
-                                                                setActionMenuOpen(null);
+                                                                setActionMenuOpen(
+                                                                  null
+                                                                );
                                                               } catch (error) {
-                                                                console.error("Error canceling availability:", error);
-                                                                alert("Failed to cancel availability. Please try again.");
+                                                                console.error(
+                                                                  "Error canceling availability:",
+                                                                  error
+                                                                );
+                                                                alert(
+                                                                  "Failed to cancel availability. Please try again."
+                                                                );
                                                               }
                                                             },
                                                           });
-                                                          setActionMenuOpen(null);
+                                                          setActionMenuOpen(
+                                                            null
+                                                          );
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
                                                       >
@@ -5506,24 +5711,50 @@ function App() {
                                                 .includes("off")
                                             ) &&
                                             !(
-                                              extractedData.summary.trim() === "B&R" ||
-                                              extractedData.summary.trim() === "CBT/PL" ||
-                                              extractedData.summary.trim() === "CBT/UL" ||
-                                              extractedData.summary.trim() === "CBP/PL" ||
-                                              extractedData.summary.trim() === "CBP/UL" ||
-                                              extractedData.summary.trim() === "CBO" ||
-                                              extractedData.summary.trim() === "NO SHOW - LR" ||
-                                              extractedData.summary.trim() === "NO SHOW - TR" ||
-                                              extractedData.summary.trim() === "MAKE UP" ||
-                                              extractedData.summary.trim() === "MAKE UP - S" ||
-                                              extractedData.summary.includes("B&R") ||
-                                              extractedData.summary.includes("CBT/PL") ||
-                                              extractedData.summary.includes("CBT/UL") ||
-                                              extractedData.summary.includes("CBP/PL") ||
-                                              extractedData.summary.includes("CBP/UL") ||
-                                              extractedData.summary.includes("CBO") ||
-                                              extractedData.summary.includes("NO SHOW - LR") ||
-                                              extractedData.summary.includes("NO SHOW - TR")
+                                              extractedData.summary.trim() ===
+                                                "B&R" ||
+                                              extractedData.summary.trim() ===
+                                                "CBT/PL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBT/UL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBP/PL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBP/UL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBO" ||
+                                              extractedData.summary.trim() ===
+                                                "NO SHOW - LR" ||
+                                              extractedData.summary.trim() ===
+                                                "NO SHOW - TR" ||
+                                              extractedData.summary.trim() ===
+                                                "MAKE UP" ||
+                                              extractedData.summary.trim() ===
+                                                "MAKE UP - S" ||
+                                              extractedData.summary.includes(
+                                                "B&R"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBT/PL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBT/UL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBP/PL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBP/UL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBO"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "NO SHOW - LR"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "NO SHOW - TR"
+                                              )
                                             ) && (
                                               <div className="relative">
                                                 <button
@@ -5538,31 +5769,59 @@ function App() {
                                                   className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
                                                   title="Manage Actions"
                                                 >
-                                                  <MdManageAccounts size={8} className="sm:w-3 sm:h-3" />
-                                                  <span className="hidden sm:inline">Manage</span>
-                                                  <FaChevronDown size={8} className="sm:w-3 sm:h-3" />
+                                                  <MdManageAccounts
+                                                    size={8}
+                                                    className="sm:w-3 sm:h-3"
+                                                  />
+                                                  <span className="hidden sm:inline">
+                                                    Manage
+                                                  </span>
+                                                  <FaChevronDown
+                                                    size={8}
+                                                    className="sm:w-3 sm:h-3"
+                                                  />
                                                 </button>
 
                                                 {actionMenuOpen === index && (
-                                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50" data-dropdown-menu>
+                                                  <div
+                                                    className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                                    data-dropdown-menu
+                                                  >
                                                     <div className="py-1">
                                                       <button
                                                         onClick={() => {
                                                           // Extract time from the booking data
-                                                          let timeSlot = "00:00";
-                                                          if (extractedData.summary) {
-                                                            const timeMatch = extractedData.summary.match(/(\d{1,2}:\d{2})/);
+                                                          let timeSlot =
+                                                            "00:00";
+                                                          if (
+                                                            extractedData.summary
+                                                          ) {
+                                                            const timeMatch =
+                                                              extractedData.summary.match(
+                                                                /(\d{1,2}:\d{2})/
+                                                              );
                                                             if (timeMatch) {
-                                                              timeSlot = timeMatch[1];
+                                                              timeSlot =
+                                                                timeMatch[1];
                                                             }
                                                           }
-                                                          if (timeSlot === "00:00" && extractedData.start_time) {
-                                                            const timeFromStart = extractedData.start_time.match(/(\d{2}:\d{2})/);
+                                                          if (
+                                                            timeSlot ===
+                                                              "00:00" &&
+                                                            extractedData.start_time
+                                                          ) {
+                                                            const timeFromStart =
+                                                              extractedData.start_time.match(
+                                                                /(\d{2}:\d{2})/
+                                                              );
                                                             if (timeFromStart) {
-                                                              timeSlot = timeFromStart[1];
+                                                              timeSlot =
+                                                                timeFromStart[1];
                                                             }
                                                           }
-                                                          if (timeSlot === "00:00") {
+                                                          if (
+                                                            timeSlot === "00:00"
+                                                          ) {
                                                             timeSlot = "09:00";
                                                           }
 
@@ -5574,15 +5833,23 @@ function App() {
                                                             time: timeSlot,
                                                             reason: "",
                                                             studentDetails: {
-                                                              learner_name: extractedData.learner_name,
+                                                              learner_name:
+                                                                extractedData.learner_name,
                                                               jlid: extractedData.jlid,
                                                               name: extractedData.learner_name,
-                                                              jetlearner_id: extractedData.jlid,
+                                                              jetlearner_id:
+                                                                extractedData.jlid,
                                                             },
-                                                            teacherDetails: getTeacherByTeacherId(extractedData.teacherid) || selectedTeacher,
+                                                            teacherDetails:
+                                                              getTeacherByTeacherId(
+                                                                extractedData.teacherid
+                                                              ) ||
+                                                              selectedTeacher,
                                                             upcomingEvents: false,
                                                           });
-                                                          setActionMenuOpen(null);
+                                                          setActionMenuOpen(
+                                                            null
+                                                          );
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
                                                       >
@@ -5592,17 +5859,23 @@ function App() {
                                                       <button
                                                         onClick={() => {
                                                           // Open Edit/Reschedule popup with current booking data
-                                                          setEditReschedulePopup({
-                                                            isOpen: true,
-                                                            data: extractedData,
-                                                            date: bookingDate,
-                                                            time: timeRange,
-                                                          });
-                                                          setActionMenuOpen(null);
+                                                          setEditReschedulePopup(
+                                                            {
+                                                              isOpen: true,
+                                                              data: extractedData,
+                                                              date: bookingDate,
+                                                              time: timeRange,
+                                                            }
+                                                          );
+                                                          setActionMenuOpen(
+                                                            null
+                                                          );
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
                                                       >
-                                                        <FaCalendarAlt size={10} />
+                                                        <FaCalendarAlt
+                                                          size={10}
+                                                        />
                                                         Edit/Reschedule Booking
                                                       </button>
                                                       <button
@@ -5611,59 +5884,99 @@ function App() {
                                                           setConfirmationPopup({
                                                             isOpen: true,
                                                             type: "delete-booking",
-                                                            title: "Confirm Delete",
-                                                            message: "Are you sure you want to delete the booking?",
+                                                            title:
+                                                              "Confirm Delete",
+                                                            message:
+                                                              "Are you sure you want to delete the booking?",
                                                             data: extractedData,
                                                             date: bookingDate,
                                                             time: timeRange,
-                                                            eventId: extractedData.event_id || null,
-                                                            upcomingEvents: false,
-                                                            onConfirm: async () => {
+                                                            eventId:
+                                                              extractedData.event_id ||
+                                                              null,
+                                                            upcomingEvents:
+                                                              confirmationPopup.upcomingEvents,
+                                                            onConfirm: async (
+                                                              upcomingEvents
+                                                            ) => {
                                                               try {
                                                                 // Call delete-class API
-                                                                console.log("🚀 Calling delete-class API for booking deletion");
-                                                                console.log("📊 Event ID:", extractedData.event_id);
-                                                                console.log("📊 Upcoming events:", confirmationPopup.upcomingEvents);
-
-                                                                if (!extractedData.event_id) {
-                                                                  throw new Error("No event_id available for deletion");
-                                                                }
-
-                                                                const deleteResult = await handleDeleteClass(
-                                                                  extractedData.event_id,
-                                                                  confirmationPopup.upcomingEvents
+                                                                console.log(
+                                                                  "🚀 Calling delete-class API for booking deletion"
+                                                                );
+                                                                console.log(
+                                                                  "📊 Event ID:",
+                                                                  extractedData.event_id
+                                                                );
+                                                                console.log(
+                                                                  "📊 Upcoming events:",
+                                                                  upcomingEvents
                                                                 );
 
-                                                                if (deleteResult.success) {
+                                                                if (
+                                                                  !extractedData.event_id
+                                                                ) {
+                                                                  throw new Error(
+                                                                    "No event_id available for deletion"
+                                                                  );
+                                                                }
+
+                                                                const deleteResult =
+                                                                  await handleDeleteClass(
+                                                                    extractedData.event_id,
+                                                                    upcomingEvents
+                                                                  );
+
+                                                                if (
+                                                                  deleteResult.success
+                                                                ) {
                                                                   // Close the action menu
-                                                                  setActionMenuOpen(null);
+                                                                  setActionMenuOpen(
+                                                                    null
+                                                                  );
 
                                                                   // Show success message
-                                                                  setSuccessMessage({
-                                                                    show: true,
-                                                                    message: "Booking Successfully Deleted !!",
-                                                                    type: "delete",
-                                                                  });
+                                                                  setSuccessMessage(
+                                                                    {
+                                                                      show: true,
+                                                                      message:
+                                                                        "Booking Successfully Deleted !!",
+                                                                      type: "delete",
+                                                                    }
+                                                                  );
 
                                                                   // Close success message after delay
-                                                                  setTimeout(() => {
-                                                                    setSuccessMessage({
-                                                                      show: false,
-                                                                      message: "",
-                                                                      type: "",
-                                                                    });
-                                                                  }, 2000);
+                                                                  setTimeout(
+                                                                    () => {
+                                                                      setSuccessMessage(
+                                                                        {
+                                                                          show: false,
+                                                                          message:
+                                                                            "",
+                                                                          type: "",
+                                                                        }
+                                                                      );
+                                                                    },
+                                                                    2000
+                                                                  );
 
                                                                   // Refresh the data after deletion
                                                                   await fetchListViewBookingDetails();
                                                                 }
                                                               } catch (error) {
-                                                                console.error("Error deleting booking:", error);
-                                                                alert(`Failed to delete booking: ${error.message}`);
+                                                                console.error(
+                                                                  "Error deleting booking:",
+                                                                  error
+                                                                );
+                                                                alert(
+                                                                  `Failed to delete booking: ${error.message}`
+                                                                );
                                                               }
                                                             },
                                                           });
-                                                          setActionMenuOpen(null);
+                                                          setActionMenuOpen(
+                                                            null
+                                                          );
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
                                                       >
@@ -5678,24 +5991,50 @@ function App() {
 
                                           {/* Black Dot Actions */}
                                           {extractedData.summary &&
-                                            (extractedData.summary.trim() === "B&R" ||
-                                              extractedData.summary.trim() === "CBT/PL" ||
-                                              extractedData.summary.trim() === "CBT/UL" ||
-                                              extractedData.summary.trim() === "CBP/PL" ||
-                                              extractedData.summary.trim() === "CBP/UL" ||
-                                              extractedData.summary.trim() === "CBO" ||
-                                              extractedData.summary.trim() === "NO SHOW - LR" ||
-                                              extractedData.summary.trim() === "NO SHOW - TR" ||
-                                              extractedData.summary.trim() === "MAKE UP" ||
-                                              extractedData.summary.trim() === "MAKE UP - S" ||
-                                              extractedData.summary.includes("B&R") ||
-                                              extractedData.summary.includes("CBT/PL") ||
-                                              extractedData.summary.includes("CBT/UL") ||
-                                              extractedData.summary.includes("CBP/PL") ||
-                                              extractedData.summary.includes("CBP/UL") ||
-                                              extractedData.summary.includes("CBO") ||
-                                              extractedData.summary.includes("NO SHOW - LR") ||
-                                              extractedData.summary.includes("NO SHOW - TR")) && (
+                                            (extractedData.summary.trim() ===
+                                              "B&R" ||
+                                              extractedData.summary.trim() ===
+                                                "CBT/PL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBT/UL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBP/PL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBP/UL" ||
+                                              extractedData.summary.trim() ===
+                                                "CBO" ||
+                                              extractedData.summary.trim() ===
+                                                "NO SHOW - LR" ||
+                                              extractedData.summary.trim() ===
+                                                "NO SHOW - TR" ||
+                                              extractedData.summary.trim() ===
+                                                "MAKE UP" ||
+                                              extractedData.summary.trim() ===
+                                                "MAKE UP - S" ||
+                                              extractedData.summary.includes(
+                                                "B&R"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBT/PL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBT/UL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBP/PL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBP/UL"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "CBO"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "NO SHOW - LR"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "NO SHOW - TR"
+                                              )) && (
                                               <div className="relative">
                                                 <button
                                                   onClick={(e) => {
@@ -5709,13 +6048,24 @@ function App() {
                                                   className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
                                                   title="Manage Actions"
                                                 >
-                                                  <MdManageAccounts size={8} className="sm:w-3 sm:h-3" />
-                                                  <span className="hidden sm:inline">Manage</span>
-                                                  <FaChevronDown size={8} className="sm:w-3 sm:h-3" />
+                                                  <MdManageAccounts
+                                                    size={8}
+                                                    className="sm:w-3 sm:h-3"
+                                                  />
+                                                  <span className="hidden sm:inline">
+                                                    Manage
+                                                  </span>
+                                                  <FaChevronDown
+                                                    size={8}
+                                                    className="sm:w-3 sm:h-3"
+                                                  />
                                                 </button>
 
                                                 {actionMenuOpen === index && (
-                                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50" data-dropdown-menu>
+                                                  <div
+                                                    className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                                    data-dropdown-menu
+                                                  >
                                                     <div className="py-1">
                                                       <button
                                                         onClick={() => {
@@ -5723,59 +6073,98 @@ function App() {
                                                           setConfirmationPopup({
                                                             isOpen: true,
                                                             type: "delete-events",
-                                                            title: "Confirm Delete",
-                                                            message: "Are you sure you want to delete this event?",
+                                                            title:
+                                                              "Confirm Delete",
+                                                            message:
+                                                              "Are you sure you want to delete this event?",
                                                             data: extractedData,
                                                             date: bookingDate,
                                                             time: timeRange,
-                                                            eventId: extractedData.event_id || null,
+                                                            eventId:
+                                                              extractedData.event_id ||
+                                                              null,
                                                             upcomingEvents: false,
-                                                            onConfirm: async () => {
+                                                            onConfirm: async (
+                                                              upcomingEvents
+                                                            ) => {
                                                               try {
                                                                 // Call delete-class API for event deletion
-                                                                console.log("🚀 Calling delete-class API for event deletion");
-                                                                console.log("📊 Event ID:", extractedData.event_id);
-                                                                console.log("📊 Upcoming events:", confirmationPopup.upcomingEvents);
-
-                                                                if (!extractedData.event_id) {
-                                                                  throw new Error("No event_id available for deletion");
-                                                                }
-
-                                                                const deleteResult = await handleDeleteClass(
-                                                                  extractedData.event_id,
-                                                                  confirmationPopup.upcomingEvents
+                                                                console.log(
+                                                                  "🚀 Calling delete-class API for event deletion"
+                                                                );
+                                                                console.log(
+                                                                  "📊 Event ID:",
+                                                                  extractedData.event_id
+                                                                );
+                                                                console.log(
+                                                                  "📊 Upcoming events:",
+                                                                  upcomingEvents
                                                                 );
 
-                                                                if (deleteResult.success) {
+                                                                if (
+                                                                  !extractedData.event_id
+                                                                ) {
+                                                                  throw new Error(
+                                                                    "No event_id available for deletion"
+                                                                  );
+                                                                }
+
+                                                                const deleteResult =
+                                                                  await handleDeleteClass(
+                                                                    extractedData.event_id,
+                                                                    upcomingEvents
+                                                                  );
+
+                                                                if (
+                                                                  deleteResult.success
+                                                                ) {
                                                                   // Close the action menu
-                                                                  setActionMenuOpen(null);
+                                                                  setActionMenuOpen(
+                                                                    null
+                                                                  );
 
                                                                   // Show success message
-                                                                  setSuccessMessage({
-                                                                    show: true,
-                                                                    message: "Event Successfully Deleted !!",
-                                                                    type: "delete",
-                                                                  });
+                                                                  setSuccessMessage(
+                                                                    {
+                                                                      show: true,
+                                                                      message:
+                                                                        "Event Successfully Deleted !!",
+                                                                      type: "delete",
+                                                                    }
+                                                                  );
 
                                                                   // Close success message after delay
-                                                                  setTimeout(() => {
-                                                                    setSuccessMessage({
-                                                                      show: false,
-                                                                      message: "",
-                                                                      type: "",
-                                                                    });
-                                                                  }, 2000);
+                                                                  setTimeout(
+                                                                    () => {
+                                                                      setSuccessMessage(
+                                                                        {
+                                                                          show: false,
+                                                                          message:
+                                                                            "",
+                                                                          type: "",
+                                                                        }
+                                                                      );
+                                                                    },
+                                                                    2000
+                                                                  );
 
                                                                   // Refresh the data after deletion
                                                                   await fetchListViewBookingDetails();
                                                                 }
                                                               } catch (error) {
-                                                                console.error("Error deleting event:", error);
-                                                                alert(`Failed to delete event: ${error.message}`);
+                                                                console.error(
+                                                                  "Error deleting event:",
+                                                                  error
+                                                                );
+                                                                alert(
+                                                                  `Failed to delete event: ${error.message}`
+                                                                );
                                                               }
                                                             },
                                                           });
-                                                          setActionMenuOpen(null);
+                                                          setActionMenuOpen(
+                                                            null
+                                                          );
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
                                                       >
@@ -5785,17 +6174,23 @@ function App() {
                                                       <button
                                                         onClick={() => {
                                                           // Open Edit/Reschedule popup with current booking data
-                                                          setEditReschedulePopup({
-                                                            isOpen: true,
-                                                            data: extractedData,
-                                                            date: bookingDate,
-                                                            time: timeRange,
-                                                          });
-                                                          setActionMenuOpen(null);
+                                                          setEditReschedulePopup(
+                                                            {
+                                                              isOpen: true,
+                                                              data: extractedData,
+                                                              date: bookingDate,
+                                                              time: timeRange,
+                                                            }
+                                                          );
+                                                          setActionMenuOpen(
+                                                            null
+                                                          );
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
                                                       >
-                                                        <FaCalendarAlt size={10} />
+                                                        <FaCalendarAlt
+                                                          size={10}
+                                                        />
                                                         Edit/Reschedule Booking
                                                       </button>
                                                     </div>
@@ -5837,7 +6232,7 @@ function App() {
                                 -{" "}
                                 {Math.min(
                                   pagination.currentPage *
-                                  pagination.itemsPerPage,
+                                    pagination.itemsPerPage,
                                   parsedBookings.length
                                 )}{" "}
                                 of {parsedBookings.length} bookings
@@ -6020,21 +6415,29 @@ function App() {
                             className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor} relative`}
                           >
                             {/* Show + icon for gray blocks (no availability) when teacher is selected and slot hasn't been clicked */}
-                            {available === 0 && booked === 0 && selectedTeacher && !clickedSlots.has(`${formatDate(date)}-${time}`) && (
-                              <button
-                                onClick={() => handleAddAvailability(date, time)}
-                                className="absolute top-1 right-1 w-5 h-5 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
-                                title="Add availability for this time slot"
-                              >
-                                <FaPlus size={8} />
-                              </button>
-                            )}
+                            {available === 0 &&
+                              booked === 0 &&
+                              selectedTeacher &&
+                              !clickedSlots.has(
+                                `${formatDate(date)}-${time}`
+                              ) && (
+                                <button
+                                  onClick={() =>
+                                    handleAddAvailability(date, time)
+                                  }
+                                  className="absolute top-1 right-1 w-5 h-5 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
+                                  title="Add availability for this time slot"
+                                >
+                                  <FaPlus size={8} />
+                                </button>
+                              )}
 
                             <div
-                              className={`font-medium text-gray-800 ${available > 0
+                              className={`font-medium text-gray-800 ${
+                                available > 0
                                   ? "cursor-pointer hover:text-blue-600 hover:underline"
                                   : ""
-                                }`}
+                              }`}
                               onClick={() => {
                                 console.log("🖱️ Availability div clicked:", {
                                   available,
@@ -6058,10 +6461,11 @@ function App() {
                             </div>
 
                             <div
-                              className={`font-medium text-gray-800 ${booked > 0
+                              className={`font-medium text-gray-800 ${
+                                booked > 0
                                   ? "cursor-pointer hover:text-green-600 hover:underline"
                                   : ""
-                                }`}
+                              }`}
                               onClick={() => {
                                 console.log("🖱️ Booking div clicked:", {
                                   booked,
@@ -6077,19 +6481,6 @@ function App() {
                               <span className="sm:hidden">B: </span>
                               {booked}
                             </div>
-
-                            {/* <div className="text-xs text-gray-600 mt-1 hidden sm:block">
-                            {formatTimeInTimezone(date, time, selectedTimezone)}
-                          </div> */}
-                            {/* <div className="flex gap-1 mt-1 sm:mt-2 flex-wrap">
-                            <button
-                              onClick={() => handleSlotClick(date, time)}
-                              className="flex items-center gap-1 px-1 sm:px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded"
-                            >
-                              <FaUsers size={8} className="sm:w-3 sm:h-3" />
-                              <span className="hidden sm:inline">Manage</span>
-                            </button>
-                          </div> */}
                           </div>
                         );
                       })}
@@ -6186,11 +6577,12 @@ function App() {
                       </span>
                       <div className="flex items-center gap-4 text-xs text-gray-600">
                         <span>
-                          Date: {toasterData.date ? formatDisplayDate(toasterData.date) : "N/A"}
+                          Date:{" "}
+                          {toasterData.date
+                            ? formatDisplayDate(toasterData.date)
+                            : "N/A"}
                         </span>
-                        <span>
-                          Time: {toasterData.time || "N/A"}
-                        </span>
+                        <span>Time: {toasterData.time || "N/A"}</span>
                       </div>
                     </div>
                   </div>
@@ -6198,14 +6590,14 @@ function App() {
                     <button
                       onClick={() => {
                         // Remove from clicked slots to make plus icon clickable again
-                        setClickedSlots(prev => {
+                        setClickedSlots((prev) => {
                           const newSet = new Set(prev);
                           newSet.delete(slotKey);
                           return newSet;
                         });
 
                         // Close this specific toaster
-                        setSlotToasters(prev => {
+                        setSlotToasters((prev) => {
                           const newToasters = { ...prev };
                           delete newToasters[slotKey];
                           return newToasters;

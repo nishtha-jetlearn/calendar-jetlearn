@@ -479,27 +479,30 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Common email domains for validation
   const COMMON_EMAIL_DOMAINS = [
-    'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
   ];
 
   // Email validation function - only accepts common domains
   const validateEmail = (email) => {
-    if (!email.includes('@')) return false;
-    
-    const [localPart, domain] = email.split('@');
+    if (!email.includes("@")) return false;
+
+    const [localPart, domain] = email.split("@");
     if (!localPart || !domain) return false;
-    
+
     // Check if domain is in the allowed list
     return COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
   };
 
   // Check if email has invalid domain for red underline styling
   const hasInvalidDomain = (email) => {
-    if (!email.includes('@')) return false;
-    
-    const [localPart, domain] = email.split('@');
+    if (!email.includes("@")) return false;
+
+    const [localPart, domain] = email.split("@");
     if (!localPart || !domain) return false;
-    
+
     // Return true if domain is not in allowed list
     return !COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
   };
@@ -515,9 +518,9 @@ const UnifiedModalComponent = function UnifiedModal({
 
     for (const email of emailList) {
       if (!validateEmail(email)) {
-        return { 
-          isValid: false, 
-          error: `Invalid email domain: ${email}` 
+        return {
+          isValid: false,
+          error: `Invalid email domain: ${email}`,
         };
       }
     }
@@ -543,12 +546,18 @@ const UnifiedModalComponent = function UnifiedModal({
 
     // Strict email validation - only allow valid emails with common domains
     if (!validateEmail(email)) {
-      setAttendeesError("Please enter a valid email with allowed domains (gmail.com, yahoo.com, hotmail.com, outlook.com)");
+      setAttendeesError(
+        "Please enter a valid email with allowed domains (gmail.com, yahoo.com, hotmail.com, outlook.com)"
+      );
       return;
     }
 
     // Check if email already exists in the list
-    if (attendeesList.some(item => item.email.toLowerCase() === email.toLowerCase())) {
+    if (
+      attendeesList.some(
+        (item) => item.email.toLowerCase() === email.toLowerCase()
+      )
+    ) {
       setAttendeesError("Email already exists in the list");
       return;
     }
@@ -556,7 +565,7 @@ const UnifiedModalComponent = function UnifiedModal({
     // Add email to the list (always store in lowercase)
     const newEmail = {
       id: Date.now(),
-      email: email.toLowerCase()
+      email: email.toLowerCase(),
     };
     setAttendeesList([...attendeesList, newEmail]);
     setAttendees("");
@@ -565,12 +574,12 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Handle removing email from attendees list
   const handleRemoveEmail = (emailId) => {
-    setAttendeesList(attendeesList.filter(item => item.id !== emailId));
+    setAttendeesList(attendeesList.filter((item) => item.id !== emailId));
   };
 
   // Handle key press in attendees input
   const handleAttendeesKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleAddEmail();
     }
@@ -748,7 +757,7 @@ const UnifiedModalComponent = function UnifiedModal({
       const bookingData = {
         bookingType,
         platformCredentials,
-        attendees: attendeesList.map(item => item.email).join(", "),
+        attendees: attendeesList.map((item) => item.email).join(", "),
         schedule,
         ...(bookingType === "paid" && {
           subject: selectedSubject,
@@ -919,27 +928,30 @@ const UnifiedModalComponent = function UnifiedModal({
                             className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
                               attendeesError
                                 ? "border-red-300"
-                                : hasInvalidDomain(attendees) && attendees.includes('@')
+                                : hasInvalidDomain(attendees) &&
+                                  attendees.includes("@")
                                 ? "border-red-300"
                                 : "border-gray-300"
                             }`}
                             style={{
-                              borderBottom: hasInvalidDomain(attendees) && attendees.includes('@') 
-                                ? '2px solid #ef4444' 
-                                : undefined
+                              borderBottom:
+                                hasInvalidDomain(attendees) &&
+                                attendees.includes("@")
+                                  ? "2px solid #ef4444"
+                                  : undefined,
                             }}
                           />
                           <button
                             type="button"
                             onClick={handleAddEmail}
-                            disabled={!attendees.trim() || !validateEmail(attendees)}
+                            disabled={
+                              !attendees.trim() || !validateEmail(attendees)
+                            }
                             className="absolute right-2 top-1/2 -translate-y-1/2 bg-green-500 text-white p-1 rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                           >
                             <FaPlus size={10} />
                           </button>
                         </div>
-                        
-
 
                         {attendeesError && (
                           <div className="flex items-center gap-1 text-red-600">
@@ -956,7 +968,10 @@ const UnifiedModalComponent = function UnifiedModal({
                               className="bg-white rounded p-2 border border-green-200 shadow-sm flex justify-between items-center"
                             >
                               <div className="flex items-center gap-1.5">
-                                <FaUserCheck size={12} className="text-green-600" />
+                                <FaUserCheck
+                                  size={12}
+                                  className="text-green-600"
+                                />
                                 <span className="text-xs font-medium text-gray-900 truncate">
                                   {emailItem.email}
                                 </span>
@@ -971,7 +986,10 @@ const UnifiedModalComponent = function UnifiedModal({
                           ))}
                           {attendeesList.length === 0 && (
                             <div className="text-center py-2 text-gray-500">
-                              <FaUserCheck size={16} className="mx-auto mb-1 text-gray-300" />
+                              <FaUserCheck
+                                size={16}
+                                className="mx-auto mb-1 text-gray-300"
+                              />
                               <p className="text-xs">No attendees added</p>
                             </div>
                           )}

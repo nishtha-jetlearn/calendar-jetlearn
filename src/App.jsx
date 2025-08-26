@@ -2296,6 +2296,7 @@ function App() {
         date: date,
         time: time,
         teacherId: selectedTeacher.uid,
+        repeatOccurrence: 1, // Default to 1 occurrence
       },
     }));
   };
@@ -2379,9 +2380,19 @@ function App() {
           toasterData.date instanceof Date
             ? toasterData.date
             : new Date(toasterData.date);
-        const formattedDate = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
-
-        schedules.push([formattedDate, toasterData.time]);
+        
+        // Get repeat occurrence count (default to 1 if not set)
+        const repeatCount = toasterData.repeatOccurrence || 1;
+        
+        // Create schedules for each occurrence
+        for (let i = 0; i < repeatCount; i++) {
+          // Calculate the date for this occurrence (add i weeks)
+          const occurrenceDate = new Date(dateObj);
+          occurrenceDate.setDate(occurrenceDate.getDate() + (i * 7));
+          const formattedDate = occurrenceDate.toISOString().split("T")[0]; // YYYY-MM-DD format
+          
+          schedules.push([formattedDate, toasterData.time]);
+        }
       }
 
       if (schedules.length === 0) {
@@ -2467,10 +2478,14 @@ function App() {
       // Don't clear clickedSlots - keep them to hide plus icons after saving
       // setClickedSlots(new Set());
 
+      // Calculate total schedules created
+      const totalSchedules = schedules.length;
+      const totalToasters = toasterEntries.length;
+      
       // Show success message
       setSuccessMessage({
         show: true,
-        message: `Successfully added ${schedules.length} availability slots!`,
+        message: `Successfully added ${totalSchedules} availability slots from ${totalToasters} toaster${totalToasters > 1 ? 's' : ''}!`,
         type: "availability",
       });
 
@@ -6544,7 +6559,12 @@ function App() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <FaCalendarAlt className="w-4 h-4 text-blue-600" />
-                Add Availability Toasters ({Object.keys(slotToasters).length})
+                Add Availability Toasters ({Object.keys(slotToasters).length}) - {(() => {
+                  const totalSchedules = Object.values(slotToasters).reduce((total, toaster) => {
+                    return total + (toaster.repeatOccurrence || 1);
+                  }, 0);
+                  return `${totalSchedules} total slots`;
+                })()}
               </h3>
               <button
                 onClick={() => {
@@ -6584,6 +6604,31 @@ function App() {
                         </span>
                         <span>Time: {toasterData.time || "N/A"}</span>
                       </div>
+                      {/* Repeat Occurrence Input */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <label className="text-xs text-gray-600 font-medium">
+                          Repeat Occurrence:
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="52"
+                          value={toasterData.repeatOccurrence || 1}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 1;
+                            setSlotToasters((prev) => ({
+                              ...prev,
+                              [slotKey]: {
+                                ...prev[slotKey],
+                                repeatOccurrence: Math.max(1, Math.min(52, value)),
+                              },
+                            }));
+                          }}
+                          className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          title="Number of weeks to repeat this availability"
+                        />
+                        <span className="text-xs text-gray-500">weeks</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -6620,7 +6665,12 @@ function App() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition-colors duration-200 flex items-center justify-center gap-2"
             >
               <FaSave className="w-4 h-4" />
-              Save All ({Object.keys(slotToasters).length})
+              Save All ({(() => {
+                const totalSchedules = Object.values(slotToasters).reduce((total, toaster) => {
+                  return total + (toaster.repeatOccurrence || 1);
+                }, 0);
+                return `${totalSchedules} slots`;
+              })()})
             </button>
           </div>
         </div>

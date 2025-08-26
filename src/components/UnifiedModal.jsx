@@ -137,6 +137,7 @@ const UnifiedModalComponent = function UnifiedModal({
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [attendeesError, setAttendeesError] = useState("");
   const [attendeesList, setAttendeesList] = useState([]);
+  const [showDomainSuggestions, setShowDomainSuggestions] = useState(false);
 
   // Generate available dates based on teacher availability
   const generateAvailableDates = () => {
@@ -477,34 +478,50 @@ const UnifiedModalComponent = function UnifiedModal({
     return teacher ? teacher.full_name : "Unassigned";
   };
 
-  // Common email domains for validation
+  // Common email domains for suggestions
   const COMMON_EMAIL_DOMAINS = [
     "gmail.com",
     "yahoo.com",
     "hotmail.com",
     "outlook.com",
+    "live.com",
+    "msn.com",
+    "aol.com",
+    "icloud.com",
+    "protonmail.com",
+    "zoho.com",
   ];
 
-  // Email validation function - only accepts common domains
+  // Email validation function - accepts any valid email format
   const validateEmail = (email) => {
     if (!email.includes("@")) return false;
 
     const [localPart, domain] = email.split("@");
     if (!localPart || !domain) return false;
 
-    // Check if domain is in the allowed list
-    return COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
+    // Basic email validation - check for valid format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
-  // Check if email has invalid domain for red underline styling
+  // Get domain suggestions based on user input
+  const getDomainSuggestions = (input) => {
+    if (!input.includes("@")) return [];
+    
+    const [localPart, domain] = input.split("@");
+    if (!domain || domain.length < 2) return [];
+    
+    return COMMON_EMAIL_DOMAINS.filter(commonDomain => 
+      commonDomain.toLowerCase().startsWith(domain.toLowerCase())
+    ).slice(0, 3); // Limit to 3 suggestions
+  };
+
+  // Check if email has invalid domain for red underline styling (now only for format validation)
   const hasInvalidDomain = (email) => {
     if (!email.includes("@")) return false;
-
-    const [localPart, domain] = email.split("@");
-    if (!localPart || !domain) return false;
-
-    // Return true if domain is not in allowed list
-    return !COMMON_EMAIL_DOMAINS.includes(domain.toLowerCase());
+    
+    // Only show error if email format is invalid
+    return !validateEmail(email);
   };
 
   // Validate attendees emails
@@ -533,10 +550,15 @@ const UnifiedModalComponent = function UnifiedModal({
     // Convert to lowercase automatically
     const lowercaseValue = value.toLowerCase();
     setAttendees(lowercaseValue);
+    
     // Clear error when user starts typing
     if (attendeesError) {
       setAttendeesError("");
     }
+    
+    // Show domain suggestions if user is typing a domain
+    const suggestions = getDomainSuggestions(lowercaseValue);
+    setShowDomainSuggestions(suggestions.length > 0);
   };
 
   // Handle adding email to attendees list
@@ -544,11 +566,9 @@ const UnifiedModalComponent = function UnifiedModal({
     const email = attendees.trim().toLowerCase();
     if (!email) return;
 
-    // Strict email validation - only allow valid emails with common domains
+    // Basic email validation - allow any valid email format
     if (!validateEmail(email)) {
-      setAttendeesError(
-        "Please enter a valid email with allowed domains (gmail.com, yahoo.com, hotmail.com, outlook.com)"
-      );
+      setAttendeesError("Please enter a valid email address");
       return;
     }
 
@@ -570,6 +590,7 @@ const UnifiedModalComponent = function UnifiedModal({
     setAttendeesList([...attendeesList, newEmail]);
     setAttendees("");
     setAttendeesError("");
+    setShowDomainSuggestions(false);
   };
 
   // Handle removing email from attendees list
@@ -577,11 +598,21 @@ const UnifiedModalComponent = function UnifiedModal({
     setAttendeesList(attendeesList.filter((item) => item.id !== emailId));
   };
 
+  // Handle selecting a domain suggestion
+  const handleDomainSuggestionClick = (suggestion) => {
+    const [localPart] = attendees.split("@");
+    const newEmail = `${localPart}@${suggestion}`;
+    setAttendees(newEmail);
+    setShowDomainSuggestions(false);
+  };
+
   // Handle key press in attendees input
   const handleAttendeesKeyPress = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleAddEmail();
+    } else if (e.key === "Escape") {
+      setShowDomainSuggestions(false);
     }
   };
 
@@ -924,6 +955,10 @@ const UnifiedModalComponent = function UnifiedModal({
                               handleAttendeesChange(e.target.value)
                             }
                             onKeyPress={handleAttendeesKeyPress}
+                            onBlur={() => {
+                              // Hide suggestions after a short delay to allow clicking
+                              setTimeout(() => setShowDomainSuggestions(false), 200);
+                            }}
                             placeholder="Enter email address and press Enter"
                             className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
                               attendeesError
@@ -951,6 +986,24 @@ const UnifiedModalComponent = function UnifiedModal({
                           >
                             <FaPlus size={10} />
                           </button>
+                          
+                          {/* Domain Suggestions Dropdown */}
+                          {showDomainSuggestions && attendees.includes("@") && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-32 overflow-y-auto">
+                              {getDomainSuggestions(attendees).map((suggestion, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handleDomainSuggestionClick(suggestion)}
+                                  className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 border-b border-gray-100 last:border-b-0 flex items-center gap-2"
+                                >
+                                  <FaSearch size={10} className="text-blue-500" />
+                                  <span className="text-gray-700">
+                                    {attendees.split("@")[0]}@{suggestion}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {attendeesError && (

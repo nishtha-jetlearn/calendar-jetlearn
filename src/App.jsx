@@ -1934,6 +1934,7 @@ function App() {
       const payload = {
         event_id: eventId,
         upcoming_events: upcomingEvents.toString(), // Convert boolean to string
+        updated_by: user?.email,
       };
 
       console.log("📤 Sending delete-class API request:");
@@ -2048,6 +2049,7 @@ function App() {
             date: dateObj.toISOString().split("T")[0], // YYYY-MM-DD format
             time: time,
             teacherId: teacherId,
+            updated_by: user?.email,
             timezone: selectedTimezone,
             reason: reason,
             eventId: eventId, // Include event_id in API call
@@ -2429,6 +2431,7 @@ function App() {
       const payload = {
         teacher_uid: teacherId,
         schedule: formattedSchedule,
+        updated_by: user?.email,
       };
 
       console.log(
@@ -2507,6 +2510,7 @@ function App() {
       const payload = {
         teacher_uid: toasterData.teacherId,
         schedule: [[formattedDate, toasterData.time]],
+        updated_by: user?.email,
       };
 
       console.log("📤 Sending add-teacher-availability API request:");

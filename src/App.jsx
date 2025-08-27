@@ -2678,7 +2678,20 @@ function App() {
     // Extract attendees from summary or existing data
     let extractedAttendees = "";
     if (extractedData.attendees) {
-      extractedAttendees = extractedData.attendees;
+      // Handle attendees as array or string
+      if (Array.isArray(extractedData.attendees)) {
+        extractedAttendees = extractedData.attendees.join(", ");
+        console.log(
+          "📧 Extracted attendees from array:",
+          extractedData.attendees
+        );
+      } else {
+        extractedAttendees = extractedData.attendees;
+        console.log(
+          "📧 Extracted attendees from string:",
+          extractedData.attendees
+        );
+      }
     } else {
       // Try to extract email addresses from summary
       const emailMatches = summary.match(
@@ -2686,8 +2699,10 @@ function App() {
       );
       if (emailMatches) {
         extractedAttendees = emailMatches.join(", ");
+        console.log("📧 Extracted attendees from summary:", emailMatches);
       }
     }
+    console.log("📧 Final extracted attendees:", extractedAttendees);
 
     // Determine class type based on summary keywords
     let classType = "1:1"; // default
@@ -2743,6 +2758,45 @@ function App() {
     };
   };
 
+  // Helper function to validate and auto-correct email addresses
+  const validateAndCorrectEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // Basic email validation
+    if (!emailRegex.test(email)) {
+      return {
+        isValid: false,
+        correctedEmail: null,
+        error: "Please enter a valid email address",
+      };
+    }
+
+    // Domain auto-correction
+    let correctedEmail = email;
+    const [localPart, domain] = email.split("@");
+    const domainLower = domain.toLowerCase();
+
+    if (domainLower.includes("gmal") || domainLower.includes("gmai")) {
+      correctedEmail = `${localPart}@gmail.com`;
+    } else if (domainLower.includes("yah")) {
+      correctedEmail = `${localPart}@yahoo.com`;
+    } else if (
+      domainLower.includes("hotmai") ||
+      domainLower.includes("hotmal")
+    ) {
+      correctedEmail = `${localPart}@hotmail.com`;
+    } else if (domainLower.includes("outloo")) {
+      correctedEmail = `${localPart}@outlook.com`;
+    }
+
+    return {
+      isValid: true,
+      correctedEmail,
+      needsCorrection: correctedEmail !== email,
+      originalEmail: email,
+    };
+  };
+
   // Function to extract specific fields from event data
   const extractEventFields = (event, type) => {
     if (type === "availability") {
@@ -2795,6 +2849,7 @@ function App() {
         teacher_name: teacherName,
         event_id: event.event_id,
         class_type: event.class_type,
+        attendees: event.attendees || [], // Preserve attendees array from original event
       };
     }
 
@@ -3397,7 +3452,10 @@ function App() {
             : hiddenRecordingOptions
             ? JSON.parse(hiddenRecordingOptions)
             : [],
-        attendees: attendees.split(",").filter((email) => email.trim()),
+        attendees: attendees
+          .split(",")
+          .filter((email) => email.trim())
+          .map((email) => email.trim()),
         updated_by: user?.email || "",
         upcoming_events: upcomingEvents ? "true" : "false",
       };
@@ -3836,12 +3894,29 @@ function App() {
                         if (e.key === "Enter") {
                           e.preventDefault();
                           const newEmail = attendeeInput.trim();
+
+                          // Validate and auto-correct email
+                          const validation = validateAndCorrectEmail(newEmail);
+
+                          if (!validation.isValid) {
+                            alert(validation.error);
+                            return;
+                          }
+
+                          if (validation.needsCorrection) {
+                            setAttendeeInput(validation.correctedEmail);
+                            alert(
+                              `Email corrected to: ${validation.correctedEmail}`
+                            );
+                            return;
+                          }
+
                           if (
-                            newEmail &&
+                            validation.correctedEmail &&
                             !attendees
                               .split(",")
                               .map((email) => email.trim())
-                              .includes(newEmail)
+                              .includes(validation.correctedEmail)
                           ) {
                             const currentAttendees = attendees
                               .split(",")
@@ -3849,7 +3924,7 @@ function App() {
                             if (currentAttendees.length < 10) {
                               const updatedAttendees = [
                                 ...currentAttendees,
-                                newEmail,
+                                validation.correctedEmail,
                               ].join(", ");
                               setAttendees(updatedAttendees);
                               setAttendeeInput("");
@@ -3861,12 +3936,29 @@ function App() {
                     <button
                       onClick={() => {
                         const newEmail = attendeeInput.trim();
+
+                        // Validate and auto-correct email
+                        const validation = validateAndCorrectEmail(newEmail);
+
+                        if (!validation.isValid) {
+                          alert(validation.error);
+                          return;
+                        }
+
+                        if (validation.needsCorrection) {
+                          setAttendeeInput(validation.correctedEmail);
+                          alert(
+                            `Email corrected to: ${validation.correctedEmail}`
+                          );
+                          return;
+                        }
+
                         if (
-                          newEmail &&
+                          validation.correctedEmail &&
                           !attendees
                             .split(",")
                             .map((email) => email.trim())
-                            .includes(newEmail)
+                            .includes(validation.correctedEmail)
                         ) {
                           const currentAttendees = attendees
                             .split(",")
@@ -3874,7 +3966,7 @@ function App() {
                           if (currentAttendees.length < 10) {
                             const updatedAttendees = [
                               ...currentAttendees,
-                              newEmail,
+                              validation.correctedEmail,
                             ].join(", ");
                             setAttendees(updatedAttendees);
                             setAttendeeInput("");

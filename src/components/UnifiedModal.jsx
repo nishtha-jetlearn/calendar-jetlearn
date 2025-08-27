@@ -516,7 +516,7 @@ const UnifiedModalComponent = function UnifiedModal({
     const [localPart, domain] = email.split("@");
     if (!localPart || !domain) return [];
 
-    const suggestions = COMMON_EMAIL_DOMAINS.filter(commonDomain =>
+    const suggestions = COMMON_EMAIL_DOMAINS.filter((commonDomain) =>
       commonDomain.startsWith(domain.toLowerCase())
     );
 
@@ -554,7 +554,9 @@ const UnifiedModalComponent = function UnifiedModal({
       setAttendeesError("");
     }
     // Show domain suggestions if user is typing after @
-    setShowDomainSuggestions(lowercaseValue.includes("@") && lowercaseValue.split("@")[1]?.length > 0);
+    setShowDomainSuggestions(
+      lowercaseValue.includes("@") && lowercaseValue.split("@")[1]?.length > 0
+    );
   };
 
   // Handle adding email to attendees list
@@ -989,23 +991,32 @@ const UnifiedModalComponent = function UnifiedModal({
                         {/* Domain Suggestions */}
                         {showDomainSuggestions && attendees.includes("@") && (
                           <div className="bg-white border border-gray-200 rounded shadow-lg max-h-24 overflow-y-auto">
-                            {getDomainSuggestions(attendees).map((suggestion, index) => (
-                              <div
-                                key={index}
-                                onClick={() => handleDomainSuggestion(suggestion)}
-                                className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <FaUserCheck size={10} className="text-green-600" />
-                                  <span className="text-xs text-gray-700">
-                                    {attendees.split("@")[0]}@{suggestion}
-                                  </span>
+                            {getDomainSuggestions(attendees).map(
+                              (suggestion, index) => (
+                                <div
+                                  key={index}
+                                  onClick={() =>
+                                    handleDomainSuggestion(suggestion)
+                                  }
+                                  className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <FaUserCheck
+                                      size={10}
+                                      className="text-green-600"
+                                    />
+                                    <span className="text-xs text-gray-700">
+                                      {attendees.split("@")[0]}@{suggestion}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              )
+                            )}
                             {getDomainSuggestions(attendees).length === 0 && (
                               <div className="p-2 text-gray-500">
-                                <span className="text-xs">No suggestions available</span>
+                                <span className="text-xs">
+                                  No suggestions available
+                                </span>
                               </div>
                             )}
                           </div>

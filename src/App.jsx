@@ -3364,7 +3364,7 @@ function App() {
       const apiPayload = {
         event_id: editReschedulePopup.data?.event_id || hiddenEventId || "",
         jl_uid: jl_uid,
-        teacher_uid: teacher_uid || hiddenTeacherId || "",
+        teacher_uid: selectedTeacher?.uid || "",
         platform_credentials: description || "",
         schedule: scheduleEntries.map((entry) => {
           // Convert local time to UTC for API
@@ -3537,7 +3537,7 @@ function App() {
                 />
                 <input
                   type="hidden"
-                  value={editReschedulePopup.data.teacher_id || ""}
+                  value={selectedTeacher?.uid || ""}
                   id="edit_teacher_id"
                   name="teacher_id"
                 />

@@ -47,7 +47,6 @@ import {
   getDayName,
   getCurrentWeekStart,
   formatDisplayDate,
-  getCurrentMonthRange,
 } from "./utils/dateUtils";
 
 const TIME_SLOTS = Array.from(
@@ -206,11 +205,6 @@ function App() {
   const [currentWeekStart, setCurrentWeekStart] = useState(
     getCurrentWeekStart()
   );
-
-  const [monthRange, setMonthRange] = useState({
-    startOfMonth: "",
-    endOfMonth: "",
-  });
 
   const [schedule, setSchedule] = useState(() => {
     const initialSchedule = {};
@@ -1051,15 +1045,19 @@ function App() {
         }
       );
       console.log(output);
-      const range = getCurrentMonthRange();
-      setMonthRange(range);
-      console.log("getCurrentMonthRange", getCurrentMonthRange());
-
-      // const startDate = range.startOfMonth;
-      const endDate = range.endOfMonth;
+      // Calculate 3 months from start of current week
       const weekDates = getWeekDates(currentWeekStart);
-      const startDate = formatDate(weekDates[0]);
-      // const endDate = formatDate(weekDates[6]);
+      const startDate = formatDate(weekDates[0]); // Start of current week
+
+      // Calculate end date (3 months from start date)
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(startDateObj);
+      endDateObj.setMonth(endDateObj.getMonth() + 3);
+      const endDate = formatDate(endDateObj);
+
+      console.log("📅 List View Date Range:");
+      console.log("  - Start Date (current week start):", startDate);
+      console.log("  - End Date (3 months later):", endDate);
 
       const formData = new URLSearchParams();
       formData.append("start_date", startDate);
@@ -5353,7 +5351,7 @@ function App() {
                               Details of the Availability and Bookings
                             </h4>
                             <p className="text-sm text-blue-600 mt-1">
-                              Showing all bookings for Current Month
+                              Showing all bookings for Next 3 Month
                             </p>
                           </div>
                           <div className="text-right">
@@ -5518,6 +5516,9 @@ function App() {
                                                 (extractedData.summary
                                                   .toLowerCase()
                                                   .includes("week off") ||
+                                                  extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("jloh") ||
                                                   extractedData.summary
                                                     .toLowerCase()
                                                     .includes("off"))
@@ -5801,6 +5802,9 @@ function App() {
                                               extractedData.summary
                                                 .toLowerCase()
                                                 .includes("week off") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("jloh") ||
                                               extractedData.summary
                                                 .toLowerCase()
                                                 .includes("off")

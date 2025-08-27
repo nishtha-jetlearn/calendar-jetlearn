@@ -2390,8 +2390,10 @@ function App() {
         for (let i = 0; i < globalRepeatOccurrence; i++) {
           // Calculate the date for this occurrence (add i weeks)
           const occurrenceDate = new Date(dateObj);
-          occurrenceDate.setDate(occurrenceDate.getDate() + (i * 7)); // Add i weeks
-          const occurrenceFormattedDate = occurrenceDate.toISOString().split("T")[0];
+          occurrenceDate.setDate(occurrenceDate.getDate() + i * 7); // Add i weeks
+          const occurrenceFormattedDate = occurrenceDate
+            .toISOString()
+            .split("T")[0];
 
           schedules.push([occurrenceFormattedDate, toasterData.time]);
         }
@@ -2443,12 +2445,14 @@ function App() {
         teacher_uid: teacherId,
         schedule: formattedSchedule,
         updated_by: user?.email,
+        count: globalRepeatOccurrence,
       };
 
       console.log(
         "📤 Sending add-teacher-availability API request for all toasters:"
       );
       console.log("🚀 Payload:", payload);
+      console.log("🔄 Repeat count:", globalRepeatOccurrence);
       console.log(
         "🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/"
       );
@@ -2730,8 +2734,8 @@ function App() {
             },
       // Pre-populate all extracted learners
       students: extractedLearners,
-      // Pre-populate schedule
-      schedule: [[formatDate(bookingDate), timeRange]],
+      // Pre-populate schedule - extract only start time from timeRange
+      schedule: [[formatDate(bookingDate), timeRange.split(" - ")[0]]],
       // Pre-populate recording keywords
       recording: recordingKeywords,
       // Pre-populate other fields
@@ -3173,6 +3177,7 @@ function App() {
     // State for the edit/reschedule form
     const [attendees, setAttendees] = useState("");
     const [attendeeInput, setAttendeeInput] = useState("");
+    const [description, setDescription] = useState("");
     const [scheduleEntries, setScheduleEntries] = useState([]);
     const [upcomingEvents, setUpcomingEvents] = useState(false);
     const [selectedScheduleDate, setSelectedScheduleDate] = useState("");
@@ -3216,6 +3221,7 @@ function App() {
         setSelectedClassCount(bookingData.class_count || "1");
         setAttendees(bookingData.attendees || "");
         setSelectedRecording(bookingData.recording || []);
+        setDescription(bookingData.description || "");
 
         // Set schedule from pre-processed data
         if (bookingData.schedule && Array.isArray(bookingData.schedule)) {
@@ -3351,13 +3357,40 @@ function App() {
       const hiddenBookingType = getHiddenFieldValue("edit_booking_type");
       const hiddenCourseInfo = getHiddenFieldValue("edit_course_info");
 
+      // Extract offset hours and minutes from "(GMT+02:00)"
+      const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+      const offsetHours = parseInt(match[1], 10); // +02
+      const offsetMinutes = parseInt(match[2], 10); // 00
+
       // Prepare the API payload according to the curl example
       const apiPayload = {
         event_id: editReschedulePopup.data?.event_id || hiddenEventId || "",
         jl_uid: jl_uid,
         teacher_uid: teacher_uid || hiddenTeacherId || "",
-        platform_credentials: editReschedulePopup.data?.description || "",
-        schedule: scheduleEntries,
+        platform_credentials: description || "",
+        schedule: scheduleEntries.map((entry) => {
+          // Convert local time to UTC for API
+          const [date, time] = entry;
+
+          // Extract only start time if it's a range (e.g., "16:00 - 17:00" -> "16:00")
+          const startTime = time.includes(" - ") ? time.split(" - ")[0] : time;
+
+          // Parse the local date and time
+          const [hours, minutes] = startTime.split(":").map(Number);
+          const localDateTime = new Date(date + "T" + startTime + ":00");
+
+          // Apply timezone offset to convert to UTC
+          const utcDateTime = new Date(
+            localDateTime.getTime() -
+              (offsetHours * 60 + offsetMinutes) * 60 * 1000
+          );
+
+          // Format as YYYY-MM-DD and HH:MM for API
+          const utcDate = utcDateTime.toISOString().split("T")[0];
+          const utcTime = utcDateTime.toTimeString().slice(0, 5);
+
+          return [utcDate, utcTime];
+        }),
         class_type: selectedClassType || hiddenClassType || "1:1",
         booking_type: editReschedulePopup.data?.booking_type || "Paid",
         tags:
@@ -3378,7 +3411,8 @@ function App() {
       console.log("  - jl_uid:", apiPayload.jl_uid);
       console.log("  - teacher_uid:", apiPayload.teacher_uid);
       console.log("  - platform_credentials:", apiPayload.platform_credentials);
-      console.log("  - schedule:", apiPayload.schedule);
+      console.log("  - schedule (UTC):", apiPayload.schedule);
+      console.log("  - timezone offset:", `${offsetHours}:${offsetMinutes}`);
       console.log("  - class_type:", apiPayload.class_type);
       console.log("  - booking_type:", apiPayload.booking_type);
       console.log("  - tags:", apiPayload.tags);
@@ -3467,14 +3501,25 @@ function App() {
                 </div>
               </div>
               <button
-                onClick={() =>
+                onClick={() => {
                   setEditReschedulePopup({
                     isOpen: false,
                     data: null,
                     date: null,
                     time: null,
-                  })
-                }
+                  });
+                  // Reset form state
+                  setDescription("");
+                  setAttendees("");
+                  setAttendeeInput("");
+                  setScheduleEntries([]);
+                  setUpcomingEvents(false);
+                  setSelectedStudents([]);
+                  setSelectedClassType("");
+                  setSelectedClassCount("");
+                  setSelectedRecording([]);
+                  setIsFormInitialized(false);
+                }}
                 className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 sm:p-2 rounded-full transition-all duration-200 flex-shrink-0"
               >
                 <FaTimes size={16} className="sm:w-5 sm:h-5" />
@@ -3594,18 +3639,8 @@ function App() {
                   Description
                 </h3>
                 <textarea
-                  value={editReschedulePopup.data?.description || ""}
-                  onChange={(e) => {
-                    // Update the description in the data
-                    const updatedData = {
-                      ...editReschedulePopup.data,
-                      description: e.target.value,
-                    };
-                    setEditReschedulePopup((prev) => ({
-                      ...prev,
-                      data: updatedData,
-                    }));
-                  }}
+                  value={description || ""}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Enter booking description..."
                   className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
                   rows={4}
@@ -3635,16 +3670,45 @@ function App() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {scheduleEntries.map((entry, index) => (
-                        <div
-                          key={index}
-                          className="p-2 bg-white rounded-md border border-gray-200"
-                        >
-                          <span className="text-xs text-gray-700">
-                            {entry[0]} at {entry[1]}
-                          </span>
-                        </div>
-                      ))}
+                      {scheduleEntries.map((entry, index) => {
+                        const [date, time] = entry;
+
+                        // Format date as DD-MM-YYYY (DayName)
+                        const dateObj = new Date(date);
+                        const day = dateObj
+                          .getDate()
+                          .toString()
+                          .padStart(2, "0");
+                        const month = (dateObj.getMonth() + 1)
+                          .toString()
+                          .padStart(2, "0");
+                        const year = dateObj.getFullYear();
+                        const dayName = dateObj.toLocaleDateString("en-US", {
+                          weekday: "long",
+                        });
+
+                        // Extract only start time if it's a range (e.g., "16:00 - 17:00" -> "16:00")
+                        const startTime = time.includes(" - ")
+                          ? time.split(" - ")[0]
+                          : time;
+
+                        // Format time as HH:MM
+                        const formattedTime = startTime.includes(":")
+                          ? startTime
+                          : `${startTime.slice(0, 2)}:${startTime.slice(2, 4)}`;
+
+                        return (
+                          <div
+                            key={index}
+                            className="p-2 bg-white rounded-md border border-gray-200"
+                          >
+                            <span className="text-xs text-gray-700">
+                              {day}-{month}-{year} ({dayName}) at{" "}
+                              {formattedTime}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -6601,7 +6665,8 @@ function App() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <FaCalendarAlt className="w-4 h-4 text-blue-600" />
-                Add Availability Toasters ({Object.keys(slotToasters).length * globalRepeatOccurrence})
+                Add Availability Toasters (
+                {Object.keys(slotToasters).length * globalRepeatOccurrence})
               </h3>
               <button
                 onClick={() => {
@@ -6696,7 +6761,8 @@ function App() {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition-colors duration-200 flex items-center justify-center gap-2"
             >
               <FaSave className="w-4 h-4" />
-              Save All ({Object.keys(slotToasters).length * globalRepeatOccurrence})
+              Save All (
+              {Object.keys(slotToasters).length * globalRepeatOccurrence})
             </button>
           </div>
         </div>

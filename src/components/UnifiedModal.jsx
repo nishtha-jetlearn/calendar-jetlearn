@@ -11,6 +11,8 @@ import {
   FaSearch,
   FaCalendarAlt,
   FaExclamationTriangle,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
 import { formatDisplayDate } from "../utils/dateUtils";
 import { useDebounce } from "../hooks/useDebounce";
@@ -139,6 +141,40 @@ const UnifiedModalComponent = function UnifiedModal({
   const [attendeesList, setAttendeesList] = useState([]);
   const [showDomainSuggestions, setShowDomainSuggestions] = useState(false);
 
+  // Calendar picker state
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+
+  // Update calendar date when selected date changes or when calendar opens
+  useEffect(() => {
+    if (selectedScheduleDate) {
+      const selectedDate = new Date(selectedScheduleDate);
+      setCalendarDate(selectedDate);
+    }
+  }, [selectedScheduleDate]);
+
+  // Update calendar date when calendar opens to show the correct month
+  useEffect(() => {
+    if (calendarOpen && selectedScheduleDate) {
+      const selectedDate = new Date(selectedScheduleDate);
+      setCalendarDate(selectedDate);
+    }
+  }, [calendarOpen, selectedScheduleDate]);
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarOpen && !event.target.closest(".calendar-container")) {
+        setCalendarOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [calendarOpen]);
+
   // Generate available dates based on teacher availability
   const generateAvailableDates = () => {
     // Priority 1: Use listViewBookingDetails data (green dots from list view)
@@ -259,7 +295,7 @@ const UnifiedModalComponent = function UnifiedModal({
   // Generate available times based on teacher availability for selected date
   const generateAvailableTimes = (selectedDate) => {
     if (!selectedDate) {
-      return generateTimeSlots();
+      return []; // Return empty array instead of all time slots
     }
 
     // Priority 1: Use listViewBookingDetails data (green dots from list view)
@@ -346,8 +382,8 @@ const UnifiedModalComponent = function UnifiedModal({
       }
     }
 
-    // Fallback to default time slots
-    return generateTimeSlots();
+    // Return empty array if no available times found
+    return [];
   };
 
   // Generate time slots for schedule (fallback)
@@ -410,7 +446,16 @@ const UnifiedModalComponent = function UnifiedModal({
   };
 
   // Get available dates and times
-  const availableDates = generateAvailableDates();
+  const availableDates = useMemo(() => {
+    console.log(
+      "🔄 Regenerating available dates for teacher:",
+      selectedTeacherId
+    );
+    const dates = generateAvailableDates();
+    console.log("📅 Available dates:", dates);
+    return dates;
+  }, [selectedTeacherId, teacherAvailability, listViewBookingDetails]);
+
   const availableTimes = generateAvailableTimes(selectedScheduleDate);
 
   // Update available times when selected date changes
@@ -1265,40 +1310,226 @@ const UnifiedModalComponent = function UnifiedModal({
                             ? ""
                             : selectedTeacherId && "(Teacher Availability)"}
                         </label>
-                        <select
-                          value={selectedScheduleDate}
-                          onChange={(e) =>
-                            setSelectedScheduleDate(e.target.value)
-                          }
-                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select date...</option>
-                          {availableDates.length > 0 ? (
-                            availableDates.map((date) => {
-                              const dateObj = new Date(date);
-                              const day = dateObj
-                                .getDate()
-                                .toString()
-                                .padStart(2, "0");
-                              const month = (dateObj.getMonth() + 1)
-                                .toString()
-                                .padStart(2, "0");
-                              const year = dateObj.getFullYear();
-                              const formattedDate = `${day}-${month}-${year}`;
-                              return (
-                                <option key={date} value={date}>
-                                  {formattedDate} ({getDayName(formattedDate)})
-                                </option>
-                              );
-                            })
-                          ) : (
-                            <option value="" disabled>
-                              {listViewBookingDetails
-                                ? "No green dots in list view"
-                                : "No available dates for selected teacher"}
-                            </option>
+                        <div className="relative calendar-container">
+                          <button
+                            onClick={() => setCalendarOpen(!calendarOpen)}
+                            className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white flex items-center justify-between"
+                          >
+                            <span
+                              className={
+                                selectedScheduleDate
+                                  ? "text-gray-900"
+                                  : "text-gray-500"
+                              }
+                            >
+                              {selectedScheduleDate
+                                ? (() => {
+                                    const dateObj = new Date(
+                                      selectedScheduleDate
+                                    );
+                                    const day = dateObj
+                                      .getDate()
+                                      .toString()
+                                      .padStart(2, "0");
+                                    const month = (dateObj.getMonth() + 1)
+                                      .toString()
+                                      .padStart(2, "0");
+                                    const year = dateObj.getFullYear();
+                                    const formattedDate = `${day}-${month}-${year}`;
+                                    return `${formattedDate} (${getDayName(
+                                      formattedDate
+                                    )})`;
+                                  })()
+                                : "Select date..."}
+                            </span>
+                            <FaCalendarAlt
+                              size={12}
+                              className="text-gray-400"
+                            />
+                          </button>
+
+                          {calendarOpen && (
+                            <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-300 rounded-lg shadow-lg mt-1 p-3 min-w-[280px]">
+                              <div className="flex items-center justify-between mb-3">
+                                <button
+                                  onClick={() => {
+                                    const currentDate = new Date(calendarDate);
+                                    currentDate.setMonth(
+                                      currentDate.getMonth() - 1
+                                    );
+                                    setCalendarDate(currentDate);
+                                  }}
+                                  className="p-2 hover:bg-gray-100 rounded border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                                  title="Previous month"
+                                >
+                                  <FaChevronLeft
+                                    size={14}
+                                    className="text-gray-600"
+                                  />
+                                </button>
+
+                                <div className="flex flex-col items-center">
+                                  <h3 className="text-sm font-semibold text-gray-900">
+                                    {calendarDate.toLocaleDateString("en-US", {
+                                      month: "long",
+                                      year: "numeric",
+                                    })}
+                                  </h3>
+                                  <button
+                                    onClick={() => setCalendarDate(new Date())}
+                                    className="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors duration-200"
+                                    title="Go to today"
+                                  >
+                                    Today
+                                  </button>
+                                </div>
+
+                                <button
+                                  onClick={() => {
+                                    const currentDate = new Date(calendarDate);
+                                    currentDate.setMonth(
+                                      currentDate.getMonth() + 1
+                                    );
+                                    setCalendarDate(currentDate);
+                                  }}
+                                  className="p-2 hover:bg-gray-100 rounded border border-gray-200 transition-colors duration-200 flex items-center justify-center"
+                                  title="Next month"
+                                >
+                                  <FaChevronRight
+                                    size={14}
+                                    className="text-gray-600"
+                                  />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-7 gap-1 mb-2">
+                                {[
+                                  "Sun",
+                                  "Mon",
+                                  "Tue",
+                                  "Wed",
+                                  "Thu",
+                                  "Fri",
+                                  "Sat",
+                                ].map((day) => (
+                                  <div
+                                    key={day}
+                                    className="text-xs font-medium text-gray-500 text-center py-1"
+                                  >
+                                    {day}
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="grid grid-cols-7 gap-1">
+                                {(() => {
+                                  const year = calendarDate.getFullYear();
+                                  const month = calendarDate.getMonth();
+                                  const firstDay = new Date(year, month, 1);
+                                  const lastDay = new Date(year, month + 1, 0);
+                                  const startDate = new Date(firstDay);
+                                  startDate.setDate(
+                                    startDate.getDate() - firstDay.getDay()
+                                  );
+
+                                  const days = [];
+                                  for (let i = 0; i < 42; i++) {
+                                    const date = new Date(startDate);
+                                    date.setDate(startDate.getDate() + i);
+
+                                    const isCurrentMonth =
+                                      date.getMonth() === month;
+                                    const isToday =
+                                      date.toDateString() ===
+                                      new Date().toDateString();
+                                    const isSelected =
+                                      selectedScheduleDate &&
+                                      date.toDateString() ===
+                                        new Date(
+                                          selectedScheduleDate
+                                        ).toDateString();
+                                    const isAvailable = availableDates.some(
+                                      (availableDate) =>
+                                        new Date(
+                                          availableDate
+                                        ).toDateString() === date.toDateString()
+                                    );
+
+                                    const dayString = `${date.getFullYear()}-${String(
+                                      date.getMonth() + 1
+                                    ).padStart(2, "0")}-${String(
+                                      date.getDate()
+                                    ).padStart(2, "0")}`;
+
+                                    days.push(
+                                      <button
+                                        key={i}
+                                        onClick={() => {
+                                          if (isAvailable) {
+                                            setSelectedScheduleDate(dayString);
+                                            setCalendarOpen(false);
+                                          }
+                                        }}
+                                        disabled={!isAvailable}
+                                        className={`
+                                          w-8 h-8 text-xs rounded flex items-center justify-center transition-all duration-200
+                                          ${
+                                            !isCurrentMonth
+                                              ? "text-gray-300"
+                                              : ""
+                                          }
+                                          ${
+                                            isToday
+                                              ? "bg-blue-100 text-blue-700 font-semibold"
+                                              : ""
+                                          }
+                                          ${
+                                            isSelected
+                                              ? "bg-blue-600 text-white font-semibold"
+                                              : ""
+                                          }
+                                          ${
+                                            isAvailable &&
+                                            isCurrentMonth &&
+                                            !isToday &&
+                                            !isSelected
+                                              ? "hover:bg-blue-50 text-gray-700 border-2 border-green-300 bg-green-50"
+                                              : ""
+                                          }
+                                          ${
+                                            !isAvailable && isCurrentMonth
+                                              ? "text-gray-400 cursor-not-allowed"
+                                              : ""
+                                          }
+                                        `}
+                                      >
+                                        {date.getDate()}
+                                      </button>
+                                    );
+                                  }
+                                  return days;
+                                })()}
+                              </div>
+
+                              <div className="mt-3 pt-2 border-t border-gray-200">
+                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                  <span>
+                                    Available dates for{" "}
+                                    {selectedTeacherId
+                                      ? `Teacher ${selectedTeacherId}`
+                                      : "selected teacher"}
+                                  </span>
+                                </div>
+                                {availableDates.length === 0 && (
+                                  <div className="text-xs text-red-500 mt-1">
+                                    No available dates for this teacher
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           )}
-                        </select>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-0.5">
@@ -1325,6 +1556,8 @@ const UnifiedModalComponent = function UnifiedModal({
                             <option value="" disabled>
                               {listViewBookingDetails
                                 ? "No green dots for selected date in list view"
+                                : selectedTeacherId
+                                ? `No available times for Teacher ${selectedTeacherId} on selected date`
                                 : "No available times for selected date"}
                             </option>
                           )}

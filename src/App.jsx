@@ -1953,22 +1953,29 @@ function App() {
         }
       );
 
-      if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errJson = await response.json();
-          if (errJson && errJson.message) errorMsg += ` - ${errJson.message}`;
-        } catch {}
-        throw new Error(errorMsg);
-      }
+      console.log("✅ Delete Class API Response:", response);
 
       const result = await response.json();
-      console.log("✅ Delete Class API Response:", result);
+      console.log("✅ Delete Class API result:", result);
 
       // Check if deletion was successful
-      if (result.status === "success" || result.success) {
-        console.log("✅ Class deleted successfully");
-        return { success: true, data: result };
+      if (result.status === "success") {
+        // Show success message
+        setSuccessMessage({
+          show: true,
+          message: "Booking Successfully Deleted !!",
+          type: "cancel",
+        });
+
+        // Close success message after delay
+        setTimeout(() => {
+          setConfirmationPopup(false);
+          setSuccessMessage({
+            show: false,
+            message: "",
+            type: "",
+          });
+        }, 2000);
       } else {
         throw new Error(result.message || "Delete failed");
       }
@@ -1985,7 +1992,7 @@ function App() {
     teacherId = null,
     reason = "",
     eventId = null,
-    upcomingEvents
+    upcomingEvents = false
   ) => {
     try {
       console.log("🚀 Canceling availability for:", {
@@ -2014,7 +2021,10 @@ function App() {
       // If eventId is provided, use delete-class API
       if (eventId) {
         console.log("🎯 Using delete-class API for availability cancellation");
-        const deleteResult = await handleDeleteClass(eventId, upcomingEvents);
+        const deleteResult = await handleDeleteClass(
+          eventId,
+          upcomingEvents || false
+        );
 
         if (deleteResult.success) {
           // Refresh the data after canceling
@@ -2029,6 +2039,7 @@ function App() {
 
           // Close success message after delay
           setTimeout(() => {
+            setModalOpen(false);
             setSuccessMessage({
               show: false,
               message: "",
@@ -2038,52 +2049,6 @@ function App() {
         }
         return;
       }
-
-      const response = await fetch(
-        "https://live.jetlearn.com/api/delete-class/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            date: dateObj.toISOString().split("T")[0], // YYYY-MM-DD format
-            time: time,
-            teacherId: teacherId,
-            updated_by: user?.email,
-            timezone: selectedTimezone,
-            reason: reason,
-            eventId: eventId, // Include event_id in API call
-            upcoming_events: upcomingEvents, // Include upcoming_events parameter
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("✅ Availability canceled successfully:", result);
-
-      // Refresh the data after canceling
-      await fetchListViewBookingDetails();
-
-      // Show success message
-      setSuccessMessage({
-        show: true,
-        message: "Availability Successfully Cancelled !!",
-        type: "cancel",
-      });
-
-      // Close success message after delay
-      setTimeout(() => {
-        setSuccessMessage({
-          show: false,
-          message: "",
-          type: "",
-        });
-      }, 2000);
     } catch (error) {
       console.error("❌ Error canceling availability:", error);
       alert("Failed to cancel availability. Please try again.");
@@ -2107,52 +2072,6 @@ function App() {
         reason,
         upcomingEvents,
       });
-
-      // If eventId is provided, use delete-class API
-      if (eventId) {
-        console.log("🎯 Using delete-class API for booking cancellation");
-        const deleteResult = await handleDeleteClass(eventId, upcomingEvents);
-
-        if (deleteResult.success) {
-          // Determine message type based on reason
-          const isNoShow = reason.includes("NO SHOW");
-          const messageType = isNoShow ? "no-show" : "cancel";
-          const messageText = isNoShow
-            ? "No Show Successfully Recorded !!"
-            : "Booking Successfully Cancelled !!";
-
-          // Show success message
-          setSuccessMessage({
-            show: true,
-            message: messageText,
-            type: messageType,
-          });
-
-          // Close the cancel popup after a short delay
-          setTimeout(() => {
-            setCancelPopup({
-              isOpen: false,
-              type: null,
-              data: null,
-              date: null,
-              time: null,
-              reason: "",
-              studentDetails: null,
-              teacherDetails: null,
-              upcomingEvents: false,
-            });
-            setSuccessMessage({
-              show: false,
-              message: "",
-              type: "",
-            });
-          }, 2000);
-
-          // Refresh the data after canceling
-          await fetchListViewBookingDetails();
-        }
-        return;
-      }
 
       // Fallback to old API if no eventId (for backward compatibility)
       console.log("⚠️ No eventId provided, using fallback API");
@@ -4692,67 +4611,40 @@ function App() {
 
     const handleCancelConfirm = async () => {
       try {
-        // Show confirmation popup first
-        const actionType =
-          cancelPopup.type === "availability"
-            ? "cancel-availability"
-            : "delete-booking";
-        const actionText =
-          cancelPopup.type === "availability" ? "cancel" : "delete";
-        const itemText =
-          cancelPopup.type === "availability" ? "availability" : "booking";
+        if (cancelPopup.type === "availability") {
+          await handleCancelAvailability(
+            cancelPopup.date,
+            cancelPopup.time,
+            cancelPopup.teacherDetails?.uid,
+            cancelPopup.reason,
+            cancelPopup.data?.event_id || null,
+            cancelPopup.upcomingEvents || false
+          );
+        } else if (cancelPopup.type === "booking") {
+          await handleCancelBooking(
+            cancelPopup.date,
+            cancelPopup.time,
+            cancelPopup.data,
+            cancelPopup.reason,
+            cancelPopup.data?.event_id || null,
+            cancelPopup.upcomingEvents || false
+          );
+        }
 
-        setConfirmationPopup({
-          isOpen: true,
-          type: actionType,
-          title: `Confirm ${
-            actionText.charAt(0).toUpperCase() + actionText.slice(1)
-          }`,
-          message: `Are you sure you want to ${actionText} the ${itemText}?`,
-          data: cancelPopup.data,
-          date: cancelPopup.date,
-          time: cancelPopup.time,
-          eventId: cancelPopup.data?.event_id || null,
-          onConfirm: async (upcomingEvents) => {
-            try {
-              if (cancelPopup.type === "availability") {
-                await handleCancelAvailability(
-                  cancelPopup.date,
-                  cancelPopup.time,
-                  cancelPopup.teacherDetails?.uid,
-                  cancelPopup.reason,
-                  cancelPopup.data?.event_id || null,
-                  upcomingEvents || false
-                );
-              } else if (cancelPopup.type === "booking") {
-                await handleCancelBooking(
-                  cancelPopup.date,
-                  cancelPopup.time,
-                  cancelPopup.data,
-                  cancelPopup.reason,
-                  cancelPopup.data?.event_id || null,
-                  upcomingEvents
-                );
-              }
-
-              // Close the cancel popup
-              setCancelPopup({
-                isOpen: false,
-                type: null,
-                data: null,
-                date: null,
-                time: null,
-                reason: "",
-                studentDetails: null,
-                teacherDetails: null,
-              });
-            } catch (error) {
-              console.error("Error canceling:", error);
-            }
-          },
+        // Close the cancel popup
+        setCancelPopup({
+          isOpen: false,
+          type: null,
+          data: null,
+          date: null,
+          time: null,
+          reason: "",
+          studentDetails: null,
+          teacherDetails: null,
+          upcomingEvents: false,
         });
       } catch (error) {
-        console.error("Error showing confirmation:", error);
+        console.error("Error canceling:", error);
       }
     };
 
@@ -6098,8 +5990,7 @@ function App() {
                                                             eventId:
                                                               extractedData.event_id ||
                                                               null,
-                                                            upcomingEvents:
-                                                              confirmationPopup.upcomingEvents,
+                                                            upcomingEvents: false,
                                                             onConfirm: async (
                                                               upcomingEvents
                                                             ) => {
@@ -6128,11 +6019,13 @@ function App() {
                                                                 const deleteResult =
                                                                   await handleDeleteClass(
                                                                     extractedData.event_id,
-                                                                    upcomingEvents
+                                                                    upcomingEvents ||
+                                                                      false
                                                                   );
 
                                                                 if (
-                                                                  deleteResult.success
+                                                                  deleteResult ==
+                                                                  "success"
                                                                 ) {
                                                                   // Close the action menu
                                                                   setActionMenuOpen(
@@ -6316,11 +6209,13 @@ function App() {
                                                                 const deleteResult =
                                                                   await handleDeleteClass(
                                                                     extractedData.event_id,
-                                                                    upcomingEvents
+                                                                    upcomingEvents ||
+                                                                      false
                                                                   );
 
                                                                 if (
-                                                                  deleteResult.success
+                                                                  deleteResult ==
+                                                                  "success"
                                                                 ) {
                                                                   // Close the action menu
                                                                   setActionMenuOpen(

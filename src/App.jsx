@@ -1503,6 +1503,8 @@ function App() {
               type: "",
             });
           }, 2000);
+
+          await fetchListViewBookingDetails();
         }
       } catch (error) {
         console.error("❌ Error sending booking to API:", error);
@@ -1976,6 +1978,8 @@ function App() {
             type: "",
           });
         }, 2000);
+
+        await fetchListViewBookingDetails();
       } else {
         throw new Error(result.message || "Delete failed");
       }

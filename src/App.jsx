@@ -5679,7 +5679,7 @@ function App() {
                                                         <FaUsers size={10} />
                                                         Manage Booking
                                                       </button>
-                                                      <button
+                                                      {/* <button
                                                         onClick={() => {
                                                           // Extract time from the booking data
                                                           let timeSlot =
@@ -5772,7 +5772,7 @@ function App() {
                                                       >
                                                         <FaTimes size={10} />
                                                         Cancel Availability
-                                                      </button>
+                                                      </button> */}
                                                     </div>
                                                   </div>
                                                 )}

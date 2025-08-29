@@ -1398,7 +1398,7 @@ function App() {
       email: student?.email || "",
       jetlearner_id: student?.jetlearner_id || "",
       platformCredentials: bookingData.platformCredentials || "",
-      attendees: bookingData.attendees || "",
+      attendees: bookingData.attendees.trim() || "",
       schedule: formattedSchedule || [],
       summary: bookingData.summary || "",
       ...(bookingData.bookingType === "paid" && {
@@ -1425,7 +1425,10 @@ function App() {
       try {
         const attendeeslist =
           bookingData.attendees && bookingData.attendees.trim()
-            ? bookingData.attendees.trim().split(",")
+            ? bookingData.attendees
+                .trim()
+                .split(",")
+                .map((item) => item.trim())
             : [];
         console.log(attendeeslist);
         const taglist =
@@ -3195,7 +3198,7 @@ function App() {
         // Set form fields directly from pre-processed data
         setSelectedClassType(bookingData.class_type || "");
         setSelectedClassCount(bookingData.class_count || "1");
-        setAttendees(bookingData.attendees || "");
+        setAttendees(bookingData.attendees ? bookingData.attendees.trim() : "");
         setSelectedRecording(bookingData.recording || []);
         setDescription(bookingData.description || "");
 

@@ -5399,6 +5399,12 @@ function App() {
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Summary
                               </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Teacher Name
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
@@ -5512,6 +5518,11 @@ function App() {
                                                     .includes("jloh") ||
                                                   extractedData.summary
                                                     .toLowerCase()
+                                                    .includes(
+                                                      "non available hour"
+                                                    ) ||
+                                                  extractedData.summary
+                                                    .toLowerCase()
                                                     .includes("off"))
                                               ? "bg-yellow-500"
                                               : extractedData.summary &&
@@ -5595,6 +5606,70 @@ function App() {
                                         <div className="text-sm text-gray-900 break-words">
                                           {extractedData.summary || "N/A"}
                                         </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                      <div className="flex items-center justify-between">
+                                        {(() => {
+                                          // Extract TJ (Teacher/Job) code from summary
+                                          const tlMatch =
+                                            extractedData.summary?.match(
+                                              /\bTJ[A-Za-z0-9]+\b/
+                                            );
+                                          console.log(
+                                            "🔍 Teacher UID:",
+                                            tlMatch
+                                          );
+                                          if (tlMatch) {
+                                            const teacherUid = tlMatch[0];
+
+                                            // Find teacher in teachers array
+                                            const teacher = teachers.find(
+                                              (t) => t.uid === teacherUid
+                                            );
+                                            if (teacher) {
+                                              return (
+                                                console.log(
+                                                  "🔍 Teacher:",
+                                                  teacher
+                                                ),
+                                                (
+                                                  <div>
+                                                    <div className="text-xs text-gray-500">
+                                                      {teacher.full_name ||
+                                                        selectedTeacher?.full_name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                      {teacher.email ||
+                                                        selectedTeacher?.email}
+                                                    </div>
+                                                  </div>
+                                                )
+                                              );
+                                            }
+                                            return (
+                                              <span className="text-gray-500">
+                                                {teacherUid}
+                                              </span>
+                                            );
+                                          }
+                                          return (
+                                            <span className="text-gray-400">
+                                              <div>
+                                                <div className="text-xs text-gray-500">
+                                                  {selectedTeacher?.full_name}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                  {selectedTeacher?.email}
+                                                </div>
+                                              </div>
+                                            </span>
+                                          );
+                                        })()}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                      <div className="flex items-center justify-between">
                                         {/* Action Menu Dropdown */}
                                         <div className="relative ml-3">
                                           {/* Availability Actions (Green Dot) */}
@@ -5796,6 +5871,11 @@ function App() {
                                               extractedData.summary
                                                 .toLowerCase()
                                                 .includes("jloh") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes(
+                                                  "non available hour"
+                                                ) ||
                                               extractedData.summary
                                                 .toLowerCase()
                                                 .includes("off")

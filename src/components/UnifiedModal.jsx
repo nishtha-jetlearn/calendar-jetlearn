@@ -786,10 +786,10 @@ const UnifiedModalComponent = function UnifiedModal({
     }
 
     // Validate attendees list
-    if (attendeesList.length === 0) {
-      alert("Please add at least one attendee email.");
-      return;
-    }
+    // if (attendeesList.length === 0) {
+    //   alert("Please add at least one attendee email.");
+    //   return;
+    // }
 
     // Validate schedule entries
     if (scheduleEntries.length === 0) {

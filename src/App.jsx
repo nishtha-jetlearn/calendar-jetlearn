@@ -5317,8 +5317,14 @@ function App() {
                           <h3 className="font-semibold text-green-800 text-sm">
                             Learner Profile
                           </h3>
-                          <p className="text-green-600 text-xs">
+                          <p className="text-blue-700 text-base font-medium">
                             {selectedStudent.deal_name}
+                            {selectedStudent.hubspot_learner_status && (
+                              <span className="text-gray-600 ml-2 text-xs font-bold">
+                                Status - (
+                                {selectedStudent.hubspot_learner_status})
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>

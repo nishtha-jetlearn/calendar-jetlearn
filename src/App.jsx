@@ -5295,9 +5295,204 @@ function App() {
                     </span>
                   )}
                   {selectedStudent && (
-                    <span className="px-1 py-0.5 bg-green-100 text-green-800 text-xs rounded">
-                      Student: {selectedStudent.deal_name}
-                    </span>
+                    <div className="w-full bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl shadow-sm p-4">
+                      {/* Header */}
+                      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-green-200">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <svg
+                            className="w-5 h-5 text-green-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-green-800 text-sm">
+                            Student Profile
+                          </h3>
+                          <p className="text-green-600 text-xs">
+                            {selectedStudent.deal_name}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {/* Subscription Start */}
+                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-blue-100 rounded-md">
+                              <svg
+                                className="w-4 h-4 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-medium text-gray-700 text-xs">
+                              Start Date
+                            </span>
+                          </div>
+                          <div className="text-blue-600 font-semibold text-sm">
+                            {selectedStudent.current_subscription_start_date ||
+                              "N/A"}
+                          </div>
+                        </div>
+
+                        {/* Subscription End */}
+                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-orange-100 rounded-md">
+                              <svg
+                                className="w-4 h-4 text-orange-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-medium text-gray-700 text-xs">
+                              End Date
+                            </span>
+                          </div>
+                          <div className="text-orange-600 font-semibold text-sm">
+                            {selectedStudent.current_subscription_end_date ||
+                              "N/A"}
+                          </div>
+                        </div>
+
+                        {/* Total Classes Offered */}
+                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-purple-100 rounded-md">
+                              <svg
+                                className="w-4 h-4 text-purple-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-medium text-gray-700 text-xs">
+                              Total Classes
+                            </span>
+                          </div>
+                          <div className="text-purple-600 font-semibold text-sm">
+                            {selectedStudent.current_subscription_total_classes_offered ||
+                              "N/A"}
+                          </div>
+                        </div>
+
+                        {/* Classes Taken */}
+                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-green-100 rounded-md">
+                              <svg
+                                className="w-4 h-4 text-green-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-medium text-gray-700 text-xs">
+                              Classes Taken
+                            </span>
+                          </div>
+                          <div className="text-green-600 font-semibold text-sm">
+                            {selectedStudent.taken_classes_sub ||
+                              selectedStudent.taken_classes_till_date ||
+                              "N/A"}
+                          </div>
+                        </div>
+
+                        {/* No-Show Count */}
+                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-red-100 rounded-md">
+                              <svg
+                                className="w-4 h-4 text-red-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-medium text-gray-700 text-xs">
+                              No-Shows
+                            </span>
+                          </div>
+                          <div className="text-red-600 font-semibold text-sm">
+                            {selectedStudent.No_show_count || "N/A"}
+                          </div>
+                        </div>
+
+                        {/* Current Class Count */}
+                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-indigo-100 rounded-md">
+                              <svg
+                                className="w-4 h-4 text-indigo-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-medium text-gray-700 text-xs">
+                              Current Count
+                            </span>
+                          </div>
+                          <div className="text-indigo-600 font-semibold text-sm">
+                            {selectedStudent.current_class_count || "N/A"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                   {!selectedTeacher && !selectedStudent && (
                     <span className="px-1 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">

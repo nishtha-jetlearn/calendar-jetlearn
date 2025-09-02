@@ -1458,6 +1458,7 @@ function App() {
             batch_name: bookingData.batchNumber || "",
             tags: taglist,
             updated_by: user?.email,
+            time_zone: selectedTimezone,
           }),
           ...(bookingData.summary && {
             summary: bookingData.summary,

@@ -5315,7 +5315,7 @@ function App() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-green-800 text-sm">
-                            Student Profile
+                            Learner Profile
                           </h3>
                           <p className="text-green-600 text-xs">
                             {selectedStudent.deal_name}

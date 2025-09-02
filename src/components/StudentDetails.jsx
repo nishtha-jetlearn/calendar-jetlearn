@@ -1,7 +1,11 @@
-import React from 'react';
-import { FaGraduationCap, FaUsers, FaUserCheck, FaBookOpen } from 'react-icons/fa';
-import { formatShortDate, getDayName } from '../utils/dateUtils';
-
+import React from "react";
+import {
+  FaGraduationCap,
+  FaUsers,
+  FaUserCheck,
+  FaBookOpen,
+} from "react-icons/fa";
+import { formatShortDate, getDayName } from "../utils/dateUtils";
 
 const StudentDetails = (props) => {
   const { student, schedule, allTeachers } = props;
@@ -19,23 +23,30 @@ const StudentDetails = (props) => {
   // Get student's booking history
   const getStudentBookingHistory = () => {
     const bookings = [];
-    Object.keys(schedule).forEach(dateStr => {
+    Object.keys(schedule).forEach((dateStr) => {
       const dateSchedule = schedule[dateStr];
-      Object.keys(dateSchedule).forEach(time => {
+      Object.keys(dateSchedule).forEach((time) => {
         const slot = dateSchedule[time];
         if (slot && slot.students) {
-          const studentBooking = slot.students.find(s => 
-            s.name.toLowerCase() === (student.deal_name || student.name || '').toLowerCase()
+          const studentBooking = slot.students.find(
+            (s) =>
+              s.name.toLowerCase() ===
+              (student.deal_name || student.name || "").toLowerCase()
           );
           if (studentBooking) {
-            const teacherData = allTeachers ? allTeachers.find(t => t.id.toString() === studentBooking.teacherId.toString()) : 
-                               TEACHERS.find(t => t.id.toString() === studentBooking.teacherId.toString());
-            const teacherName = teacherData?.full_name || 'Unassigned';
+            const teacherData = allTeachers
+              ? allTeachers.find(
+                  (t) => t.id.toString() === studentBooking.teacherId.toString()
+                )
+              : TEACHERS.find(
+                  (t) => t.id.toString() === studentBooking.teacherId.toString()
+                );
+            const teacherName = teacherData?.full_name || "Unassigned";
             bookings.push({
               date: dateStr,
               time: time,
               teacher: teacherName,
-              bookingType: studentBooking.bookingType || 'trial'
+              bookingType: studentBooking.bookingType || "trial",
             });
           }
         }
@@ -55,7 +66,9 @@ const StudentDetails = (props) => {
             <FaGraduationCap size={20} className="text-green-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-lg text-blue-700">{student.deal_name || student.name}</h3>
+            <h3 className="font-semibold text-lg text-blue-700">
+              {student.deal_name || student.name}
+            </h3>
             <div className="space-y-1 mt-1">
               {student.jetlearner_id && (
                 <p className="text-xs text-gray-600">
@@ -125,7 +138,6 @@ const StudentDetails = (props) => {
         </div>
       )} */}
 
-
       {studentBookings.length === 0 && (
         <div className="">
           {/* <FaGraduationCap size={32} className="mx-auto mb-2 text-gray-300" /> */}
@@ -138,4 +150,3 @@ const StudentDetails = (props) => {
 };
 
 export default React.memo(StudentDetails);
-

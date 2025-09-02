@@ -5348,8 +5348,17 @@ function App() {
                             </span>
                           </div>
                           <div className="text-blue-600 font-semibold text-sm">
-                            {selectedStudent.current_subscription_start_date ||
-                              "N/A"}
+                            {selectedStudent.current_subscription_start_date
+                              ? new Date(
+                                  selectedStudent.current_subscription_start_date
+                                )
+                                  .toLocaleDateString("en-GB", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                  .replace(/ /g, "-")
+                              : "N/A"}
                           </div>
                         </div>
 
@@ -5376,8 +5385,17 @@ function App() {
                             </span>
                           </div>
                           <div className="text-orange-600 font-semibold text-sm">
-                            {selectedStudent.current_subscription_end_date ||
-                              "N/A"}
+                            {selectedStudent.current_subscription_end_date
+                              ? new Date(
+                                  selectedStudent.current_subscription_end_date
+                                )
+                                  .toLocaleDateString("en-GB", {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                  .replace(/ /g, "-")
+                              : "N/A"}
                           </div>
                         </div>
 

@@ -6377,7 +6377,8 @@ function App() {
                                               ) ||
                                               extractedData.summary.includes(
                                                 "NO SHOW - TR"
-                                              )) && (
+                                              )) &&
+                                            canEditDeleteBooking() && (
                                               <div className="relative">
                                                 <button
                                                   onClick={(e) => {

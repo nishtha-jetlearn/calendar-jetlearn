@@ -97,12 +97,9 @@ const UnifiedModalComponent = function UnifiedModal({
   timezone,
   availableStudents,
   availableTeachers,
-  bookedStudents,
   allTeachers,
   onAddTeacher,
-  onRemoveTeacher,
   onBookStudent,
-  onRemoveStudent,
   teacherAvailability, // New prop for teacher availability data
   selectedTeacherId, // New prop for selected teacher ID
   listViewBookingDetails, // New prop for list view booking details to filter green dot availability

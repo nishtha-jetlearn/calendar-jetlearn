@@ -6,12 +6,10 @@ import { useAuth } from "../contexts/AuthContext";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [sessionId, setSessionId] = useState(null);
 
   const { login } = useAuth();
 
@@ -44,20 +42,53 @@ const LoginPage = () => {
 
       const data = await response.json();
 
+      // Log the complete API response
+      console.log("🔐 Complete Login API Response:", data);
+      console.log("📊 Response structure:", {
+        message: data.message,
+        session_id: data.session_id,
+        role: data.role,
+        user: data.user,
+        access_permissions: data.access_permissions,
+      });
+
       if (response.ok) {
         // Check if the API response contains valid user data
         if (data.session_id) {
-          // Store session_id for logout
-          setSessionId(data.session_id);
-          console.log("Session ID stored:", data.session_id);
+          console.log("Session ID:", data.session_id);
 
-          login({
-            email: data.email || username + "@jet-learn.com",
-            name: data.username || username,
-            id: data.id || Date.now().toString(),
-            role: data.role || "admin",
+          // Create user data object with the new response format
+          const userData = {
+            id: data.user?.id || data.id || Date.now().toString(),
+            username: data.user?.username || data.username || username,
+            email:
+              data.user?.email || data.email || username + "@jet-learn.com",
+            role: data.user?.roles || data.role || "admin",
             sessionId: data.session_id,
+            // Include the full user object if available
+            fullUser: data.user || null,
+          };
+
+          // Extract access permissions
+          const permissions = data.access_permissions || {};
+
+          // Log what we're storing
+          console.log("👤 User Data being stored:", userData);
+          console.log("🔑 Permissions being stored:", permissions);
+          console.log("🔑 Permissions type:", typeof permissions);
+          console.log("🔑 Permissions keys:", Object.keys(permissions));
+          console.log(
+            "🔑 Raw access_permissions from API:",
+            data.access_permissions
+          );
+
+          // Login with user data and permissions
+          console.log("🚀 About to call login function with:", {
+            userData,
+            permissions,
           });
+          console.log("🚀 Login function reference:", login);
+          login(userData, permissions);
         } else {
           setError(data.message || data.error);
         }

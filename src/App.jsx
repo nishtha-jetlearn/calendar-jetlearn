@@ -40,6 +40,8 @@ import EnhancedStudentSearch from "./components/EnhancedStudentSearch";
 import EnhancedTimezoneSearch from "./components/EnhancedTimezoneSearch";
 import LoginPage from "./pages/LoginPage";
 import { useAuth } from "./contexts/AuthContext";
+import { usePermissions } from "./hooks/usePermissions";
+import PermissionDisplay from "./components/PermissionDisplay";
 import {
   getWeekDates,
   formatDate,
@@ -106,6 +108,8 @@ const safeErrorLog = (message, error) => {
 
 function App() {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
+  const { canAddBooking, canEditDeleteBooking, canAddTeacherAvailability } =
+    usePermissions();
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -2573,7 +2577,7 @@ function App() {
   // Function to process booking data for edit popup
   const processBookingDataForEdit = (extractedData, bookingDate, timeRange) => {
     const summary = extractedData.summary || "";
-
+    const description = extractedData.description || "";
     // Extract recording keywords from summary
     const recordingKeywords = [];
     if (summary.includes("DNREC")) recordingKeywords.push("DNREC");
@@ -2656,7 +2660,8 @@ function App() {
     return {
       ...extractedData,
       // Pre-populate description from summary
-      description: summary,
+      description: description,
+      summary: summary,
       // Pre-populate class type based on keywords
       class_type: classType,
       // Pre-populate booking type
@@ -2732,6 +2737,7 @@ function App() {
         end_time: event.end_time,
         creator: event.creator,
         summary: event.summary,
+        description: event.description,
         event_id: event.event_id,
         class_type: event.class_type,
       };
@@ -2769,6 +2775,7 @@ function App() {
         start_time: event.start_time,
         end_time: event.end_time,
         summary: event.summary,
+        description: event.description,
         creator: event.creator,
         teacherid: event.calendar_id || "N/A",
         jlid: jlid,
@@ -3158,6 +3165,7 @@ function App() {
     const [attendees, setAttendees] = useState("");
     const [attendeeInput, setAttendeeInput] = useState("");
     const [description, setDescription] = useState("");
+    const [summary, setSummary] = useState("");
     const [scheduleEntries, setScheduleEntries] = useState([]);
     const [upcomingEvents, setUpcomingEvents] = useState(false);
     const [selectedScheduleDate, setSelectedScheduleDate] = useState("");
@@ -3202,6 +3210,7 @@ function App() {
         setAttendees(bookingData.attendees ? bookingData.attendees.trim() : "");
         setSelectedRecording(bookingData.recording || []);
         setDescription(bookingData.description || "");
+        setSummary(bookingData.summary || "");
 
         // Set schedule from pre-processed data
         if (bookingData.schedule && Array.isArray(bookingData.schedule)) {
@@ -3348,6 +3357,7 @@ function App() {
         jl_uid: jl_uid,
         teacher_uid: selectedTeacher?.uid || "",
         platform_credentials: description || "",
+        summary: summary || "",
         schedule: scheduleEntries.map((entry) => {
           // Convert local time to UTC for API
           const [date, time] = entry;
@@ -3385,6 +3395,7 @@ function App() {
           .map((email) => email.trim()),
         updated_by: user?.email || "",
         upcoming_events: upcomingEvents ? "true" : "false",
+        time_zone: selectedTimezone,
       };
 
       console.log("📤 Sending UPDATE/EDIT Class API request:");
@@ -3493,6 +3504,7 @@ function App() {
                   });
                   // Reset form state
                   setDescription("");
+                  setSummary("");
                   setAttendees("");
                   setAttendeeInput("");
                   setScheduleEntries([]);
@@ -3613,17 +3625,36 @@ function App() {
             )}
 
             {/* Description - Full Width */}
-            <div className="mb-3">
+            {/* Credentials/Notes and Summary - Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3">
+              {/* Credentials / Notes */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                   <div className="p-0.5 bg-blue-100 rounded">
                     <FaEdit size={14} className="text-blue-600" />
                   </div>
-                  Description
+                  Credentials / Notes
                 </h3>
                 <textarea
                   value={description || ""}
                   onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter booking description..."
+                  className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
+                  rows={4}
+                />
+              </div>
+
+              {/* Summary */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                  <div className="p-0.5 bg-blue-100 rounded">
+                    <FaEdit size={14} className="text-blue-600" />
+                  </div>
+                  Summary
+                </h3>
+                <textarea
+                  value={summary || ""}
+                  onChange={(e) => setSummary(e.target.value)}
                   placeholder="Enter booking description..."
                   className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
                   rows={4}
@@ -5907,7 +5938,8 @@ function App() {
                                               extractedData.summary
                                                 .toLowerCase()
                                                 .includes("off")
-                                            ) && (
+                                            ) &&
+                                            canAddBooking() && (
                                               <div className="relative">
                                                 <button
                                                   onClick={(e) => {
@@ -5974,100 +6006,6 @@ function App() {
                                                         <FaUsers size={10} />
                                                         Manage Booking
                                                       </button>
-                                                      {/* <button
-                                                        onClick={() => {
-                                                          // Extract time from the booking data
-                                                          let timeSlot =
-                                                            "00:00";
-                                                          if (
-                                                            extractedData.summary
-                                                          ) {
-                                                            const timeMatch =
-                                                              extractedData.summary.match(
-                                                                /(\d{1,2}:\d{2})/
-                                                              );
-                                                            if (timeMatch) {
-                                                              timeSlot =
-                                                                timeMatch[1];
-                                                            }
-                                                          }
-                                                          if (
-                                                            timeSlot ===
-                                                              "00:00" &&
-                                                            extractedData.start_time
-                                                          ) {
-                                                            const timeFromStart =
-                                                              extractedData.start_time.match(
-                                                                /(\d{2}:\d{2})/
-                                                              );
-                                                            if (timeFromStart) {
-                                                              timeSlot =
-                                                                timeFromStart[1];
-                                                            }
-                                                          }
-                                                          if (
-                                                            timeSlot === "00:00"
-                                                          ) {
-                                                            timeSlot = "09:00";
-                                                          }
-
-                                                          setConfirmationPopup({
-                                                            isOpen: true,
-                                                            type: "cancel-availability",
-                                                            title:
-                                                              "Confirm Cancel",
-                                                            message:
-                                                              "Are you sure you want to cancel the availability?",
-                                                            data: extractedData,
-                                                            date: bookingDate,
-                                                            time: timeSlot,
-                                                            eventId:
-                                                              extractedData.event_id ||
-                                                              null,
-                                                            upcomingEvents:
-                                                              confirmationPopup.upcomingEvents,
-                                                            onConfirm: async (
-                                                              upcomingEvents
-                                                            ) => {
-                                                              try {
-                                                                // Call the cancel availability function
-                                                                await handleCancelAvailability(
-                                                                  bookingDate,
-                                                                  timeSlot,
-                                                                  getTeacherByTeacherId(
-                                                                    extractedData.teacherid
-                                                                  )?.uid ||
-                                                                    selectedTeacher?.uid,
-                                                                  "",
-                                                                  extractedData.event_id ||
-                                                                    null,
-                                                                  upcomingEvents
-                                                                );
-
-                                                                // Close the action menu
-                                                                setActionMenuOpen(
-                                                                  null
-                                                                );
-                                                              } catch (error) {
-                                                                console.error(
-                                                                  "Error canceling availability:",
-                                                                  error
-                                                                );
-                                                                alert(
-                                                                  "Failed to cancel availability. Please try again."
-                                                                );
-                                                              }
-                                                            },
-                                                          });
-                                                          setActionMenuOpen(
-                                                            null
-                                                          );
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
-                                                      >
-                                                        <FaTimes size={10} />
-                                                        Cancel Availability
-                                                      </button> */}
                                                     </div>
                                                   </div>
                                                 )}
@@ -6145,7 +6083,8 @@ function App() {
                                               extractedData.summary.includes(
                                                 "NO SHOW - TR"
                                               )
-                                            ) && (
+                                            ) &&
+                                            canEditDeleteBooking() && (
                                               <div className="relative">
                                                 <button
                                                   onClick={(e) => {
@@ -6839,7 +6778,8 @@ function App() {
                               selectedTeacher &&
                               !clickedSlots.has(
                                 `${formatDate(date)}-${time}`
-                              ) && (
+                              ) &&
+                              canAddTeacherAvailability() && (
                                 <button
                                   onClick={() =>
                                     handleAddAvailability(date, time)

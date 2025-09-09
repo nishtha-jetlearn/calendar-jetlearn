@@ -225,6 +225,13 @@ function App() {
   const [timezones, setTimezones] = useState([]);
   const [selectedTimezone, setSelectedTimezone] = useState("(GMT+02:00) CET");
 
+  // Utility function to format timezone for API calls (replace spaces with underscores)
+  const formatTimezoneForAPI = (timezone) => {
+    return timezone.replace(/(.*\)) (.+)/, (match, prefix, tz) => {
+      return `${prefix} ${tz.replace(/ /g, "_")}`;
+    });
+  };
+
   // State for students from API
   const [students, setStudents] = useState([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
@@ -608,7 +615,7 @@ function App() {
       const formData = new URLSearchParams();
       formData.append("start_date", startDate);
       formData.append("end_date", endDate);
-      formData.append("timezone", timezone);
+      formData.append("timezone", formatTimezoneForAPI(timezone));
 
       // Get teacher to use - only if explicitly selected or passed as param
       let teacherToUse = null;
@@ -865,13 +872,13 @@ function App() {
       formData.append("start_date", dateStr);
       formData.append("end_date", dateStr);
       formData.append("type", "Bookings");
-      formData.append("timezone", selectedTimezone);
+      formData.append("timezone", formatTimezoneForAPI(selectedTimezone));
 
       // If teacher data is available, include it; otherwise send without teacher filter
       if (teacherToUse && teacherToUse.uid && teacherToUse.email) {
         formData.append("teacherid", teacherToUse.uid);
         formData.append("email", teacherToUse.email);
-        formData.append("timezone", selectedTimezone);
+        formData.append("timezone", formatTimezoneForAPI(selectedTimezone));
 
         console.log(
           "🚀 Sending Bookings API Request for time slot (with teacher):",
@@ -881,7 +888,7 @@ function App() {
             type: "Bookings",
             teacherid: teacherToUse.uid,
             email: teacherToUse.email,
-            time_slot: time,
+            timezone: formatTimezoneForAPI(selectedTimezone),
           }
         );
       } else {
@@ -964,7 +971,7 @@ function App() {
       formData.append("start_date", dateStr);
       formData.append("end_date", dateStr);
       formData.append("type", "Availability");
-      formData.append("timezone", selectedTimezone);
+      formData.append("timezone", formatTimezoneForAPI(selectedTimezone));
 
       // If teacher data is available, include it; otherwise send without teacher filter
       if (teacherToUse && teacherToUse.uid && teacherToUse.email) {
@@ -979,7 +986,7 @@ function App() {
             type: "Availability",
             teacherid: teacherToUse.uid,
             email: teacherToUse.email,
-            time_slot: time,
+            timezone: formatTimezoneForAPI(selectedTimezone),
           }
         );
       } else {
@@ -1042,13 +1049,8 @@ function App() {
         data: null,
       });
 
-      const output = selectedTimezone.replace(
-        /(.*\)) (.+)/,
-        (match, prefix, tz) => {
-          return `${prefix} ${tz.replace(/ /g, "_")}`;
-        }
-      );
-      console.log(output);
+      const formattedTimezone = formatTimezoneForAPI(selectedTimezone);
+      console.log("Formatted timezone for API:", formattedTimezone);
       // Calculate 3 months from start of current week
       const weekDates = getWeekDates(currentWeekStart);
       const startDate = formatDate(weekDates[0]); // Start of current week
@@ -1066,7 +1068,7 @@ function App() {
       const formData = new URLSearchParams();
       formData.append("start_date", startDate);
       formData.append("end_date", endDate);
-      formData.append("timezone", selectedTimezone);
+      formData.append("timezone", formattedTimezone);
 
       // Add teacher filter if selected
       if (selectedTeacher && selectedTeacher.uid) {
@@ -1462,7 +1464,7 @@ function App() {
             batch_name: bookingData.batchNumber || "",
             tags: taglist,
             updated_by: user?.email,
-            time_zone: selectedTimezone,
+            time_zone: formatTimezoneForAPI(selectedTimezone),
           }),
           ...(bookingData.summary && {
             summary: bookingData.summary,
@@ -1754,7 +1756,7 @@ function App() {
         const endDate = formatDate(weekDates[6]);
 
         const formData = new URLSearchParams();
-        formData.append("timezone", selectedTimezone);
+        formData.append("timezone", formatTimezoneForAPI(selectedTimezone));
         formData.append("start_date", startDate);
         formData.append("end_date", endDate);
 
@@ -3395,7 +3397,7 @@ function App() {
           .map((email) => email.trim()),
         updated_by: user?.email || "",
         upcoming_events: upcomingEvents ? "true" : "false",
-        time_zone: selectedTimezone,
+        time_zone: formatTimezoneForAPI(selectedTimezone),
       };
 
       console.log("📤 Sending UPDATE/EDIT Class API request:");

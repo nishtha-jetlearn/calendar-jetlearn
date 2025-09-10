@@ -291,11 +291,6 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Generate available times based on teacher availability for selected date
   const generateAvailableTimes = (selectedDate) => {
-    console.log("🕐 generateAvailableTimes called for date:", selectedDate);
-    console.log("🕐 listViewBookingDetails:", listViewBookingDetails);
-    console.log("🕐 teacherAvailability:", teacherAvailability);
-    console.log("🕐 selectedTeacherId:", selectedTeacherId);
-
     if (!selectedDate) {
       console.log("❌ No selected date, returning empty array");
       return []; // Return empty array instead of all time slots

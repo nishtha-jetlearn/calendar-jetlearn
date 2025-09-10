@@ -2797,6 +2797,7 @@ function App() {
         description: event.description,
         event_id: event.event_id,
         class_type: event.class_type,
+        timezone: event.timezone,
       };
     } else if (type === "booking") {
       // Parse summary to extract fields
@@ -2840,6 +2841,7 @@ function App() {
         teacher_name: teacherName,
         event_id: event.event_id,
         class_type: event.class_type,
+        timezone: event.timezone,
         attendees: event.attendees || [], // Preserve attendees array from original event
       };
     }
@@ -5750,19 +5752,6 @@ function App() {
                                 pagination.itemsPerPage
                               );
 
-                              // Debug logging for pagination
-                              console.log("🔍 List View Pagination Debug:", {
-                                totalBookings: parsedBookings.length,
-                                currentPage: pagination.currentPage,
-                                itemsPerPage: pagination.itemsPerPage,
-                                paginatedBookingsCount:
-                                  paginatedBookings.length,
-                                totalPages: getTotalPages(
-                                  parsedBookings.length,
-                                  pagination.itemsPerPage
-                                ),
-                              });
-
                               return paginatedBookings.map((booking, index) => {
                                 const extractedData = extractEventFields(
                                   booking,
@@ -5927,6 +5916,10 @@ function App() {
                                         </div>
                                         <div className="text-xs text-gray-500">
                                           IST
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                          Bookeed Timezone :{" "}
+                                          {extractedData.timezone}
                                         </div>
                                       </div>
                                     </td>

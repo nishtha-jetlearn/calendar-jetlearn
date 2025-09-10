@@ -3379,7 +3379,7 @@ function App() {
       // Fallback to extracting from summary
       else if (editReschedulePopup.data?.summary) {
         const tlMatch =
-          editReschedulePopup.data.summary.match(/\bTL[A-Za-z0-9]+\b/g);
+          editReschedulePopup.data.summary.match(/\bTJL[A-Za-z0-9]+\b/g);
         if (tlMatch && tlMatch.length > 0) {
           teacher_uid = tlMatch[0];
         }

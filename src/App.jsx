@@ -3372,12 +3372,7 @@ function App() {
       // Extract teacher UID from the booking data or selected teacher
       let teacher_uid = null;
 
-      // First try to use the pre-extracted teacher_id
-      if (editReschedulePopup.data?.teacher_id) {
-        teacher_uid = editReschedulePopup.data.teacher_id;
-      }
-      // Fallback to extracting from summary
-      else if (editReschedulePopup.data?.summary) {
+      if (editReschedulePopup.data?.summary) {
         const tlMatch =
           editReschedulePopup.data.summary.match(/\bTJL[A-Za-z0-9]+\b/g);
         if (tlMatch && tlMatch.length > 0) {
@@ -3414,7 +3409,7 @@ function App() {
       const apiPayload = {
         event_id: editReschedulePopup.data?.event_id || hiddenEventId || "",
         jl_uid: jl_uid,
-        teacher_uid: selectedTeacher?.uid || "",
+        teacher_uid: selectedTeacher?.uid || teacher_uid || "",
         platform_credentials: description || "",
         summary: summary || "",
         schedule: scheduleEntries.map((entry) => {
@@ -3583,56 +3578,74 @@ function App() {
 
           <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
             {/* Hidden fields for API integration */}
-            {editReschedulePopup.data?.event_id && (
-              <>
-                <input
-                  type="hidden"
-                  value={editReschedulePopup.data.event_id}
-                  id="edit_event_id"
-                  name="event_id"
-                />
-                <input
-                  type="hidden"
-                  value={selectedTeacher?.uid || ""}
-                  id="edit_teacher_id"
-                  name="teacher_id"
-                />
-                <input
-                  type="hidden"
-                  value={JSON.stringify(
-                    selectedStudents.map((s) => s.jetlearner_id)
-                  )}
-                  id="edit_student_ids"
-                  name="student_ids"
-                />
-                <input
-                  type="hidden"
-                  value={selectedClassType}
-                  id="edit_class_type"
-                  name="class_type"
-                />
-                <input
-                  type="hidden"
-                  value={JSON.stringify(selectedRecording)}
-                  id="edit_recording_options"
-                  name="recording_options"
-                />
-                <input
-                  type="hidden"
-                  value={editReschedulePopup.data.booking_type || ""}
-                  id="edit_booking_type"
-                  name="booking_type"
-                />
-                <input
-                  type="hidden"
-                  value={JSON.stringify(
-                    editReschedulePopup.data.course_info || []
-                  )}
-                  id="edit_course_info"
-                  name="course_info"
-                />
-              </>
-            )}
+            {(() => {
+              // Extract TJ (Teacher/Job) code from summary
+              const tlMatch =
+                editReschedulePopup.data.summary?.match(/\bTJ[A-Za-z0-9]+\b/);
+              console.log("🔍 Teacher UID Block :", tlMatch);
+              if (tlMatch) {
+                const teacherUid = tlMatch[0];
+
+                // Find teacher in teachers array
+                const teacher = teachers.find((t) => t.uid === teacherUid);
+                if (teacher) {
+                  console.log("🔍 Teacher Data From Summary :", teacher);
+
+                  // Render hidden fields with teacher data
+                  return (
+                    <>
+                      <input
+                        type="hidden"
+                        value={editReschedulePopup.data.event_id}
+                        id="edit_event_id"
+                        name="event_id"
+                      />
+                      <input
+                        type="hidden"
+                        value={teacher.uid}
+                        id="edit_teacher_id"
+                        name="teacher_id"
+                      />
+                      <input
+                        type="hidden"
+                        value={JSON.stringify(
+                          selectedStudents.map((s) => s.jetlearner_id)
+                        )}
+                        id="edit_student_ids"
+                        name="student_ids"
+                      />
+                      <input
+                        type="hidden"
+                        value={selectedClassType}
+                        id="edit_class_type"
+                        name="class_type"
+                      />
+                      <input
+                        type="hidden"
+                        value={JSON.stringify(selectedRecording)}
+                        id="edit_recording_options"
+                        name="recording_options"
+                      />
+                      <input
+                        type="hidden"
+                        value={editReschedulePopup.data.booking_type || ""}
+                        id="edit_booking_type"
+                        name="booking_type"
+                      />
+                      <input
+                        type="hidden"
+                        value={JSON.stringify(
+                          editReschedulePopup.data.course_info || []
+                        )}
+                        id="edit_course_info"
+                        name="course_info"
+                      />
+                    </>
+                  );
+                }
+              }
+              return null;
+            })()}
 
             {/* Compact Booking Information Display */}
             {editReschedulePopup.data?.event_id && (
@@ -3665,7 +3678,24 @@ function App() {
                       : "N/A"}
                   </div>
                   <div className="col-span-2">
-                    <strong>Teacher:</strong> {selectedTeacher?.full_name}
+                    <strong>Teacher:</strong>{" "}
+                    {(() => {
+                      // Extract TJ (Teacher/Job) code from summary
+                      const tlMatch =
+                        editReschedulePopup.data.summary?.match(
+                          /\bTJ[A-Za-z0-9]+\b/
+                        );
+                      if (tlMatch) {
+                        const teacherUid = tlMatch[0];
+                        const teacher = teachers.find(
+                          (t) => t.uid === teacherUid
+                        );
+                        return teacher
+                          ? teacher.uid
+                          : editReschedulePopup.data.teacher_id || "N/A";
+                      }
+                      return editReschedulePopup.data.teacher_id || "N/A";
+                    })()}
                   </div>
                 </div>
               </div>

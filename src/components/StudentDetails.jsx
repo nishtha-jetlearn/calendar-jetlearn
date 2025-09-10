@@ -90,6 +90,10 @@ const StudentDetails = (props) => {
                   <span className="font-bold">Country:</span> {student.country}
                 </p>
               )}
+              <p className="text-xs text-gray-600">
+                <span className="font-bold">Booked Timezone :</span>{" "}
+                {student.country_timezone}
+              </p>
             </div>
             {student.isBookedStudent && (
               <span className="inline-block mt-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full font-medium">

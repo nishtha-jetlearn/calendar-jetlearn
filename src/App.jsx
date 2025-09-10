@@ -1292,6 +1292,61 @@ function App() {
     }
   };
 
+  // Function to convert time range to IST
+  const convertTimeRangeToIST = (timeRange, bookingDate, selectedTimezone) => {
+    if (timeRange === "N/A") return "N/A";
+
+    try {
+      const [startTime, endTime] = timeRange.split(" - ");
+      if (!startTime || !endTime) return timeRange;
+
+      // Extract timezone offset from selectedTimezone (e.g., "(GMT+02:00) CET" -> +02:00)
+      const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+      if (!match) return timeRange;
+
+      const offsetHours = parseInt(match[1], 10); // +02 or -05
+      const offsetMinutes = parseInt(match[2], 10); // 00 or 30
+
+      // Convert start time
+      const [startHour, startMinute] = startTime.split(":").map(Number);
+      const startDate = new Date(bookingDate);
+      startDate.setHours(startHour, startMinute, 0, 0);
+
+      // Adjust for the original timezone offset (subtract the offset to get UTC)
+      const startUTC = new Date(
+        startDate.getTime() - (offsetHours * 60 + offsetMinutes) * 60000
+      );
+
+      // Convert UTC to IST (IST is UTC+5:30)
+      const startIST = new Date(startUTC.getTime() + (5 * 60 + 30) * 60000);
+
+      // Convert end time
+      const [endHour, endMinute] = endTime.split(":").map(Number);
+      const endDate = new Date(bookingDate);
+      endDate.setHours(endHour, endMinute, 0, 0);
+
+      // Adjust for the original timezone offset
+      const endUTC = new Date(
+        endDate.getTime() - (offsetHours * 60 + offsetMinutes) * 60000
+      );
+
+      // Convert UTC to IST
+      const endIST = new Date(endUTC.getTime() + (5 * 60 + 30) * 60000);
+
+      // Format the times
+      const formatTime = (date) => {
+        const hours = date.getHours().toString().padStart(2, "0");
+        const minutes = date.getMinutes().toString().padStart(2, "0");
+        return `${hours}:${minutes}`;
+      };
+
+      return `${formatTime(startIST)} - ${formatTime(endIST)}`;
+    } catch (error) {
+      console.error("Error converting time range to IST:", error);
+      return timeRange;
+    }
+  };
+
   // Enhanced slot click handler with teacherid
   // const handleSlotClick = (date, time) => {
   //   const slotData = getSlotCounts(date, time);
@@ -5648,7 +5703,9 @@ function App() {
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Time
                               </th>
-
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                IST Time
+                              </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Summary
                               </th>
@@ -5853,7 +5910,26 @@ function App() {
                                         </div>
                                       </div>
                                     </td>
-
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div>
+                                        <div className="text-sm text-gray-900">
+                                          {timeRange !== "N/A" ? (
+                                            convertTimeRangeToIST(
+                                              timeRange,
+                                              bookingDate,
+                                              selectedTimezone
+                                            )
+                                          ) : (
+                                            <span className="text-red-500">
+                                              {timeRange}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                          IST
+                                        </div>
+                                      </div>
+                                    </td>
                                     <td className="px-6 py-4">
                                       <div className="flex items-center justify-between">
                                         <div className="text-sm text-gray-900 break-words">

@@ -291,14 +291,22 @@ const UnifiedModalComponent = function UnifiedModal({
 
   // Generate available times based on teacher availability for selected date
   const generateAvailableTimes = (selectedDate) => {
+    console.log("🕐 generateAvailableTimes called for date:", selectedDate);
+    console.log("🕐 listViewBookingDetails:", listViewBookingDetails);
+    console.log("🕐 teacherAvailability:", teacherAvailability);
+    console.log("🕐 selectedTeacherId:", selectedTeacherId);
+
     if (!selectedDate) {
+      console.log("❌ No selected date, returning empty array");
       return []; // Return empty array instead of all time slots
     }
 
     // Priority 1: Use listViewBookingDetails data (green dots from list view)
     if (listViewBookingDetails && listViewBookingDetails.data) {
+      console.log("✅ Using listViewBookingDetails data");
       const availableTimes = [];
       const parsedBookings = parseBookingDetails(listViewBookingDetails.data);
+      console.log("📊 parsedBookings:", parsedBookings);
 
       // Get times for the selected date that have green dots
       parsedBookings.forEach((booking) => {
@@ -308,24 +316,36 @@ const UnifiedModalComponent = function UnifiedModal({
             ? new Date(booking.start_time).toISOString().split("T")[0]
             : null);
         const bookingTime =
-          booking.time ||
-          (booking.start_time ? booking.start_time.slice(11, 16) : null);
+          (booking.start_time ? booking.start_time.slice(11, 16) : null) ||
+          booking.time;
+
+        console.log("Booking start_time:", booking.start_time);
+        console.log(
+          "Slice 11-16:",
+          booking.start_time ? booking.start_time.slice(11, 16) : "N/A"
+        );
+        console.log("Extracted bookingTime:", bookingTime);
 
         if (bookingDate === selectedDate && bookingTime) {
           // Check if this booking has a green dot (availability or hours)
           if (isGreenDotBooking(booking)) {
+            console.log("Adding time to availableTimes:", bookingTime);
             availableTimes.push(bookingTime);
           }
         }
       });
 
       if (availableTimes.length > 0) {
-        return [...new Set(availableTimes)].sort(); // Remove duplicates and sort
+        console.log("Before deduplication and sorting:", availableTimes);
+        const result = [...new Set(availableTimes)].sort();
+        console.log("After deduplication and sorting:", result);
+        return result;
       }
     }
 
     // Priority 2: Use teacherAvailability data
     if (teacherAvailability && selectedTeacherId) {
+      console.log("✅ Using teacherAvailability data");
       // Convert selected date to DD-MM-YYYY format for matching
       const dateObj = new Date(selectedDate);
       const day = dateObj.getDate().toString().padStart(2, "0");
@@ -380,6 +400,7 @@ const UnifiedModalComponent = function UnifiedModal({
     }
 
     // Return empty array if no available times found
+    console.log("❌ No available times found, returning empty array");
     return [];
   };
 
@@ -454,6 +475,7 @@ const UnifiedModalComponent = function UnifiedModal({
   }, [selectedTeacherId, teacherAvailability, listViewBookingDetails]);
 
   const availableTimes = generateAvailableTimes(selectedScheduleDate);
+  console.log("🎯 Final availableTimes:", availableTimes);
 
   // Update available times when selected date changes
   useEffect(() => {
@@ -1544,11 +1566,21 @@ const UnifiedModalComponent = function UnifiedModal({
                         >
                           <option value="">Select time...</option>
                           {availableTimes.length > 0 ? (
-                            availableTimes.map((slot) => (
-                              <option key={slot} value={slot}>
-                                {slot}
-                              </option>
-                            ))
+                            availableTimes.map((slot) => {
+                              console.log(
+                                "Time slot:",
+                                slot,
+                                "Type:",
+                                typeof slot,
+                                "Length:",
+                                slot?.length
+                              );
+                              return (
+                                <option key={slot} value={slot}>
+                                  {slot}
+                                </option>
+                              );
+                            })
                           ) : (
                             <option value="" disabled>
                               {listViewBookingDetails

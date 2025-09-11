@@ -261,7 +261,7 @@ function App() {
     reason: "",
     studentDetails: null,
     teacherDetails: null,
-    upcomingEvents: false, // New field for upcoming events checkbox
+    classCount: 1, // Default class count
   });
 
   // State for booking API response
@@ -2131,7 +2131,7 @@ function App() {
     bookingData,
     reason = "",
     eventId = null,
-    upcomingEvents = false
+    classCount = 1
   ) => {
     try {
       console.log("🚀 Canceling booking for:", {
@@ -2139,7 +2139,7 @@ function App() {
         time,
         bookingData,
         reason,
-        upcomingEvents,
+        classCount,
       });
 
       // Fallback to old API if no eventId (for backward compatibility)
@@ -2178,7 +2178,7 @@ function App() {
             cancellation_type: reason,
             updated_by: user?.email,
             eventId: eventId, // Include event_id in API call
-            upcoming_events: upcomingEvents, // Include upcoming_events parameter
+            class_count: classCount, // Include class count parameter
           }),
         }
       );
@@ -2217,7 +2217,7 @@ function App() {
             reason: "",
             studentDetails: null,
             teacherDetails: null,
-            upcomingEvents: false,
+            classCount: 1,
           });
           setSuccessMessage({
             show: false,
@@ -4739,6 +4739,7 @@ function App() {
 
     const handleCancelConfirm = async () => {
       try {
+        console.log("🚀 CancelPopup Confirm:", cancelPopup);
         if (cancelPopup.type === "availability") {
           await handleCancelAvailability(
             cancelPopup.date,
@@ -4755,7 +4756,7 @@ function App() {
             cancelPopup.data,
             cancelPopup.reason,
             cancelPopup.data?.event_id || null,
-            cancelPopup.upcomingEvents || false
+            cancelPopup.classCount || 1
           );
         }
 
@@ -4769,7 +4770,7 @@ function App() {
           reason: "",
           studentDetails: null,
           teacherDetails: null,
-          upcomingEvents: false,
+          classCount: 1,
         });
       } catch (error) {
         console.error("Error canceling:", error);
@@ -4908,28 +4909,29 @@ function App() {
               </div>
             </div>
 
-            {/* Upcoming Events Checkbox */}
+            {/* Class Count Input */}
             <div className="mb-3 p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded border border-blue-200 shadow-sm">
               <h3 className="font-bold text-blue-900 mb-1 text-xs sm:text-sm flex items-center gap-1">
                 <FaCalendarAlt size={12} className="flex-shrink-0" />
-                Additional Options
+                Class Information
               </h3>
               <div className="bg-white p-1.5 rounded border border-blue-100">
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <label className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-700 font-medium">
+                    Class Count:
+                  </span>
                   <input
-                    type="checkbox"
-                    checked={cancelPopup.upcomingEvents}
+                    type="number"
+                    min="1"
+                    value={cancelPopup.classCount || 1}
                     onChange={(e) => {
                       setCancelPopup((prev) => ({
                         ...prev,
-                        upcomingEvents: e.target.checked,
+                        classCount: parseInt(e.target.value) || 1,
                       }));
                     }}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <span className="text-gray-700">
-                    Do you want to do it for upcoming events as well?
-                  </span>
                 </label>
               </div>
             </div>

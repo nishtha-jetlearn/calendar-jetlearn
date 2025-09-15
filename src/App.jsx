@@ -1660,13 +1660,13 @@ function App() {
               ? "1:1"
               : bookingData.classType || "1:1",
           booking_type: bookingData.bookingType === "trial" ? "Trial" : "Paid",
+
           ...(bookingData.bookingType === "paid" && {
             course: bookingData.subject || "",
             recording: taglist,
             batch_name: bookingData.batchNumber || "",
             tags: taglist,
             updated_by: user?.email,
-            time_zone: formatTimezoneForAPI(selectedTimezone),
           }),
           ...(bookingData.summary && {
             summary: bookingData.summary,
@@ -1674,6 +1674,7 @@ function App() {
           ...(bookingData.eventId && {
             event_id: bookingData.eventId, // Include event_id for edit operations
           }),
+          time_zone: formatTimezoneForAPI(selectedTimezone),
         };
 
         console.log("📤 Sending booking to API:", apiPayload);

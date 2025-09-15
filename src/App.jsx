@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  Suspense,
+} from "react";
 import {
   FaUsers,
   FaGraduationCap,
@@ -330,6 +336,13 @@ function App() {
   // New state to track individual toasters for each slot
   const [slotToasters, setSlotToasters] = useState({});
 
+  // Date range filter state - initialize with current week's start and end dates
+  const [dateRangeFilter, setDateRangeFilter] = useState({
+    startDate: null,
+    endDate: null,
+    isActive: false,
+  });
+
   // New state to track clicked slots (to prevent plus icon from showing again until deleted)
   const [clickedSlots, setClickedSlots] = useState(new Set());
 
@@ -609,8 +622,16 @@ function App() {
       console.log("passed timezone param:", timezone);
       setApiDataError(null);
       const weekDates = getWeekDates(weekStartDate);
-      const startDate = formatDate(weekDates[0]); // week start
-      const endDate = formatDate(weekDates[6]); // week end
+
+      // Use filtered dates if date range filter is active
+      let startDate, endDate;
+      if (dateRangeFilter.isActive && filteredWeekDates.length > 0) {
+        startDate = formatDate(filteredWeekDates[0]);
+        endDate = formatDate(filteredWeekDates[filteredWeekDates.length - 1]);
+      } else {
+        startDate = formatDate(weekDates[0]); // week start
+        endDate = formatDate(weekDates[6]); // week end
+      }
 
       const formData = new URLSearchParams();
       formData.append("start_date", startDate);
@@ -846,6 +867,132 @@ function App() {
   };
 
   const weekDates = getWeekDates(currentWeekStart);
+
+  // Filter weekDates based on date range filter
+  const getFilteredWeekDates = () => {
+    // If filter is not active, show all week dates
+    if (!dateRangeFilter.isActive) {
+      return weekDates;
+    }
+
+    // If filter is active, filter based on selected date range
+    if (dateRangeFilter.startDate && dateRangeFilter.endDate) {
+      const startDate = new Date(dateRangeFilter.startDate);
+      const endDate = new Date(dateRangeFilter.endDate);
+
+      const filtered = weekDates.filter((date) => {
+        const dateObj = new Date(date);
+        return dateObj >= startDate && dateObj <= endDate;
+      });
+
+      // Ensure we always have at least one date to display
+      return filtered.length > 0 ? filtered : weekDates;
+    }
+
+    // Fallback to showing all week dates
+    return weekDates;
+  };
+
+  const filteredWeekDates = getFilteredWeekDates();
+
+  // Helper function to fetch data for filtered date range
+  const fetchFilteredData = useCallback(
+    async (startDate, endDate) => {
+      try {
+        // Get teacher to use
+        let teacherToUse = null;
+        let studentToUse = null;
+        let hasFilters = false;
+
+        if (selectedTeacher && selectedTeacher.uid) {
+          teacherToUse = selectedTeacher;
+          hasFilters = true;
+        }
+
+        if (selectedStudent && selectedStudent.uid) {
+          studentToUse = selectedStudent;
+          hasFilters = true;
+        }
+
+        // Call booking details API if filters are applied
+        if (hasFilters) {
+          const bookingFormData = new URLSearchParams();
+          bookingFormData.append("start_date", startDate);
+          bookingFormData.append("end_date", endDate);
+          bookingFormData.append(
+            "timezone",
+            formatTimezoneForAPI(selectedTimezone)
+          );
+
+          if (teacherToUse) {
+            bookingFormData.append("teacherid", teacherToUse.uid);
+            bookingFormData.append("email", teacherToUse.email);
+          }
+
+          if (studentToUse) {
+            bookingFormData.append("jlid", studentToUse.uid);
+          }
+
+          const bookingResponse = await fetch(
+            "https://live.jetlearn.com/events/get-bookings-details/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: bookingFormData.toString(),
+            }
+          );
+
+          if (bookingResponse.ok) {
+            const bookingData = await bookingResponse.json();
+            setListViewBookingDetails({
+              isLoading: false,
+              success: true,
+              data: bookingData,
+              error: null,
+            });
+            console.log("✅ Filtered booking details API called successfully");
+          } else {
+            console.error("❌ Error calling filtered booking details API");
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error in fetchFilteredData:", error);
+      }
+    },
+    [selectedTeacher, selectedStudent, selectedTimezone]
+  );
+
+  // Initialize date range filter with current week's start and end dates
+  useEffect(() => {
+    const weekDates = getWeekDates(currentWeekStart);
+    setDateRangeFilter({
+      startDate: formatDate(weekDates[0]),
+      endDate: formatDate(weekDates[6]),
+      isActive: false,
+    });
+  }, [currentWeekStart]);
+
+  // Effect to trigger API calls when date range filter changes
+  useEffect(() => {
+    if (
+      dateRangeFilter.isActive &&
+      dateRangeFilter.startDate &&
+      dateRangeFilter.endDate
+    ) {
+      // Call the new fetchFilteredData function
+      fetchFilteredData(dateRangeFilter.startDate, dateRangeFilter.endDate);
+    }
+  }, [
+    dateRangeFilter.isActive,
+    dateRangeFilter.startDate,
+    dateRangeFilter.endDate,
+    selectedTeacher,
+    selectedStudent,
+    selectedTimezone,
+    fetchFilteredData,
+  ]);
 
   // Function to send booking data to API
   const sendBookingToAPI = async (date, time, teacherUid = null) => {
@@ -5336,6 +5483,90 @@ function App() {
               </button>
             </div>
 
+            {/* Date Range Filter - Only show in List View */}
+            {currentView === "list" && (
+              <div className="flex items-center gap-2 px-2 py-1 bg-blue-600 rounded-lg">
+                <FaFilter size={12} className="text-blue-100" />
+                <div className="flex items-center gap-1">
+                  <input
+                    type="date"
+                    value={
+                      dateRangeFilter.startDate || formatDate(weekDates[0])
+                    }
+                    onChange={(e) => {
+                      const newStartDate = e.target.value;
+                      const currentWeekStart = formatDate(weekDates[0]);
+                      const currentWeekEnd = formatDate(weekDates[6]);
+                      const isActive =
+                        newStartDate !== currentWeekStart ||
+                        dateRangeFilter.endDate !== currentWeekEnd;
+
+                      setDateRangeFilter((prev) => ({
+                        ...prev,
+                        startDate: newStartDate,
+                        isActive: isActive,
+                      }));
+
+                      // Call APIs if filter becomes active and we have both dates
+                      if (isActive && newStartDate && dateRangeFilter.endDate) {
+                        fetchFilteredData(
+                          newStartDate,
+                          dateRangeFilter.endDate
+                        );
+                      }
+                    }}
+                    className="px-2 py-1 text-xs bg-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                    placeholder="Start Date"
+                  />
+                  <span className="text-blue-100 text-xs">to</span>
+                  <input
+                    type="date"
+                    value={dateRangeFilter.endDate || formatDate(weekDates[6])}
+                    onChange={(e) => {
+                      const newEndDate = e.target.value;
+                      const currentWeekStart = formatDate(weekDates[0]);
+                      const currentWeekEnd = formatDate(weekDates[6]);
+                      const isActive =
+                        dateRangeFilter.startDate !== currentWeekStart ||
+                        newEndDate !== currentWeekEnd;
+
+                      setDateRangeFilter((prev) => ({
+                        ...prev,
+                        endDate: newEndDate,
+                        isActive: isActive,
+                      }));
+
+                      // Call APIs if filter becomes active and we have both dates
+                      if (isActive && dateRangeFilter.startDate && newEndDate) {
+                        fetchFilteredData(
+                          dateRangeFilter.startDate,
+                          newEndDate
+                        );
+                      }
+                    }}
+                    className="px-2 py-1 text-xs bg-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                    placeholder="End Date"
+                  />
+                  {dateRangeFilter.isActive && (
+                    <button
+                      onClick={() => {
+                        const weekDates = getWeekDates(currentWeekStart);
+                        setDateRangeFilter({
+                          startDate: formatDate(weekDates[0]),
+                          endDate: formatDate(weekDates[6]),
+                          isActive: false,
+                        });
+                      }}
+                      className="ml-1 p-1 text-blue-100 hover:text-white transition-colors"
+                      title="Reset to current week"
+                    >
+                      <FaTimes size={10} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Navigation Controls - Right Side */}
             <div className="flex items-center gap-1">
               <button
@@ -5350,12 +5581,26 @@ function App() {
                 <FaCalendarAlt size={10} />
                 <span className="text-xs font-medium">
                   <span className="hidden sm:inline">
-                    {formatDisplayDate(weekDates[0])} -{" "}
-                    {formatDisplayDate(weekDates[6])}
+                    {dateRangeFilter.isActive && filteredWeekDates.length > 0
+                      ? `${formatDisplayDate(
+                          filteredWeekDates[0]
+                        )} - ${formatDisplayDate(
+                          filteredWeekDates[filteredWeekDates.length - 1]
+                        )}`
+                      : `${formatDisplayDate(
+                          weekDates[0]
+                        )} - ${formatDisplayDate(weekDates[6])}`}
                   </span>
                   <span className="sm:hidden">
-                    {formatShortDate(weekDates[0])} -{" "}
-                    {formatShortDate(weekDates[6])}
+                    {dateRangeFilter.isActive && filteredWeekDates.length > 0
+                      ? `${formatShortDate(
+                          filteredWeekDates[0]
+                        )} - ${formatShortDate(
+                          filteredWeekDates[filteredWeekDates.length - 1]
+                        )}`
+                      : `${formatShortDate(weekDates[0])} - ${formatShortDate(
+                          weekDates[6]
+                        )}`}
                   </span>
                 </span>
               </div>
@@ -6843,11 +7088,23 @@ function App() {
               </div>
 
               <div className="overflow-x-auto">
-                <div className="grid grid-cols-[50px_repeat(7,minmax(60px,1fr))] sm:grid-cols-[60px_repeat(7,minmax(80px,1fr))] md:grid-cols-[80px_repeat(7,minmax(120px,1fr))] min-w-[500px] sm:min-w-[600px] md:min-w-[800px] h-full">
-                  <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm">
+                <div
+                  className="grid h-full w-full"
+                  style={{
+                    gridTemplateColumns: `80px repeat(${Math.max(
+                      1,
+                      filteredWeekDates.length
+                    )}, minmax(100px, 1fr))`,
+                    minWidth: `${Math.max(
+                      600,
+                      Math.max(1, filteredWeekDates.length) * 100 + 80
+                    )}px`,
+                  }}
+                >
+                  <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm min-w-[80px]">
                     Time
                   </div>
-                  {weekDates.map((date) => (
+                  {filteredWeekDates.map((date) => (
                     <div
                       key={formatDate(date)}
                       className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300"
@@ -6862,10 +7119,10 @@ function App() {
                   ))}
                   {getPaginatedTimeSlots().map((time) => (
                     <React.Fragment key={time}>
-                      <div className="bg-gray-50 p-1 sm:p-2 lg:p-4 font-medium text-gray-600 text-center border-b border-r border-gray-300 text-xs sm:text-sm">
+                      <div className="bg-gray-50 p-1 sm:p-2 lg:p-4 font-medium text-gray-600 text-center border-b border-r border-gray-300 text-xs sm:text-sm min-w-[80px]">
                         {time}
                       </div>
-                      {weekDates.map((date) => {
+                      {filteredWeekDates.map((date) => {
                         const dateSchedule = getScheduleForDate(date);
                         const slot = dateSchedule[time];
                         const { available, booked, teacherid, apiData } =

@@ -91,7 +91,7 @@ const StudentDetails = (props) => {
                 </p>
               )}
               <p className="text-xs text-gray-600">
-                <span className="font-bold">Booked Timezone :</span>{" "}
+                <span className="font-bold">Country Timezone :</span>{" "}
                 {student.country_timezone}
               </p>
             </div>

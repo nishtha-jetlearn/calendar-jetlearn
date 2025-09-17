@@ -142,6 +142,9 @@ const UnifiedModalComponent = function UnifiedModal({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
 
+  // Booking loading state
+  const [isBookingLoading, setIsBookingLoading] = useState(false);
+
   // Update calendar date when selected date changes or when calendar opens
   useEffect(() => {
     if (selectedScheduleDate) {
@@ -793,32 +796,39 @@ const UnifiedModalComponent = function UnifiedModal({
     return true;
   };
 
-  const handleBookStudent = () => {
+  const handleBookStudent = async () => {
     if (!studentName.trim() && selectedStudents.length === 0) {
       alert("Please select at least one student or enter a student name.");
       return;
     }
 
+    // Set loading state
+    setIsBookingLoading(true);
+
     // Validate attendees list
     // if (attendeesList.length === 0) {
     //   alert("Please add at least one attendee email.");
+    //   setIsBookingLoading(false);
     //   return;
     // }
 
     // Validate schedule entries
     if (scheduleEntries.length === 0) {
       alert("Please add at least one schedule entry.");
+      setIsBookingLoading(false);
       return;
     }
 
     // Validate class type limits
     if (selectedClassType === "1:1" && selectedStudents.length > 1) {
       alert("Maximum 1 learner can be selected for 1:1 class type.");
+      setIsBookingLoading(false);
       return;
     }
 
     if (selectedClassType === "1:2" && selectedStudents.length > 2) {
       alert("Maximum 2 learners can be selected for 1:2 class type.");
+      setIsBookingLoading(false);
       return;
     }
 
@@ -826,12 +836,14 @@ const UnifiedModalComponent = function UnifiedModal({
     if (bookingType === "paid") {
       if (!selectedSubject || !selectedClassType || !selectedClassCount) {
         alert("Please fill in all required fields for paid booking.");
+        setIsBookingLoading(false);
         return;
       }
 
       // Validate batch number for batch class type
       if (selectedClassType === "batch" && !batchNumber.trim()) {
         alert("Please enter a batch Name for batch class type.");
+        setIsBookingLoading(false);
         return;
       }
     }
@@ -845,49 +857,57 @@ const UnifiedModalComponent = function UnifiedModal({
         ? selectedStudents
         : [{ id: Date.now().toString(), name: studentName.trim() }];
 
-    studentsToBook.forEach((student) => {
-      // Prepare API payload
-      const bookingData = {
-        bookingType,
-        platformCredentials,
-        attendees: attendeesList.map((item) => item.email).join(", "),
-        schedule,
-        ...(bookingType === "paid" && {
-          subject: selectedSubject,
-          classType: selectedClassType,
-          classCount: selectedClassCount,
-          recording: selectedRecording.join(", "),
-          ...(selectedClassType === "batch" && {
-            batchNumber: batchNumber.trim(),
+    try {
+      studentsToBook.forEach((student) => {
+        // Prepare API payload
+        const bookingData = {
+          bookingType,
+          platformCredentials,
+          attendees: attendeesList.map((item) => item.email).join(", "),
+          schedule,
+          ...(bookingType === "paid" && {
+            subject: selectedSubject,
+            classType: selectedClassType,
+            classCount: selectedClassCount,
+            recording: selectedRecording.join(", "),
+            ...(selectedClassType === "batch" && {
+              batchNumber: batchNumber.trim(),
+            }),
           }),
-        }),
-        ...(bookingType === "trial" && {
-          classType: "1:1",
-          classCount: 1,
-        }),
-      };
+          ...(bookingType === "trial" && {
+            classType: "1:1",
+            classCount: 1,
+          }),
+        };
 
-      onBookStudent(student.name, selectedStudents, bookingData);
-    });
+        onBookStudent(student.name, selectedStudents, bookingData);
+      });
 
-    // Reset form
-    setStudentName("");
-    setSelectedTeacher("");
-    setBookingType("trial");
-    setSelectedSubject("");
-    setSelectedClassType("");
-    setSelectedClassCount("");
-    setSelectedRecording([]);
-    setBatchNumber("");
-    setStudentSearchTerm("");
-    setPlatformCredentials("");
-    setAttendees("");
-    setSelectedScheduleDate("");
-    setSelectedScheduleTime("");
-    setScheduleEntries([]);
-    setSelectedStudents([]);
-    setAttendeesError("");
-    setAttendeesList([]);
+      // Reset form
+      setStudentName("");
+      setSelectedTeacher("");
+      setBookingType("trial");
+      setSelectedSubject("");
+      setSelectedClassType("");
+      setSelectedClassCount("");
+      setSelectedRecording([]);
+      setBatchNumber("");
+      setStudentSearchTerm("");
+      setPlatformCredentials("");
+      setAttendees("");
+      setSelectedScheduleDate("");
+      setSelectedScheduleTime("");
+      setScheduleEntries([]);
+      setSelectedStudents([]);
+      setAttendeesError("");
+      setAttendeesList([]);
+    } catch (error) {
+      console.error("Error booking student:", error);
+      alert("An error occurred while booking. Please try again.");
+    } finally {
+      // Reset loading state
+      setIsBookingLoading(false);
+    }
   };
 
   const selectStudentFromSearch = (student) => {
@@ -1284,12 +1304,14 @@ const UnifiedModalComponent = function UnifiedModal({
                     <button
                       onClick={handleBookStudent}
                       disabled={
-                        !studentName.trim() && selectedStudents.length === 0
+                        (!studentName.trim() &&
+                          selectedStudents.length === 0) ||
+                        isBookingLoading
                       }
                       className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 rounded hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
                     >
                       <FaBook size={14} />
-                      Book Learners
+                      {isBookingLoading ? "Booking..." : "Book Learners"}
                     </button>
                   </div>
                 </div>

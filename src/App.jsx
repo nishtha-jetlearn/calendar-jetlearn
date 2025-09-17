@@ -300,6 +300,15 @@ function App() {
   const [apiDataLoading, setApiDataLoading] = useState(false);
   const [apiDataError, setApiDataError] = useState(null);
 
+  // State for teacher leaves
+  const [teacherLeaves, setTeacherLeaves] = useState({
+    isLoading: false,
+    success: false,
+    error: null,
+    data: null,
+    leaves: {}, // Will store dates as keys with leave details
+  });
+
   // Add pagination state
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -753,6 +762,65 @@ function App() {
     }
   };
 
+  // Fetch teacher leaves data from API
+  const fetchTeacherLeaves = async (teacherEmail, startDate, endDate) => {
+    try {
+      console.log("🍃 Fetching teacher leaves:", {
+        teacher_email: teacherEmail,
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      setTeacherLeaves((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      const formData = new URLSearchParams();
+      formData.append("teacher_email", teacherEmail);
+      formData.append("start_date", startDate);
+      formData.append("end_date", endDate);
+
+      const response = await fetch(
+        "https://live.jetlearn.com/events/get-teacher-leaves/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Teacher leaves fetched successfully:", result);
+
+      if (result.success) {
+        setTeacherLeaves({
+          isLoading: false,
+          success: true,
+          error: null,
+          data: result,
+          leaves: result.leaves || {},
+        });
+        return result;
+      } else {
+        throw new Error(result.message || "Failed to fetch teacher leaves");
+      }
+    } catch (error) {
+      console.error("❌ Teacher leaves API Error:", error);
+      setTeacherLeaves({
+        isLoading: false,
+        success: false,
+        error: error.message,
+        data: null,
+        leaves: {},
+      });
+      return null;
+    }
+  };
+
   // Load weekly data when week changes (teacher/student handled separately)
   useEffect(() => {
     const loadWeekData = async () => {
@@ -778,6 +846,16 @@ function App() {
       if (data) {
         setWeeklyApiData(data);
       }
+
+      // Also fetch teacher leaves if teacher is selected and in week view
+      if (selectedTeacher?.email && currentView === "week") {
+        console.log("🍃 Fetching teacher leaves for week change...");
+        const weekDates = getWeekDates(currentWeekStart);
+        const startDate = formatDate(weekDates[0]);
+        const endDate = formatDate(weekDates[6]);
+        await fetchTeacherLeaves(selectedTeacher.email, startDate, endDate);
+      }
+
       setApiDataLoading(false);
     };
 
@@ -1777,6 +1855,16 @@ function App() {
           setWeeklyApiData(data);
           console.log("✅ API call completed with teacher data");
         }
+
+        // Also fetch teacher leaves if in week view or switching to week view
+        if (currentView === "week" && teacher.email) {
+          console.log("🍃 Fetching teacher leaves for week view...");
+          const weekDates = getWeekDates(currentWeekStart);
+          const startDate = formatDate(weekDates[0]);
+          const endDate = formatDate(weekDates[6]);
+          await fetchTeacherLeaves(teacher.email, startDate, endDate);
+        }
+
         setApiDataLoading(false);
       };
 
@@ -5472,11 +5560,26 @@ function App() {
                     selectedStudent?.jetlearner_id,
                     selectedTimezone
                   )
-                    .then((data) => {
+                    .then(async (data) => {
                       if (data) {
                         setWeeklyApiData(data);
                         console.log(
                           "✅ Availability summary API called successfully"
+                        );
+                      }
+
+                      // Also fetch teacher leaves if teacher is selected
+                      if (selectedTeacher?.email) {
+                        console.log(
+                          "🍃 Fetching teacher leaves for week view switch..."
+                        );
+                        const weekDates = getWeekDates(currentWeekStart);
+                        const startDate = formatDate(weekDates[0]);
+                        const endDate = formatDate(weekDates[6]);
+                        await fetchTeacherLeaves(
+                          selectedTeacher.email,
+                          startDate,
+                          endDate
                         );
                       }
                     })
@@ -7111,10 +7214,19 @@ function App() {
                 <div className="flex items-center gap-1 sm:gap-2">
                   <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-gray-200 rounded"></div>
                   <span className="text-xs sm:text-sm text-gray-700">
-                    <span className="hidden sm:inline">No Availability</span>
+                    <span className="hidden sm:inline">Free Slots</span>
                     <span className="sm:hidden">None</span>
                   </span>
                 </div>
+                {selectedTeacher && (
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-orange-500 rounded"></div>
+                    <span className="text-xs sm:text-sm text-gray-700">
+                      <span className="hidden sm:inline">Teacher Leave</span>
+                      <span className="sm:hidden">Leave</span>
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="overflow-x-auto">
@@ -7134,19 +7246,35 @@ function App() {
                   <div className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 border-b border-r border-gray-300 text-center text-xs sm:text-sm min-w-[80px]">
                     Time
                   </div>
-                  {filteredWeekDates.map((date) => (
-                    <div
-                      key={formatDate(date)}
-                      className="bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300"
-                    >
-                      <div className="text-xs sm:text-sm">
-                        {getDayName(date)}
+                  {filteredWeekDates.map((date) => {
+                    const dateStr = formatDate(date);
+                    const isOnLeave =
+                      teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
+
+                    return (
+                      <div
+                        key={dateStr}
+                        className={`bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300 relative ${
+                          isOnLeave ? "bg-orange-100 border-orange-300" : ""
+                        }`}
+                      >
+                        <div className="text-xs sm:text-sm">
+                          {getDayName(date)}
+                        </div>
+                        <div className="text-xs text-gray-500 font-bold">
+                          {formatShortDate(date)}
+                        </div>
+                        {isOnLeave && (
+                          <div
+                            className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full border border-white"
+                            title="Teacher on Leave"
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center"></div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-500 font-bold">
-                        {formatShortDate(date)}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {getPaginatedTimeSlots().map((time) => (
                     <React.Fragment key={time}>
                       <div className="bg-gray-50 p-1 sm:p-2 lg:p-4 font-medium text-gray-600 text-center border-b border-r border-gray-300 text-xs sm:text-sm min-w-[80px]">
@@ -7157,7 +7285,16 @@ function App() {
                         const slot = dateSchedule[time];
                         const { available, booked, teacherid, apiData } =
                           getSlotCounts(date, time);
-                        const cellColor = getCellColor(available, booked);
+                        const dateStr = formatDate(date);
+                        const isOnLeave =
+                          teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
+
+                        // Modify cell color if teacher is on leave
+                        let cellColor = getCellColor(available, booked);
+                        if (isOnLeave && selectedTeacher) {
+                          cellColor = "bg-orange-100 hover:bg-orange-200";
+                        }
+
                         return (
                           <div
                             key={`${formatDate(date)}-${time}`}
@@ -7231,6 +7368,18 @@ function App() {
                               <span className="sm:hidden">B: </span>
                               {booked}
                             </div>
+
+                            {/* Teacher Leave Indicator */}
+                            {isOnLeave && selectedTeacher && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-orange-200 bg-opacity-75 pointer-events-none">
+                                <div className="text-orange-700 font-bold text-xs flex flex-col items-center">
+                                  <span className="hidden sm:block">
+                                    On Leave
+                                  </span>
+                                  <span className="sm:hidden">Leave</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

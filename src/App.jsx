@@ -268,6 +268,7 @@ function App() {
     studentDetails: null,
     teacherDetails: null,
     classCount: 1, // Default class count
+    isLoading: false,
   });
 
   // State for booking API response
@@ -366,6 +367,7 @@ function App() {
     data: null,
     date: null,
     time: null,
+    isLoading: false,
   });
 
   // New state for confirmation popup
@@ -909,7 +911,7 @@ function App() {
           hasFilters = true;
         }
 
-        if (selectedStudent && selectedStudent.uid) {
+        if (selectedStudent && selectedStudent.jetlearner_id) {
           studentToUse = selectedStudent;
           hasFilters = true;
         }
@@ -930,7 +932,7 @@ function App() {
           }
 
           if (studentToUse) {
-            bookingFormData.append("jlid", studentToUse.uid);
+            bookingFormData.append("jlid", studentToUse.jetlearner_id);
           }
 
           const bookingResponse = await fetch(
@@ -2366,6 +2368,7 @@ function App() {
             studentDetails: null,
             teacherDetails: null,
             classCount: 1,
+            isLoading: false,
           });
           setSuccessMessage({
             show: false,
@@ -3341,6 +3344,7 @@ function App() {
                         data: bookingDetailsPopup.data,
                         date: bookingDetailsPopup.date,
                         time: bookingDetailsPopup.time,
+                        isLoading: false,
                       });
                       // Close the booking details popup
                       setBookingDetailsPopup({
@@ -3514,6 +3518,9 @@ function App() {
         return;
       }
 
+      // Set loading state
+      setEditReschedulePopup((prev) => ({ ...prev, isLoading: true }));
+
       // Extract JL IDs from selected students
       const jl_uid = selectedStudents.map((student) => student.jetlearner_id);
 
@@ -3534,6 +3541,7 @@ function App() {
 
       if (!teacher_uid) {
         alert("Teacher UID not found. Please ensure a teacher is selected.");
+        setEditReschedulePopup((prev) => ({ ...prev, isLoading: false }));
         return;
       }
 
@@ -3656,6 +3664,7 @@ function App() {
               data: null,
               date: null,
               time: null,
+              isLoading: false,
             });
             setSuccessMessage({
               show: false,
@@ -3672,6 +3681,8 @@ function App() {
       } catch (error) {
         console.error("❌ Error updating booking:", error);
         alert(`Failed to update booking: ${error.message}`);
+        // Reset loading state on error
+        setEditReschedulePopup((prev) => ({ ...prev, isLoading: false }));
       }
     };
 
@@ -3703,6 +3714,7 @@ function App() {
                     data: null,
                     date: null,
                     time: null,
+                    isLoading: false,
                   });
                   // Reset form state
                   setDescription("");
@@ -4285,10 +4297,11 @@ function App() {
             {/* Update Button */}
             <button
               onClick={handleSubmit}
-              className="w-full p-2 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
+              disabled={editReschedulePopup.isLoading}
+              className="w-full p-2 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
             >
               <FaEdit size={12} />
-              Update Booking
+              {editReschedulePopup.isLoading ? "Updating..." : "Update Booking"}
             </button>
           </div>
         </div>
@@ -4887,6 +4900,9 @@ function App() {
 
     const handleCancelConfirm = async () => {
       try {
+        // Set loading state
+        setCancelPopup((prev) => ({ ...prev, isLoading: true }));
+
         console.log("🚀 CancelPopup Confirm:", cancelPopup);
         if (cancelPopup.type === "availability") {
           await handleCancelAvailability(
@@ -4919,9 +4935,12 @@ function App() {
           studentDetails: null,
           teacherDetails: null,
           classCount: 1,
+          isLoading: false,
         });
       } catch (error) {
         console.error("Error canceling:", error);
+        // Reset loading state on error
+        setCancelPopup((prev) => ({ ...prev, isLoading: false }));
       }
     };
 
@@ -4935,6 +4954,8 @@ function App() {
         reason: "",
         studentDetails: null,
         teacherDetails: null,
+        classCount: 1,
+        isLoading: false,
       });
     };
 
@@ -5094,11 +5115,15 @@ function App() {
               </button>
               <button
                 onClick={handleCancelConfirm}
-                disabled={!cancelPopup.reason.trim()}
+                disabled={!cancelPopup.reason.trim() || cancelPopup.isLoading}
                 className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200 font-medium flex items-center justify-center gap-1 text-xs"
               >
                 <FaTimes size={12} />
-                <span>Confirm Cancellation</span>
+                <span>
+                  {cancelPopup.isLoading
+                    ? "Cancelling..."
+                    : "Confirm Cancellation"}
+                </span>
               </button>
             </div>
           </div>
@@ -6524,6 +6549,8 @@ function App() {
                                                               ) ||
                                                               selectedTeacher,
                                                             upcomingEvents: false,
+                                                            classCount: 1,
+                                                            isLoading: false,
                                                           });
                                                           setActionMenuOpen(
                                                             null
@@ -6556,6 +6583,7 @@ function App() {
                                                               data: processedData,
                                                               date: bookingDate,
                                                               time: timeRange,
+                                                              isLoading: false,
                                                             }
                                                           );
                                                           setActionMenuOpen(
@@ -6888,6 +6916,7 @@ function App() {
                                                               data: processedData,
                                                               date: bookingDate,
                                                               time: timeRange,
+                                                              isLoading: false,
                                                             }
                                                           );
                                                           setActionMenuOpen(

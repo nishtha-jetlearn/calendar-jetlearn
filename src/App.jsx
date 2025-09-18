@@ -57,6 +57,148 @@ import {
   formatDisplayDate,
 } from "./utils/dateUtils";
 
+// Helper function to check if a teacher is on leave for a specific date
+const isTeacherOnLeave = (teacherEmail, date, teacherLeaves) => {
+  if (!teacherLeaves?.success || !teacherLeaves?.leaves) {
+    console.log("🔍 isTeacherOnLeave: No leave data available", {
+      teacherEmail,
+      date,
+      teacherLeaves,
+    });
+    return false;
+  }
+
+  const dateStr = formatDate(date);
+  const leaves = teacherLeaves.leaves[dateStr];
+
+  // Check if leaves object exists (it's an object, not an array)
+  const hasLeaves = leaves && typeof leaves === "object" && leaves.id;
+
+  // Debug logging (can be removed in production)
+  console.log("🔍 isTeacherOnLeave check:", {
+    teacherEmail,
+    dateStr,
+    leaves,
+    hasLeaves,
+    availableDates: Object.keys(teacherLeaves.leaves),
+  });
+
+  return hasLeaves;
+};
+
+// Helper function to check if a teacher has week off for a specific date
+const isTeacherWeekOff = (teacherEmail, date, availabilitySummary) => {
+  console.log("🔍 isTeacherWeekOff called with:", {
+    teacherEmail,
+    date,
+    availabilitySummary: availabilitySummary ? "exists" : "null/undefined",
+    isObject: typeof availabilitySummary === "object",
+    dataKeys:
+      availabilitySummary && typeof availabilitySummary === "object"
+        ? Object.keys(availabilitySummary)
+        : [],
+  });
+
+  // Check if availabilitySummary exists and is an object (direct API response)
+  if (!availabilitySummary || typeof availabilitySummary !== "object") {
+    console.log("🔍 isTeacherWeekOff: No valid data, returning false");
+    return false;
+  }
+
+  const dateStr = formatDate(date);
+  const dateData = availabilitySummary[dateStr];
+
+  console.log("🔍 isTeacherWeekOff date check:", {
+    dateStr,
+    dateData,
+    dateDataKeys: dateData ? Object.keys(dateData) : [],
+  });
+
+  // Check if any time slot has week_off = 1 for this date
+  let hasWeekOff = false;
+  if (dateData && typeof dateData === "object") {
+    // Check all time slots for this date
+    hasWeekOff = Object.values(dateData).some((timeSlot) => {
+      const isWeekOff =
+        timeSlot && typeof timeSlot === "object" && timeSlot.week_off === 1;
+      if (isWeekOff) {
+        console.log("🔍 Found week_off = 1 in timeSlot:", timeSlot);
+      }
+      return isWeekOff;
+    });
+  }
+
+  console.log("🔍 isTeacherWeekOff final result:", {
+    teacherEmail,
+    dateStr,
+    dateData,
+    hasWeekOff,
+    timeSlots: dateData ? Object.keys(dateData) : [],
+    weekOffSlots: dateData
+      ? Object.entries(dateData).filter(([, slot]) => slot?.week_off === 1)
+      : [],
+    availableDates: Object.keys(availabilitySummary || {}),
+  });
+
+  return hasWeekOff;
+};
+
+// Helper function to get teacher email from event data
+const getTeacherEmailFromEvent = (eventData, selectedTeacher, teachers) => {
+  console.log("🔍 getTeacherEmailFromEvent:", {
+    eventData,
+    selectedTeacher,
+    teachers,
+  });
+
+  // First try to get teacher email from the event data
+  if (eventData.teacher_email) {
+    console.log(
+      "🔍 Found teacher_email in event data:",
+      eventData.teacher_email
+    );
+    return eventData.teacher_email;
+  }
+
+  // Try to get teacher email from attendees array (most reliable)
+  if (eventData.attendees && Array.isArray(eventData.attendees)) {
+    // Look for teacher email in attendees (usually contains .jetlearn@gmail.com)
+    const teacherEmail = eventData.attendees.find(
+      (email) =>
+        email.includes("@jetlearn.com") || email.includes("@jet-learn.com")
+    );
+    if (teacherEmail) {
+      console.log("🔍 Found teacher email in attendees:", teacherEmail);
+      return teacherEmail;
+    }
+  }
+
+  // Try to extract teacher UID from summary and find the teacher
+  const tlMatch = eventData.summary?.match(/\bTJ[A-Za-z0-9]+\b/);
+  if (tlMatch) {
+    const teacherUid = tlMatch[0];
+    const teacher = teachers.find((t) => t.uid === teacherUid);
+    if (teacher && teacher.email) {
+      console.log("🔍 Found teacher by UID from summary:", teacher.email);
+      return teacher.email;
+    }
+  }
+
+  // Try teacher_id field
+  if (eventData.teacher_id) {
+    const teacher = teachers.find((t) => t.uid === eventData.teacher_id);
+    if (teacher && teacher.email) {
+      console.log("🔍 Found teacher by teacher_id:", teacher.email);
+      return teacher.email;
+    }
+  }
+
+  // Fallback to selected teacher
+  const fallbackEmail = selectedTeacher?.email || null;
+  console.log("🔍 Using fallback teacher email:", fallbackEmail);
+  return fallbackEmail;
+};
+
 const TIME_SLOTS = Array.from(
   { length: 24 },
   (_, i) => `${String(i).padStart(2, "0")}:00`
@@ -1345,6 +1487,17 @@ function App() {
         error: null,
         data: result,
       });
+
+      // Fetch teacher leaves if teacher is selected
+      if (selectedTeacher && selectedTeacher.email) {
+        console.log("🍃 Fetching teacher leaves for list view...");
+        try {
+          await fetchTeacherLeaves(selectedTeacher.email, startDate, endDate);
+        } catch (leaveError) {
+          console.error("❌ Failed to fetch teacher leaves:", leaveError);
+          // Don't throw here, just log the error as leaves are not critical for list view
+        }
+      }
 
       return result;
     } catch (error) {
@@ -6197,13 +6350,47 @@ function App() {
                                 );
                                 timeRange = `${startTime} - ${endTime}`;
 
+                                // Check if teacher is on leave for this date
+                                const teacherEmail = getTeacherEmailFromEvent(
+                                  extractedData,
+                                  selectedTeacher,
+                                  teachers
+                                );
+                                const teacherOnLeave =
+                                  teacherEmail &&
+                                  isTeacherOnLeave(
+                                    teacherEmail,
+                                    bookingDate,
+                                    teacherLeaves
+                                  );
+
+                                // Debug logging (can be removed in production)
+                                console.log("🔍 Leave Check Debug:", {
+                                  teacherEmail,
+                                  bookingDate: formatDate(bookingDate),
+                                  teacherLeavesData: teacherLeaves,
+                                  teacherOnLeave,
+                                  extractedData: extractedData,
+                                });
+
                                 return (
                                   <tr
                                     key={index}
-                                    className="hover:bg-gray-50 transition-colors"
+                                    className={`hover:bg-gray-50 transition-colors ${
+                                      teacherOnLeave ? "bg-orange-50" : ""
+                                    }`}
                                   >
                                     <td className="px-6 py-4 whitespace-nowrap">
                                       <div className="flex items-center">
+                                        {/* Leave Tag - Show on all events when teacher is on leave */}
+                                        {teacherOnLeave && (
+                                          <div className="mr-2">
+                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                              <span className="w-2 h-2 bg-orange-500 rounded-full mr-1"></span>
+                                              Leave
+                                            </span>
+                                          </div>
+                                        )}
                                         <div
                                           className={`w-3 h-3 rounded-full mr-3 ${
                                             extractedData.summary &&
@@ -6400,6 +6587,20 @@ function App() {
                                       <div className="flex items-center justify-between">
                                         {/* Action Menu Dropdown */}
                                         <div className="relative ml-3">
+                                          {/* Disabled Actions Message for Availability Hours on Leave */}
+                                          {teacherOnLeave &&
+                                            extractedData.summary &&
+                                            (extractedData.summary
+                                              .toLowerCase()
+                                              .includes("availability") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("hours")) && (
+                                              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded border border-gray-200">
+                                                <span className="w-2 h-2 bg-orange-500 rounded-full mr-1"></span>
+                                                (Leave)
+                                              </div>
+                                            )}
                                           {/* Availability Actions (Green Dot) */}
                                           {extractedData.summary &&
                                             (extractedData.summary
@@ -6416,6 +6617,7 @@ function App() {
                                                 .toLowerCase()
                                                 .includes("off")
                                             ) &&
+                                            !teacherOnLeave &&
                                             canAddBooking() && (
                                               <div className="relative">
                                                 <button
@@ -7219,12 +7421,21 @@ function App() {
                   </span>
                 </div>
                 {selectedTeacher && (
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-orange-500 rounded"></div>
-                    <span className="text-xs sm:text-sm text-gray-700">
-                      <span className="hidden sm:inline">Teacher Leave</span>
-                      <span className="sm:hidden">Leave</span>
-                    </span>
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-orange-500 rounded"></div>
+                      <span className="text-xs sm:text-sm text-gray-700">
+                        <span className="hidden sm:inline">Teacher Leave</span>
+                        <span className="sm:hidden">Leave</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
+                      <span className="text-xs sm:text-sm text-gray-700">
+                        <span className="hidden sm:inline">Week Off</span>
+                        <span className="sm:hidden">WO</span>
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -7251,11 +7462,26 @@ function App() {
                     const isOnLeave =
                       teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
 
+                    // Check if teacher has week off for this date
+                    const teacherEmail = selectedTeacher?.email;
+
+                    console.log("🔍 Week view header - weeklyApiData:", {
+                      weeklyApiData,
+                      teacherEmail,
+                      date: formatDate(date),
+                    });
+
+                    const isWeekOff =
+                      teacherEmail &&
+                      isTeacherWeekOff(teacherEmail, date, weeklyApiData);
+
                     return (
                       <div
                         key={dateStr}
                         className={`bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300 relative ${
                           isOnLeave ? "bg-orange-100 border-orange-300" : ""
+                        } ${
+                          isWeekOff ? "bg-yellow-100 border-yellow-300" : ""
                         }`}
                       >
                         <div className="text-xs sm:text-sm">
@@ -7264,10 +7490,22 @@ function App() {
                         <div className="text-xs text-gray-500 font-bold">
                           {formatShortDate(date)}
                         </div>
+
+                        {/* Leave indicator */}
                         {isOnLeave && (
                           <div
                             className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full border border-white"
                             title="Teacher on Leave"
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center"></div>
+                          </div>
+                        )}
+
+                        {/* Week off indicator */}
+                        {isWeekOff && (
+                          <div
+                            className="absolute top-0 left-0 w-3 h-3 bg-yellow-500 rounded-full border border-white"
+                            title="Teacher Week Off"
                           >
                             <div className="absolute inset-0 flex items-center justify-center"></div>
                           </div>
@@ -7289,10 +7527,26 @@ function App() {
                         const isOnLeave =
                           teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
 
-                        // Modify cell color if teacher is on leave
+                        // Check if teacher has week off for this date
+                        const teacherEmail = selectedTeacher?.email;
+
+                        console.log("🔍 Week view cell - weeklyApiData:", {
+                          weeklyApiData,
+                          teacherEmail,
+                          date: formatDate(date),
+                          time,
+                        });
+
+                        const isWeekOff =
+                          teacherEmail &&
+                          isTeacherWeekOff(teacherEmail, date, weeklyApiData);
+
+                        // Modify cell color if teacher is on leave or has week off
                         let cellColor = getCellColor(available, booked);
                         if (isOnLeave && selectedTeacher) {
                           cellColor = "bg-orange-100 hover:bg-orange-200";
+                        } else if (isWeekOff && selectedTeacher) {
+                          cellColor = "bg-yellow-100 hover:bg-yellow-200";
                         }
 
                         return (
@@ -7326,11 +7580,6 @@ function App() {
                                   : ""
                               }`}
                               onClick={() => {
-                                console.log("🖱️ Availability div clicked:", {
-                                  available,
-                                  date,
-                                  time,
-                                });
                                 if (available > 0) {
                                   handleAvailabilityClick(
                                     date,
@@ -7377,6 +7626,18 @@ function App() {
                                     On Leave
                                   </span>
                                   <span className="sm:hidden">Leave</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Teacher Week Off Indicator */}
+                            {isWeekOff && selectedTeacher && !isOnLeave && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-yellow-200 bg-opacity-75 pointer-events-none">
+                                <div className="text-yellow-700 font-bold text-xs flex flex-col items-center">
+                                  <span className="hidden sm:block">
+                                    Week Off
+                                  </span>
+                                  <span className="sm:hidden">WO</span>
                                 </div>
                               </div>
                             )}

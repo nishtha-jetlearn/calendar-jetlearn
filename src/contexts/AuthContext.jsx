@@ -129,16 +129,9 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = (permissionKey) => {
     if (!accessPermissions) return false;
 
-    // Debug logging
-    console.log(`🔍 Checking permission: ${permissionKey}`);
-    console.log(`🔍 Permission value:`, accessPermissions[permissionKey]);
-    console.log(`🔍 Permission type:`, typeof accessPermissions[permissionKey]);
-
     // Check for truthy values (true, "true", 1, etc.)
     const permissionValue = accessPermissions[permissionKey];
     const hasAccess = Boolean(permissionValue);
-
-    console.log(`🔍 Has access: ${hasAccess}`);
 
     return hasAccess;
   };

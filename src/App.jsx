@@ -3618,6 +3618,14 @@ function App() {
     const [attendeeInput, setAttendeeInput] = useState("");
     const [description, setDescription] = useState("");
     const [summary, setSummary] = useState("");
+
+    // State for credentials edit mode
+    const [isCredentialsEditing, setIsCredentialsEditing] = useState(false);
+    const [tempDescription, setTempDescription] = useState("");
+
+    // State for summary edit mode
+    const [isSummaryEditing, setIsSummaryEditing] = useState(false);
+    const [tempSummary, setTempSummary] = useState("");
     const [scheduleEntries, setScheduleEntries] = useState([]);
     const [upcomingEvents, setUpcomingEvents] = useState(false);
     const [selectedScheduleDate, setSelectedScheduleDate] = useState("");
@@ -3715,6 +3723,38 @@ function App() {
         setStudentSearchResults([]);
         setShowStudentSearch(false);
       }
+    };
+
+    // Handle credentials edit mode
+    const handleCredentialsEdit = () => {
+      setTempDescription(description || "");
+      setIsCredentialsEditing(true);
+    };
+
+    const handleCredentialsSave = () => {
+      setDescription(tempDescription);
+      setIsCredentialsEditing(false);
+    };
+
+    const handleCredentialsCancel = () => {
+      setTempDescription("");
+      setIsCredentialsEditing(false);
+    };
+
+    // Handle summary edit mode
+    const handleSummaryEdit = () => {
+      setTempSummary(summary || "");
+      setIsSummaryEditing(true);
+    };
+
+    const handleSummarySave = () => {
+      setSummary(tempSummary);
+      setIsSummaryEditing(false);
+    };
+
+    const handleSummaryCancel = () => {
+      setTempSummary("");
+      setIsSummaryEditing(false);
     };
 
     // Add schedule entry
@@ -4119,36 +4159,121 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3">
               {/* Credentials / Notes */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                  <div className="p-0.5 bg-blue-100 rounded">
-                    <FaEdit size={14} className="text-blue-600" />
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                    <div className="p-0.5 bg-blue-100 rounded">
+                      <FaEdit size={14} className="text-blue-600" />
+                    </div>
+                    Credentials / Notes
+                  </h3>
+                  {!isCredentialsEditing && (
+                    <button
+                      onClick={handleCredentialsEdit}
+                      className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                      title="Edit credentials"
+                    >
+                      <FaEdit size={10} />
+                      Edit
+                    </button>
+                  )}
+                </div>
+
+                {isCredentialsEditing ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={tempDescription}
+                      onChange={(e) => setTempDescription(e.target.value)}
+                      placeholder="Enter booking description..."
+                      className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
+                      rows={4}
+                      autoFocus
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={handleCredentialsCancel}
+                        className="p-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200"
+                        title="Cancel"
+                      >
+                        <FaTimes size={12} />
+                      </button>
+                      <button
+                        onClick={handleCredentialsSave}
+                        className="p-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-200"
+                        title="Save"
+                      >
+                        <FaCheck size={12} />
+                      </button>
+                    </div>
                   </div>
-                  Credentials / Notes
-                </h3>
-                <textarea
-                  value={description || ""}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Enter booking description..."
-                  className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
-                  rows={4}
-                />
+                ) : (
+                  <div className="min-h-[80px] p-2 bg-white border border-gray-200 rounded-md text-xs text-gray-700 whitespace-pre-wrap">
+                    {description || (
+                      <span className="text-gray-400 italic">
+                        No credentials or notes added yet. Click Edit to add
+                        some.
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Summary */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
-                  <div className="p-0.5 bg-blue-100 rounded">
-                    <FaEdit size={14} className="text-blue-600" />
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                    <div className="p-0.5 bg-blue-100 rounded">
+                      <FaEdit size={14} className="text-blue-600" />
+                    </div>
+                    Summary
+                  </h3>
+                  {!isSummaryEditing && (
+                    <button
+                      onClick={handleSummaryEdit}
+                      className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                      title="Edit summary"
+                    >
+                      <FaEdit size={10} />
+                      Edit
+                    </button>
+                  )}
+                </div>
+
+                {isSummaryEditing ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={tempSummary}
+                      onChange={(e) => setTempSummary(e.target.value)}
+                      placeholder="Enter booking summary..."
+                      className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
+                      rows={4}
+                      autoFocus
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={handleSummaryCancel}
+                        className="p-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors duration-200"
+                        title="Cancel"
+                      >
+                        <FaTimes size={12} />
+                      </button>
+                      <button
+                        onClick={handleSummarySave}
+                        className="p-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors duration-200"
+                        title="Save"
+                      >
+                        <FaCheck size={12} />
+                      </button>
+                    </div>
                   </div>
-                  Summary
-                </h3>
-                <textarea
-                  value={summary || ""}
-                  onChange={(e) => setSummary(e.target.value)}
-                  placeholder="Enter booking description..."
-                  className="w-full p-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-blue-400 transition-colors duration-200"
-                  rows={4}
-                />
+                ) : (
+                  <div className="min-h-[80px] p-2 bg-white border border-gray-200 rounded-md text-xs text-gray-700 whitespace-pre-wrap">
+                    {summary || (
+                      <span className="text-gray-400 italic">
+                        No summary added yet. Click Edit to add one.
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -57,6 +57,104 @@ import {
   formatDisplayDate,
 } from "./utils/dateUtils";
 
+// Helper function to format datetime to UTC format for API
+const formatDateTimeToUTC = (date, timeRange, selectedTimezone) => {
+  try {
+    // Extract start time from timeRange (e.g., "10:00 - 11:00" -> "10:00")
+    const startTime = timeRange.split(" - ")[0];
+
+    // Extract timezone offset from selectedTimezone (e.g., "(GMT+02:00) CET" -> +02:00)
+    const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+    if (!match) {
+      console.error("Invalid timezone format:", selectedTimezone);
+      return null;
+    }
+
+    const offsetHours = parseInt(match[1], 10); // +02 or -05
+    const offsetMinutes = parseInt(match[2], 10); // 00 or 30
+
+    // Parse the start time
+    const [startHour, startMinute] = startTime.split(":").map(Number);
+
+    // Create date components
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-based
+    const day = date.getDate();
+
+    // Create UTC date directly to avoid timezone interpretation issues
+    // This creates a date in UTC with the given date and time
+    const utcBaseDate = new Date(
+      Date.UTC(year, month, day, startHour, startMinute, 0, 0)
+    );
+
+    // Now we need to adjust for the timezone offset
+    // If the selected timezone is GMT+02:00 and the time is 16:00,
+    // that means it's actually 14:00 UTC (16:00 - 2 hours)
+    // So we subtract the offset to get the correct UTC time
+    const totalOffsetMinutes = offsetHours * 60 + offsetMinutes;
+    const utcDateTime = new Date(
+      utcBaseDate.getTime() - totalOffsetMinutes * 60000
+    );
+
+    // Debug logging
+    console.log("🕐 Timezone conversion debug:", {
+      originalDate: date,
+      timeRange,
+      selectedTimezone,
+      startTime,
+      offsetHours,
+      offsetMinutes,
+      totalOffsetMinutes,
+      utcBaseDate: utcBaseDate.toISOString(),
+      utcDateTime: utcDateTime.toISOString(),
+    });
+
+    // Format to UTC string in the required format: "YYYY-MM-DD HH:MM"
+    const utcYear = utcDateTime.getUTCFullYear();
+    const utcMonth = String(utcDateTime.getUTCMonth() + 1).padStart(2, "0");
+    const utcDay = String(utcDateTime.getUTCDate()).padStart(2, "0");
+    const utcHours = String(utcDateTime.getUTCHours()).padStart(2, "0");
+    const utcMinutes = String(utcDateTime.getUTCMinutes()).padStart(2, "0");
+
+    const result = `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}`;
+
+    console.log("🌍 Final UTC result:", result);
+
+    return result;
+  } catch (error) {
+    console.error("Error formatting datetime to UTC:", error);
+    return null;
+  }
+};
+
+// API function to freeze a slot
+const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
+  try {
+    const response = await fetch("http://live.jetlearn.com/api/freeze-slot/", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        teacher_uid: teacherUid,
+        slot_datetime: slotDateTime,
+        user_id: userId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error freezing slot:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 // Helper function to check if a teacher is on leave for a specific date
 const isTeacherOnLeave = (teacherEmail, date, teacherLeaves) => {
   if (!teacherLeaves?.success || !teacherLeaves?.leaves) {
@@ -6778,32 +6876,115 @@ function App() {
                                                   >
                                                     <div className="py-1">
                                                       <button
-                                                        onClick={() => {
-                                                          // Open UnifiedModal for this time slot
-                                                          let timeSlot =
-                                                            timeRange;
-                                                          const slotData =
-                                                            getSlotCounts(
-                                                              bookingDate,
-                                                              timeSlot
+                                                        onClick={async () => {
+                                                          try {
+                                                            // First, execute the original functionality - Open UnifiedModal
+                                                            let timeSlot =
+                                                              timeRange;
+                                                            const slotData =
+                                                              getSlotCounts(
+                                                                bookingDate,
+                                                                timeSlot
+                                                              );
+                                                            setSelectedSlot({
+                                                              date: bookingDate,
+                                                              time: timeSlot,
+                                                              teacherid:
+                                                                slotData.teacherid ||
+                                                                extractedData.teacherid ||
+                                                                null,
+                                                              teacherDetails:
+                                                                slotData.teacherDetails,
+                                                              isFromAPI:
+                                                                slotData.isFromAPI ||
+                                                                true,
+                                                            });
+                                                            setModalOpen(true);
+
+                                                            // Then, execute the new functionality - Freeze slot API call
+                                                            // Get teacher UID from selected teacher
+                                                            const teacherUid =
+                                                              selectedTeacher?.uid;
+
+                                                            if (!teacherUid) {
+                                                              console.warn(
+                                                                "Teacher UID not found for freeze slot API"
+                                                              );
+                                                              // Don't return here, still allow modal to open
+                                                            } else {
+                                                              // Format datetime to UTC
+                                                              const slotDateTime =
+                                                                formatDateTimeToUTC(
+                                                                  bookingDate,
+                                                                  timeRange,
+                                                                  selectedTimezone
+                                                                );
+
+                                                              if (
+                                                                !slotDateTime
+                                                              ) {
+                                                                console.warn(
+                                                                  "Error formatting slot datetime for freeze slot API"
+                                                                );
+                                                              } else {
+                                                                // Get user info from auth context
+                                                                const userId =
+                                                                  user?.username ||
+                                                                  user?.id;
+                                                                const sessionId =
+                                                                  user?.sessionId;
+
+                                                                if (
+                                                                  !userId ||
+                                                                  !sessionId
+                                                                ) {
+                                                                  console.warn(
+                                                                    "User authentication information not found for freeze slot API"
+                                                                  );
+                                                                } else {
+                                                                  // Call freeze slot API in background
+                                                                  try {
+                                                                    const result =
+                                                                      await freezeSlot(
+                                                                        teacherUid,
+                                                                        slotDateTime,
+                                                                        userId,
+                                                                        sessionId
+                                                                      );
+
+                                                                    if (
+                                                                      result.success
+                                                                    ) {
+                                                                      console.log(
+                                                                        "Slot frozen successfully:",
+                                                                        result.data
+                                                                      );
+                                                                      // Optional: Show a subtle success notification
+                                                                    } else {
+                                                                      console.error(
+                                                                        "Failed to freeze slot:",
+                                                                        result.error
+                                                                      );
+                                                                    }
+                                                                  } catch (apiError) {
+                                                                    console.error(
+                                                                      "Error calling freeze slot API:",
+                                                                      apiError
+                                                                    );
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          } catch (error) {
+                                                            console.error(
+                                                              "Error in manage booking:",
+                                                              error
                                                             );
-                                                          setSelectedSlot({
-                                                            date: bookingDate,
-                                                            time: timeSlot,
-                                                            teacherid:
-                                                              slotData.teacherid ||
-                                                              extractedData.teacherid ||
-                                                              null,
-                                                            teacherDetails:
-                                                              slotData.teacherDetails,
-                                                            isFromAPI:
-                                                              slotData.isFromAPI ||
-                                                              true,
-                                                          });
-                                                          setModalOpen(true);
-                                                          setActionMenuOpen(
-                                                            null
-                                                          );
+                                                          } finally {
+                                                            setActionMenuOpen(
+                                                              null
+                                                            );
+                                                          }
                                                         }}
                                                         className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
                                                       >
@@ -7654,13 +7835,6 @@ function App() {
 
                         // Check if teacher has week off for this date
                         const teacherEmail = selectedTeacher?.email;
-
-                        console.log("🔍 Week view cell - weeklyApiData:", {
-                          weeklyApiData,
-                          teacherEmail,
-                          date: formatDate(date),
-                          time,
-                        });
 
                         const isWeekOff =
                           teacherEmail &&

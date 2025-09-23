@@ -353,9 +353,57 @@ const safeErrorLog = (message, error) => {
 };
 
 function App() {
+  console.log("🎯 App component loaded!");
+
+  // Immediate test - this should always show
+  console.log("🔥 IMMEDIATE TEST - This should show right away!");
+
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   const { canAddBooking, canEditDeleteBooking, canAddTeacherAvailability } =
     usePermissions();
+
+  // Function to check URL parameters and make API calls
+  const checkUrlParametersAndFetchData = async () => {
+    console.log(
+      "🔍 FUNCTION CALLED: Checking URL parameters and fetching data"
+    );
+    const urlParams = new URLSearchParams(window.location.search);
+    const jetId = urlParams.get("jet_id");
+    const uuid = urlParams.get("uuid");
+
+    if (jetId) {
+      console.log("🔍 Found jet_id parameter:", jetId);
+      try {
+        const response = await fetch(
+          `http://live.jetlearn.com/api/dashboard/?jet_id=${jetId}`
+        );
+        const data = await response.json();
+        console.log("📊 API Response for jet_id:", data);
+        return { type: "jet_id", value: jetId, response: data };
+      } catch (error) {
+        console.error("❌ Error fetching data for jet_id:", error);
+        return { type: "jet_id", value: jetId, error: error.message };
+      }
+    } else if (uuid) {
+      console.log("🔍 Found uuid parameter:", uuid);
+      try {
+        const response = await fetch(
+          `http://live.jetlearn.com/api/dashboard/?uuid=${uuid}`
+        );
+        const data = await response.json();
+        console.log("📊 API Response for uuid:", data);
+        return { type: "uuid", value: uuid, response: data };
+      } catch (error) {
+        console.error("❌ Error fetching data for uuid:", error);
+        return { type: "uuid", value: uuid, error: error.message };
+      }
+    } else {
+      console.log("ℹ️ No jet_id or uuid parameters found in URL");
+      return null;
+    }
+  };
+
+  // Check URL parameters on page load (moved after console.clear)
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -373,6 +421,15 @@ function App() {
   if (!isAuthenticated) {
     return <LoginPage />;
   }
+
+  // Check URL parameters on page load (runs regardless of authentication)
+  useEffect(() => {
+    console.log("🚀 URL parameter check useEffect triggered");
+    console.log("📍 Current URL:", window.location.href);
+    console.log("📍 Current search params:", window.location.search);
+
+    checkUrlParametersAndFetchData();
+  }, []);
 
   // Add global error boundary for unhandled promises
 
@@ -701,6 +758,18 @@ function App() {
     return () => {
       console.error = originalConsoleError;
     };
+  }, []);
+
+  // Check URL parameters on page load (after console.clear)
+  useEffect(() => {
+    console.log("🚀 URL parameter check useEffect triggered");
+    console.log("📍 Current URL:", window.location.href);
+    console.log("📍 Current search params:", window.location.search);
+
+    // Simple test to make sure console is working
+    console.log("🧪 TEST: Console is working!");
+
+    checkUrlParametersAndFetchData();
   }, []);
 
   // Handle click outside to close action menu
@@ -4488,7 +4557,7 @@ function App() {
                             className="w-full text-left p-2 text-xs hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
                           >
                             <div className="font-medium text-gray-900">
-                              {student.deal_name || student.name}
+                              {student.deal_name || student.name}{" "}
                             </div>
                             <div className="text-gray-500">
                               ID: {student.jetlearner_id}
@@ -4516,7 +4585,8 @@ function App() {
                           className="flex items-center justify-between p-2 bg-white rounded-md border border-gray-200"
                         >
                           <span className="text-xs text-gray-700">
-                            {student.deal_name || student.name}
+                            {student.deal_name || student.name}(
+                            {student.jetlearner_id})
                           </span>
                           <button
                             onClick={() =>

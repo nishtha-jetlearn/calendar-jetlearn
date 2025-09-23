@@ -1763,7 +1763,7 @@ const UnifiedModalComponent = function UnifiedModal({
                               className="text-purple-600"
                             />
                             <span className="text-xs font-medium text-gray-900 truncate">
-                              {student.name}
+                              {student.name}({student.id})
                             </span>
                           </div>
                           <button

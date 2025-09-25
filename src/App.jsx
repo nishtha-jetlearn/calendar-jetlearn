@@ -3810,6 +3810,44 @@ function App() {
     // Form initialization state
     const [isFormInitialized, setIsFormInitialized] = useState(false);
 
+    // Teacher change functionality
+    const [showTeacherChange, setShowTeacherChange] = useState(false);
+    const [newSelectedTeacher, setNewSelectedTeacher] = useState(null);
+    const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
+    const [teacherSearchResults, setTeacherSearchResults] = useState([]);
+
+    // Handle teacher search
+    const handleTeacherSearch = (searchTerm) => {
+      setTeacherSearchTerm(searchTerm);
+      if (searchTerm.trim() === "") {
+        setTeacherSearchResults([]);
+        return;
+      }
+
+      const filteredTeachers = teachers.filter(
+        (teacher) =>
+          teacher.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          teacher.uid.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setTeacherSearchResults(filteredTeachers.slice(0, 10));
+    };
+
+    // Handle teacher selection
+    const handleTeacherSelect = (teacher) => {
+      setNewSelectedTeacher(teacher);
+      setShowTeacherChange(false);
+      setTeacherSearchTerm("");
+      setTeacherSearchResults([]);
+    };
+
+    // Handle teacher change cancel
+    const handleTeacherChangeCancel = () => {
+      setShowTeacherChange(false);
+      setNewSelectedTeacher(null);
+      setTeacherSearchTerm("");
+      setTeacherSearchResults([]);
+    };
+
     const formatTime = (time) => {
       const [hours, minutes] = time.split(":");
       const startHour = parseInt(hours);
@@ -3975,7 +4013,12 @@ function App() {
       // Extract teacher UID from the booking data or selected teacher
       let teacher_uid = null;
 
-      if (editReschedulePopup.data?.summary) {
+      // Use newSelectedTeacher if available (teacher change functionality)
+      if (newSelectedTeacher?.uid) {
+        teacher_uid = newSelectedTeacher.uid;
+      }
+      // Extract from summary if no new teacher selected
+      else if (editReschedulePopup.data?.summary) {
         const tlMatch =
           editReschedulePopup.data.summary.match(/\bTJL[A-Za-z0-9]+\b/g);
         if (tlMatch && tlMatch.length > 0) {
@@ -4013,7 +4056,7 @@ function App() {
       const apiPayload = {
         event_id: editReschedulePopup.data?.event_id || hiddenEventId || "",
         jl_uid: jl_uid,
-        teacher_uid: selectedTeacher?.uid || teacher_uid || "",
+        teacher_uid: teacher_uid || "",
         platform_credentials: description || "",
         summary: summary || "",
         schedule: scheduleEntries.map((entry) => {
@@ -4190,15 +4233,14 @@ function App() {
               // Extract TJ (Teacher/Job) code from summary
               const tlMatch =
                 editReschedulePopup.data.summary?.match(/\bTJ[A-Za-z0-9]+\b/);
-              console.log("🔍 Teacher UID Block :", tlMatch);
-              if (tlMatch) {
-                const teacherUid = tlMatch[0];
+              const teacherUid = tlMatch ? tlMatch[0] : selectedTeacher?.uid;
 
+              if (teacherUid) {
+                console.log("🔍 Teacher UID Block  inside:", teacherUid);
                 // Find teacher in teachers array
                 const teacher = teachers.find((t) => t.uid === teacherUid);
                 if (teacher) {
                   console.log("🔍 Teacher Data From Summary :", teacher);
-
                   // Render hidden fields with teacher data
                   return (
                     <>
@@ -4286,24 +4328,52 @@ function App() {
                       : "N/A"}
                   </div>
                   <div className="col-span-2">
-                    <strong>Teacher:</strong>{" "}
-                    {(() => {
-                      // Extract TJ (Teacher/Job) code from summary
-                      const tlMatch =
-                        editReschedulePopup.data.summary?.match(
-                          /\bTJ[A-Za-z0-9]+\b/
-                        );
-                      if (tlMatch) {
-                        const teacherUid = tlMatch[0];
-                        const teacher = teachers.find(
-                          (t) => t.uid === teacherUid
-                        );
-                        return teacher
-                          ? teacher.uid
-                          : editReschedulePopup.data.teacher_id || "N/A";
-                      }
-                      return editReschedulePopup.data.teacher_id || "N/A";
-                    })()}
+                    <div className="flex items-center gap-2">
+                      <strong>Teacher:</strong>{" "}
+                      {(() => {
+                        // Use newSelectedTeacher if available, otherwise extract from data
+                        if (newSelectedTeacher) {
+                          console.log(
+                            "🔍 New Selected Teacher :",
+                            newSelectedTeacher
+                          );
+                          return `${newSelectedTeacher.uid} (${
+                            newSelectedTeacher.full_name || " "
+                          })`;
+                        }
+
+                        // Extract TJ (Teacher/Job) code from summary
+                        const tlMatch =
+                          editReschedulePopup.data.summary?.match(
+                            /\bTJ[A-Za-z0-9]+\b/
+                          );
+                        const teacherUid = tlMatch
+                          ? tlMatch[0]
+                          : selectedTeacher?.uid;
+
+                        if (teacherUid) {
+                          const teacher = teachers.find(
+                            (t) => t.uid === teacherUid
+                          );
+                          console.log(
+                            "🔍 Teacher Data From Summary :",
+                            teacher
+                          );
+                          return teacher
+                            ? `${teacher.uid} (${teacher.full_name || " "})`
+                            : editReschedulePopup.data.teacher_id || "N/A";
+                        }
+                        return editReschedulePopup.data.teacher_id || "N/A";
+                      })()}
+                      <button
+                        onClick={() => setShowTeacherChange(true)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                        title="Change Teacher"
+                      >
+                        <FaEdit size={10} />
+                        Change
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4318,6 +4388,72 @@ function App() {
                     Loading booking details...
                   </span>
                 </div>
+              </div>
+            )}
+
+            {/* Teacher Change Modal */}
+            {showTeacherChange && (
+              <div className="mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <div className="p-0.5 bg-blue-100 rounded">
+                      <FaEdit size={14} className="text-blue-600" />
+                    </div>
+                    Change Teacher
+                  </h3>
+                  <button
+                    onClick={handleTeacherChangeCancel}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Cancel"
+                  >
+                    <FaTimes size={14} />
+                  </button>
+                </div>
+
+                {/* Teacher Search Input */}
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    value={teacherSearchTerm}
+                    onChange={(e) => handleTeacherSearch(e.target.value)}
+                    placeholder="Search teachers by name or ID..."
+                    className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Teacher Search Results */}
+                {teacherSearchResults.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md">
+                    {teacherSearchResults.map((teacher) => (
+                      <div
+                        key={teacher.id}
+                        onClick={() => handleTeacherSelect(teacher)}
+                        className="p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium text-blue-600">
+                            {teacher.full_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 text-sm">
+                              {teacher.full_name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ID: {teacher.uid}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {teacherSearchTerm && teacherSearchResults.length === 0 && (
+                  <div className="p-3 text-center text-gray-500 text-sm">
+                    No teachers found matching "{teacherSearchTerm}"
+                  </div>
+                )}
               </div>
             )}
 
@@ -6697,7 +6833,13 @@ function App() {
                                               : extractedData.summary &&
                                                 (extractedData.summary
                                                   .toLowerCase()
-                                                  .includes("week off") ||
+                                                  .includes("leave") ||
+                                                  extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("training") ||
+                                                  extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("week off") ||
                                                   extractedData.summary
                                                     .toLowerCase()
                                                     .includes("jloh") ||
@@ -6711,29 +6853,9 @@ function App() {
                                                     .includes("off"))
                                               ? "bg-yellow-500"
                                               : extractedData.summary &&
-                                                (extractedData.summary.trim() ===
-                                                  "B&R" ||
-                                                  extractedData.summary.trim() ===
-                                                    "CBT/PL" ||
-                                                  extractedData.summary.trim() ===
-                                                    "CBT/UL" ||
-                                                  extractedData.summary.trim() ===
-                                                    "CBP/PL" ||
-                                                  extractedData.summary.trim() ===
-                                                    "CBP/UL" ||
-                                                  extractedData.summary.trim() ===
-                                                    "CBO" ||
-                                                  extractedData.summary.trim() ===
-                                                    "NO SHOW - LR" ||
-                                                  extractedData.summary.trim() ===
-                                                    "NO SHOW - TR" ||
-                                                  extractedData.summary.trim() ===
-                                                    "MAKE UP" ||
-                                                  extractedData.summary.trim() ===
-                                                    "MAKE UP - S" ||
-                                                  extractedData.summary.includes(
-                                                    "B&R"
-                                                  ) ||
+                                                (extractedData.summary.includes(
+                                                  "B&R"
+                                                ) ||
                                                   extractedData.summary.includes(
                                                     "CBT/PL"
                                                   ) ||
@@ -6754,6 +6876,9 @@ function App() {
                                                   ) ||
                                                   extractedData.summary.includes(
                                                     "NO SHOW - TR"
+                                                  ) ||
+                                                  extractedData.summary.includes(
+                                                    "MAKE UP"
                                                   ))
                                               ? "bg-black"
                                               : "bg-red-500"
@@ -7080,6 +7205,12 @@ function App() {
                                             !(
                                               extractedData.summary
                                                 .toLowerCase()
+                                                .includes("leave") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("training") ||
+                                              extractedData.summary
+                                                .toLowerCase()
                                                 .includes("week off") ||
                                               extractedData.summary
                                                 .toLowerCase()
@@ -7094,26 +7225,6 @@ function App() {
                                                 .includes("off")
                                             ) &&
                                             !(
-                                              extractedData.summary.trim() ===
-                                                "B&R" ||
-                                              extractedData.summary.trim() ===
-                                                "CBT/PL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBT/UL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBP/PL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBP/UL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBO" ||
-                                              extractedData.summary.trim() ===
-                                                "NO SHOW - LR" ||
-                                              extractedData.summary.trim() ===
-                                                "NO SHOW - TR" ||
-                                              extractedData.summary.trim() ===
-                                                "MAKE UP" ||
-                                              extractedData.summary.trim() ===
-                                                "MAKE UP - S" ||
                                               extractedData.summary.includes(
                                                 "B&R"
                                               ) ||
@@ -7137,6 +7248,9 @@ function App() {
                                               ) ||
                                               extractedData.summary.includes(
                                                 "NO SHOW - TR"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "MAKE UP"
                                               )
                                             ) &&
                                             canEditDeleteBooking() && (
@@ -7392,29 +7506,9 @@ function App() {
 
                                           {/* Black Dot Actions */}
                                           {extractedData.summary &&
-                                            (extractedData.summary.trim() ===
-                                              "B&R" ||
-                                              extractedData.summary.trim() ===
-                                                "CBT/PL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBT/UL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBP/PL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBP/UL" ||
-                                              extractedData.summary.trim() ===
-                                                "CBO" ||
-                                              extractedData.summary.trim() ===
-                                                "NO SHOW - LR" ||
-                                              extractedData.summary.trim() ===
-                                                "NO SHOW - TR" ||
-                                              extractedData.summary.trim() ===
-                                                "MAKE UP" ||
-                                              extractedData.summary.trim() ===
-                                                "MAKE UP - S" ||
-                                              extractedData.summary.includes(
-                                                "B&R"
-                                              ) ||
+                                            (extractedData.summary.includes(
+                                              "B&R"
+                                            ) ||
                                               extractedData.summary.includes(
                                                 "CBT/PL"
                                               ) ||
@@ -7435,6 +7529,9 @@ function App() {
                                               ) ||
                                               extractedData.summary.includes(
                                                 "NO SHOW - TR"
+                                              ) ||
+                                              extractedData.summary.includes(
+                                                "MAKE UP"
                                               )) &&
                                             canEditDeleteBooking() && (
                                               <div className="relative">

@@ -592,10 +592,31 @@ function App() {
     data: null,
   });
 
+  // State for schedule management popup
+  const [scheduleManagementPopup, setScheduleManagementPopup] = useState({
+    isOpen: false,
+    isLoading: false,
+  });
+
+  // State for attendees in schedule management popup
+  const [attendeesList, setAttendeesList] = useState([]);
+  const [attendees, setAttendees] = useState("");
+  const [attendeesError, setAttendeesError] = useState("");
+  const [showDomainSuggestions, setShowDomainSuggestions] = useState(false);
+
+  // State for schedule entries in schedule management popup
+  const [scheduleEntries, setScheduleEntries] = useState([]);
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState("");
+  const [selectedScheduleTime, setSelectedScheduleTime] = useState("");
+  const [platformCredentials, setPlatformCredentials] = useState("");
+
   // Enhanced state for better API integration
   const [weeklyApiData, setWeeklyApiData] = useState({});
   const [apiDataLoading, setApiDataLoading] = useState(false);
   const [apiDataError, setApiDataError] = useState(null);
+
+  // State for availability saving
+  const [isSavingAvailability, setIsSavingAvailability] = useState(false);
 
   // State for teacher leaves
   const [teacherLeaves, setTeacherLeaves] = useState({
@@ -2280,6 +2301,254 @@ function App() {
     }
   };
 
+  // Handle schedule management popup open
+  const handleScheduleManagementOpen = () => {
+    setScheduleManagementPopup({
+      isOpen: true,
+      isLoading: false,
+    });
+  };
+
+  // Handle schedule management popup close
+  const handleScheduleManagementClose = () => {
+    setScheduleManagementPopup({
+      isOpen: false,
+      isLoading: false,
+    });
+  };
+
+  // Email validation function
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Check if email has common domain
+  const hasCommonDomain = (email) => {
+    const commonDomains = [
+      "gmail.com",
+      "yahoo.com",
+      "hotmail.com",
+      "outlook.com",
+      "jetlearn.com",
+    ];
+    const domain = email.split("@")[1];
+    return commonDomains.includes(domain);
+  };
+
+  // Get domain suggestions
+  const getDomainSuggestions = (email) => {
+    const commonDomains = [
+      "gmail.com",
+      "yahoo.com",
+      "hotmail.com",
+      "outlook.com",
+      "jetlearn.com",
+    ];
+    const localPart = email.split("@")[0];
+    if (!localPart) return [];
+
+    return commonDomains
+      .filter(
+        (domain) =>
+          domain.includes(localPart.toLowerCase()) ||
+          localPart.toLowerCase().includes(domain.split(".")[0])
+      )
+      .slice(0, 3);
+  };
+
+  // Handle attendees input change
+  const handleAttendeesChange = (value) => {
+    // Clean whitespace as user types - remove extra spaces
+    const cleanedValue = value.replace(/\s+/g, " ").trim();
+    setAttendees(cleanedValue);
+    setAttendeesError("");
+
+    if (cleanedValue.includes("@")) {
+      setShowDomainSuggestions(true);
+    } else {
+      setShowDomainSuggestions(false);
+    }
+  };
+
+  // Handle adding email to attendees list
+  const handleAddEmail = () => {
+    // Clean whitespace from the input - remove extra spaces and trim
+    const email = attendees.trim().replace(/\s+/g, " ").trim();
+    if (!email) return;
+
+    if (!validateEmail(email)) {
+      setAttendeesError("Please enter a valid email format");
+      return;
+    }
+
+    if (
+      attendeesList.some(
+        (item) => item.email.toLowerCase() === email.toLowerCase()
+      )
+    ) {
+      setAttendeesError("Email already exists in the list");
+      return;
+    }
+
+    const newEmail = {
+      id: Date.now(),
+      email: email.toLowerCase(),
+    };
+    setAttendeesList([...attendeesList, newEmail]);
+    setAttendees("");
+    setAttendeesError("");
+    setShowDomainSuggestions(false);
+  };
+
+  // Handle removing email from attendees list
+  const handleRemoveEmail = (emailId) => {
+    setAttendeesList(attendeesList.filter((item) => item.id !== emailId));
+  };
+
+  // Handle key press in attendees input
+  const handleAttendeesKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddEmail();
+    }
+  };
+
+  // Handle domain suggestion selection
+  const handleDomainSuggestion = (suggestion) => {
+    const [localPart] = attendees.split("@");
+    const newEmail = `${localPart}@${suggestion}`;
+    setAttendees(newEmail);
+    setShowDomainSuggestions(false);
+  };
+
+  // Handle input blur to hide suggestions
+  const handleAttendeesBlur = () => {
+    setTimeout(() => {
+      setShowDomainSuggestions(false);
+    }, 150);
+  };
+
+  // Handle adding schedule entry
+  const addScheduleEntry = () => {
+    if (!selectedScheduleDate || !selectedScheduleTime) return;
+
+    const newEntry = {
+      id: Date.now(),
+      date: selectedScheduleDate,
+      time: selectedScheduleTime,
+    };
+
+    setScheduleEntries([...scheduleEntries, newEntry]);
+    setSelectedScheduleDate("");
+    setSelectedScheduleTime("");
+  };
+
+  // Handle removing schedule entry
+  const removeScheduleEntry = (entryId) => {
+    setScheduleEntries(scheduleEntries.filter((entry) => entry.id !== entryId));
+  };
+
+  // Handle booking student from schedule management popup
+  const handleBookStudentFromPopup = async () => {
+    if (!selectedStudent || scheduleEntries.length === 0) {
+      alert("Please select a student and add at least one schedule entry");
+      return;
+    }
+
+    try {
+      setScheduleManagementPopup((prev) => ({ ...prev, isLoading: true }));
+
+      // Format schedule entries for API
+      const formattedSchedule = scheduleEntries.map((entry) => {
+        // Parse YYYY-MM-DD format
+        const [year, month, day] = entry.date.split("-").map(Number);
+        const [hour, minute] = entry.time.split(":").map(Number);
+
+        // Extract timezone offset
+        const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+        const offsetHours = parseInt(match[1], 10);
+        const offsetMinutes = parseInt(match[2], 10);
+
+        // Create a date as if it were in the given offset
+        const localDate = new Date(
+          Date.UTC(
+            year,
+            month - 1,
+            day,
+            hour - offsetHours,
+            minute - offsetMinutes
+          )
+        );
+
+        // Convert to UTC string
+        const utcYear = localDate.getUTCFullYear();
+        const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, "0");
+        const utcDay = String(localDate.getUTCDate()).padStart(2, "0");
+        const utcHour = String(localDate.getUTCHours()).padStart(2, "0");
+        const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
+
+        return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
+      });
+
+      // Prepare attendees list
+      const attendeeslist = attendeesList.map((item) => item.email);
+
+      // Create API payload
+      const apiPayload = {
+        jl_uid: [selectedStudent.jetlearner_id],
+        teacher_uid: "", // Empty as requested
+        platform_credentials: platformCredentials || "",
+        class_count: 1,
+        schedule: formattedSchedule,
+        attendees: attendeeslist,
+        class_type: "1:1",
+        booking_type: "Trial", // Set as trial as requested
+        time_zone: formatTimezoneForAPI(selectedTimezone),
+      };
+
+      console.log("📤 Sending booking to API:", apiPayload);
+
+      const response = await fetch(
+        "https://live.jetlearn.com/api/book-class/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(apiPayload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Booking successful:", result);
+
+      // Show success message
+      setSuccessMessage({
+        show: true,
+        message: `Successfully booked class for ${selectedStudent.deal_name}`,
+        type: "booking",
+      });
+
+      // Close popup and reset form
+      handleScheduleManagementClose();
+      setScheduleEntries([]);
+      setAttendeesList([]);
+      setAttendees("");
+      setPlatformCredentials("");
+      await fetchListViewBookingDetails();
+    } catch (error) {
+      console.error("❌ Error booking student:", error);
+      alert("Failed to book class. Please try again.");
+    } finally {
+      setScheduleManagementPopup((prev) => ({ ...prev, isLoading: false }));
+    }
+  };
+
   // Function to clear teacher filter
   const clearTeacherFilter = () => {
     console.log("🗑️ Clearing teacher filter...");
@@ -2908,6 +3177,7 @@ function App() {
       return;
     }
 
+    setIsSavingAvailability(true);
     try {
       // Prepare all schedules for the API
       const schedules = [];
@@ -3042,6 +3312,8 @@ function App() {
     } catch (error) {
       console.error("❌ Error adding availability:", error);
       alert("Failed to add availability. Please try again.");
+    } finally {
+      setIsSavingAvailability(false);
     }
   };
 
@@ -4311,10 +4583,18 @@ function App() {
                   </div>
                   <div>
                     <strong>Booking Type:</strong>{" "}
-                    {editReschedulePopup.data.booking_type ||
-                      (editReschedulePopup.data.summary?.includes("Trial")
-                        ? "Trial"
-                        : "Paid")}
+                    {(() => {
+                      const summary = editReschedulePopup.data.summary;
+                      const hasCalibration = summary
+                        ?.toLowerCase()
+                        .includes("calibration");
+                      console.log("🔍 Booking Type Debug:", {
+                        summary: summary,
+                        hasCalibration: hasCalibration,
+                        booking_type: editReschedulePopup.data.booking_type,
+                      });
+                      return hasCalibration ? "Trial" : "Paid";
+                    })()}
                   </div>
                   <div>
                     <strong>Course:</strong>{" "}
@@ -4606,15 +4886,13 @@ function App() {
                         const [date, time] = entry;
 
                         // Format date as DD-MM-YYYY (DayName)
-                        const dateObj = new Date(date);
-                        const day = dateObj
-                          .getDate()
+                        // Parse YYYY-MM-DD format properly to avoid timezone issues
+                        const [year, month, day] = date.split("-").map(Number);
+                        const dateObj = new Date(year, month - 1, day); // month is 0-indexed
+                        const formattedDay = day.toString().padStart(2, "0");
+                        const formattedMonth = month
                           .toString()
                           .padStart(2, "0");
-                        const month = (dateObj.getMonth() + 1)
-                          .toString()
-                          .padStart(2, "0");
-                        const year = dateObj.getFullYear();
                         const dayName = dateObj.toLocaleDateString("en-US", {
                           weekday: "long",
                         });
@@ -4635,8 +4913,8 @@ function App() {
                             className="p-2 bg-white rounded-md border border-gray-200"
                           >
                             <span className="text-xs text-gray-700">
-                              {day}-{month}-{year} ({dayName}) at{" "}
-                              {formattedTime}
+                              {formattedDay}-{formattedMonth}-{year} ({dayName})
+                              at {formattedTime}
                             </span>
                           </div>
                         );
@@ -5802,6 +6080,358 @@ function App() {
     );
   };
 
+  // Schedule Management Popup Component
+  const ScheduleManagementPopup = () => {
+    if (!scheduleManagementPopup.isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-3 md:p-4 animate-in fade-in duration-200">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl max-h-[85vh] sm:max-h-[80vh] md:max-h-[75vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg md:text-xl font-bold">
+                  Add Booking for Student
+                </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1 text-sm sm:text-base text-blue-100">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FaGraduationCap size={14} className="flex-shrink-0" />
+                    <span>Student: {selectedStudent?.deal_name || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleScheduleManagementClose}
+                className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 sm:p-2 rounded-full transition-all duration-200 flex-shrink-0"
+              >
+                <FaTimes size={16} className="sm:w-5 sm:h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-y-auto max-h-[calc(85vh-90px)] sm:max-h-[calc(80vh-100px)] md:max-h-[calc(75vh-110px)] p-3 sm:p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+              {/* Left Column - Booking Details */}
+              <div className="space-y-3">
+                {/* Book New Student */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-green-100 rounded">
+                      <FaBook size={14} className="text-green-600" />
+                    </div>
+                    Booking Details
+                  </h3>
+
+                  <div className="space-y-2">
+                    {/* Booking Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Booking Type
+                      </label>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        <button
+                          type="button"
+                          className="p-2 rounded border-2 border-blue-500 bg-blue-50 text-blue-700 transition-all duration-200 text-xs font-medium"
+                        >
+                          Trial
+                        </button>
+                        {/* <button
+                          type="button"
+                          className="p-2 rounded border-2 border-gray-300 bg-white text-gray-700 hover:border-green-300 transition-all duration-200 text-xs font-medium"
+                        >
+                          Paid
+                        </button> */}
+                      </div>
+                    </div>
+
+                    {/* Platform Credentials */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Credentials / Notes
+                      </label>
+                      <textarea
+                        defaultValue={platformCredentials}
+                        onBlur={(e) => setPlatformCredentials(e.target.value)}
+                        placeholder="Enter platform credentials, notes, or any additional information..."
+                        rows={3}
+                        className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent resize-none"
+                      />
+                    </div>
+
+                    {/* Attendees with Email Validation */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Attendees (Email ID)
+                      </label>
+                      <div className="space-y-1.5">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            defaultValue={attendees}
+                            onBlur={(e) => {
+                              handleAttendeesChange(e.target.value);
+                              handleAttendeesBlur();
+                            }}
+                            onKeyPress={handleAttendeesKeyPress}
+                            placeholder="Enter email address and press Enter"
+                            className={`w-full p-2 border rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent ${
+                              attendeesError
+                                ? "border-red-300"
+                                : "border-gray-300"
+                            }`}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddEmail}
+                            disabled={
+                              !attendees.trim() || !validateEmail(attendees)
+                            }
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-green-500 text-white p-1 rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <FaPlus size={10} />
+                          </button>
+                        </div>
+
+                        {/* Domain Suggestions */}
+                        {showDomainSuggestions && attendees.includes("@") && (
+                          <div className="bg-white border border-gray-200 rounded shadow-lg max-h-24 overflow-y-auto">
+                            {getDomainSuggestions(attendees).map(
+                              (suggestion, index) => (
+                                <div
+                                  key={index}
+                                  onClick={() =>
+                                    handleDomainSuggestion(suggestion)
+                                  }
+                                  className="p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <FaUserCheck
+                                      size={10}
+                                      className="text-green-600"
+                                    />
+                                    <span className="text-xs text-gray-700">
+                                      {attendees.split("@")[0]}@{suggestion}
+                                    </span>
+                                  </div>
+                                </div>
+                              )
+                            )}
+                            {getDomainSuggestions(attendees).length === 0 && (
+                              <div className="p-2 text-gray-500">
+                                <span className="text-xs">
+                                  No suggestions available
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {attendeesError && (
+                          <div className="flex items-center gap-1 text-red-600">
+                            <FaExclamationTriangle size={10} />
+                            <span className="text-xs">{attendeesError}</span>
+                          </div>
+                        )}
+
+                        {/* Attendees List */}
+                        <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                          {attendeesList.map((emailItem) => (
+                            <div
+                              key={emailItem.id}
+                              className="bg-white rounded p-2 border border-green-200 shadow-sm flex justify-between items-center"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <FaUserCheck
+                                  size={12}
+                                  className="text-green-600"
+                                />
+                                <span className="text-xs font-medium text-gray-900 truncate">
+                                  {emailItem.email}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveEmail(emailItem.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
+                              >
+                                <FaTrash size={10} />
+                              </button>
+                            </div>
+                          ))}
+                          {attendeesList.length === 0 && (
+                            <div className="text-center py-2 text-gray-500">
+                              <FaUserCheck
+                                size={16}
+                                className="mx-auto mb-1 text-gray-300"
+                              />
+                              <p className="text-xs">No attendees added</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleBookStudentFromPopup}
+                      disabled={
+                        scheduleManagementPopup.isLoading ||
+                        !selectedStudent ||
+                        scheduleEntries.length === 0
+                      }
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 rounded hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
+                    >
+                      <FaBook size={14} />
+                      {scheduleManagementPopup.isLoading
+                        ? "Booking..."
+                        : "Book Student"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Schedule and Students */}
+              <div className="space-y-3">
+                {/* Schedule Section */}
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-blue-100 rounded">
+                      <FaCalendarAlt size={14} className="text-blue-600" />
+                    </div>
+                    Schedule
+                  </h3>
+
+                  <div className="space-y-2">
+                    {/* Schedule Entry Form */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedScheduleDate}
+                          onChange={(e) =>
+                            setSelectedScheduleDate(e.target.value)
+                          }
+                          min={new Date().toISOString().split("T")[0]}
+                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                          Time
+                        </label>
+                        <select
+                          value={selectedScheduleTime}
+                          onChange={(e) =>
+                            setSelectedScheduleTime(e.target.value)
+                          }
+                          className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">Select time...</option>
+                          {Array.from({ length: 48 }, (_, i) => {
+                            const hour = Math.floor(i / 2);
+                            const minute = (i % 2) * 30;
+                            const timeString = `${String(hour).padStart(
+                              2,
+                              "0"
+                            )}:${String(minute).padStart(2, "0")}`;
+                            return (
+                              <option key={timeString} value={timeString}>
+                                {timeString}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={addScheduleEntry}
+                      disabled={
+                        !selectedScheduleDate ||
+                        !selectedScheduleTime ||
+                        scheduleEntries.length >= 3
+                      }
+                      className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-2 rounded hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
+                    >
+                      <FaPlus size={12} />
+                      Add Schedule Entry {scheduleEntries.length}/3
+                    </button>
+
+                    {/* Schedule Entries List */}
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {scheduleEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="bg-white rounded p-2 border border-blue-200 shadow-sm flex justify-between items-center"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <FaCalendarAlt
+                              size={12}
+                              className="text-blue-600"
+                            />
+                            <span className="text-xs font-medium text-gray-900">
+                              {entry.date} at {entry.time}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => removeScheduleEntry(entry.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
+                          >
+                            <FaTrash size={10} />
+                          </button>
+                        </div>
+                      ))}
+                      {scheduleEntries.length === 0 && (
+                        <div className="text-center py-2 text-gray-500">
+                          <FaCalendarAlt
+                            size={16}
+                            className="mx-auto mb-1 text-gray-300"
+                          />
+                          <p className="text-xs">No schedule entries added</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Student Information */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-3 border border-purple-200">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
+                    <div className="p-0.5 bg-purple-100 rounded">
+                      <FaGraduationCap size={14} className="text-purple-600" />
+                    </div>
+                    Student Information
+                  </h3>
+
+                  <div className="space-y-2">
+                    <div className="bg-white rounded p-2 border border-purple-200 shadow-sm">
+                      <div className="flex items-center gap-1.5">
+                        <FaGraduationCap
+                          size={12}
+                          className="text-purple-600"
+                        />
+                        <span className="text-xs font-medium text-gray-900">
+                          {selectedStudent?.deal_name || "N/A"}
+                        </span>
+                      </div>
+                      {selectedStudent?.hubspot_learner_status && (
+                        <div className="text-[10px] text-gray-500 mt-1">
+                          Status: {selectedStudent.hubspot_learner_status}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const currentSlot = selectedSlot
     ? getScheduleForDate(selectedSlot.date)[selectedSlot.time]
     : null;
@@ -6375,36 +7005,47 @@ function App() {
                   {selectedStudent && (
                     <div className="w-full bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl shadow-sm p-4">
                       {/* Header */}
-                      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-green-200">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <svg
-                            className="w-5 h-5 text-green-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                          </svg>
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-green-200">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <svg
+                              className="w-5 h-5 text-green-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-green-800 text-sm">
+                              Learner Profile
+                            </h3>
+                            <p className="text-blue-700 text-base font-medium">
+                              {selectedStudent.deal_name}
+                              {selectedStudent.hubspot_learner_status && (
+                                <span className="text-gray-600 ml-2 text-xs font-bold">
+                                  Status - (
+                                  {selectedStudent.hubspot_learner_status})
+                                </span>
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-green-800 text-sm">
-                            Learner Profile
-                          </h3>
-                          <p className="text-blue-700 text-base font-medium">
-                            {selectedStudent.deal_name}
-                            {selectedStudent.hubspot_learner_status && (
-                              <span className="text-gray-600 ml-2 text-xs font-bold">
-                                Status - (
-                                {selectedStudent.hubspot_learner_status})
-                              </span>
-                            )}
-                          </p>
-                        </div>
+
+                        {/* Add Booking Button */}
+                        <button
+                          onClick={handleScheduleManagementOpen}
+                          className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
+                        >
+                          <FaPlus size={14} />
+                          Add Booking
+                        </button>
                       </div>
 
                       {/* Stats Grid */}
@@ -8007,11 +8648,23 @@ function App() {
                           teacherEmail &&
                           isTeacherWeekOff(teacherEmail, date, weeklyApiData);
 
-                        // Modify cell color if teacher is on leave or has week off
+                        // Show week off/leave colors only when there are no availability or bookings
                         let cellColor = getCellColor(available, booked);
-                        if (isOnLeave && selectedTeacher) {
+
+                        // Only apply week off/leave colors when there are no actual availability or bookings
+                        if (
+                          isOnLeave &&
+                          selectedTeacher &&
+                          available === 0 &&
+                          booked === 0
+                        ) {
                           cellColor = "bg-orange-100 hover:bg-orange-200";
-                        } else if (isWeekOff && selectedTeacher) {
+                        } else if (
+                          isWeekOff &&
+                          selectedTeacher &&
+                          available === 0 &&
+                          booked === 0
+                        ) {
                           cellColor = "bg-yellow-100 hover:bg-yellow-200";
                         }
 
@@ -8021,23 +8674,66 @@ function App() {
                             className={`p-1 sm:p-2 lg:p-3 border-b border-r border-gray-300 text-xs ${cellColor} relative`}
                           >
                             {/* Show + icon for gray blocks (no availability) when teacher is selected and slot hasn't been clicked */}
-                            {available === 0 &&
-                              booked === 0 &&
-                              selectedTeacher &&
-                              !clickedSlots.has(
-                                `${formatDate(date)}-${time}`
-                              ) &&
-                              canAddTeacherAvailability() && (
-                                <button
-                                  onClick={() =>
-                                    handleAddAvailability(date, time)
+                            {/* Allow availability marking even during week off and leave periods */}
+                            {(() => {
+                              const shouldShow =
+                                available === 0 &&
+                                booked === 0 &&
+                                selectedTeacher &&
+                                !clickedSlots.has(
+                                  `${formatDate(date)}-${time}`
+                                ) &&
+                                canAddTeacherAvailability();
+
+                              // Debug logging for TJL1309 on 24th
+                              if (
+                                selectedTeacher?.uid === "TJL1309" &&
+                                formatDate(date) === "2025-01-24"
+                              ) {
+                                console.log(
+                                  "🔍 Add Availability Debug for TJL1309 on 24th:",
+                                  {
+                                    time,
+                                    available,
+                                    booked,
+                                    selectedTeacher: selectedTeacher?.uid,
+                                    slotKey: `${formatDate(date)}-${time}`,
+                                    clickedSlots: clickedSlots.has(
+                                      `${formatDate(date)}-${time}`
+                                    ),
+                                    canAddTeacherAvailability:
+                                      canAddTeacherAvailability(),
+                                    shouldShow,
+                                    isOnLeave,
+                                    isWeekOff,
                                   }
-                                  className="absolute top-1 right-1 w-5 h-5 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm"
-                                  title="Add availability for this time slot"
-                                >
-                                  <FaPlus size={8} />
-                                </button>
-                              )}
+                                );
+                              }
+
+                              return shouldShow;
+                            })() && (
+                              <button
+                                onClick={() =>
+                                  handleAddAvailability(date, time)
+                                }
+                                className={`absolute top-1 right-1 w-5 h-5 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm z-10 ${
+                                  isOnLeave
+                                    ? "bg-orange-500 hover:bg-orange-600"
+                                    : isWeekOff
+                                    ? "bg-yellow-500 hover:bg-yellow-600"
+                                    : "bg-blue-500 hover:bg-blue-600"
+                                }`}
+                                title={`Add availability for this time slot${
+                                  isOnLeave
+                                    ? " (Teacher on Leave)"
+                                    : isWeekOff
+                                    ? " (Teacher Week Off)"
+                                    : ""
+                                }`}
+                              >
+                                <FaPlus size={8} />
+                              </button>
+                            )}
 
                             <div
                               className={`font-medium text-gray-800 ${
@@ -8084,29 +8780,36 @@ function App() {
                               {booked}
                             </div>
 
-                            {/* Teacher Leave Indicator */}
-                            {isOnLeave && selectedTeacher && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-orange-200 bg-opacity-75 pointer-events-none">
-                                <div className="text-orange-700 font-bold text-xs flex flex-col items-center">
-                                  <span className="hidden sm:block">
-                                    On Leave
-                                  </span>
-                                  <span className="sm:hidden">Leave</span>
+                            {/* Teacher Leave Indicator - only show when no availability or bookings */}
+                            {isOnLeave &&
+                              selectedTeacher &&
+                              available === 0 &&
+                              booked === 0 && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-orange-200 bg-opacity-75 pointer-events-none">
+                                  <div className="text-orange-700 font-bold text-xs flex flex-col items-center">
+                                    <span className="hidden sm:block">
+                                      On Leave
+                                    </span>
+                                    <span className="sm:hidden">Leave</span>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
 
-                            {/* Teacher Week Off Indicator */}
-                            {isWeekOff && selectedTeacher && !isOnLeave && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-yellow-200 bg-opacity-75 pointer-events-none">
-                                <div className="text-yellow-700 font-bold text-xs flex flex-col items-center">
-                                  <span className="hidden sm:block">
-                                    Week Off
-                                  </span>
-                                  <span className="sm:hidden">WO</span>
+                            {/* Teacher Week Off Indicator - only show when no availability or bookings */}
+                            {isWeekOff &&
+                              selectedTeacher &&
+                              !isOnLeave &&
+                              available === 0 &&
+                              booked === 0 && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-yellow-200 bg-opacity-75 pointer-events-none">
+                                  <div className="text-yellow-700 font-bold text-xs flex flex-col items-center">
+                                    <span className="hidden sm:block">
+                                      Week Off
+                                    </span>
+                                    <span className="sm:hidden">WO</span>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
                           </div>
                         );
                       })}
@@ -8161,6 +8864,7 @@ function App() {
       <BookingDetailsPopup />
       <EditReschedulePopup />
       <ConfirmationPopup />
+      <ScheduleManagementPopup />
       <SuccessMessage />
 
       {/* Combined Slot Toasters Container */}
@@ -8263,11 +8967,25 @@ function App() {
           <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
             <button
               onClick={() => handleSaveAllAvailability()}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition-colors duration-200 flex items-center justify-center gap-2"
+              disabled={isSavingAvailability}
+              className={`w-full text-white text-sm font-medium px-4 py-2 rounded transition-colors duration-200 flex items-center justify-center gap-2 ${
+                isSavingAvailability
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
-              <FaSave className="w-4 h-4" />
-              Save All (
-              {Object.keys(slotToasters).length * globalRepeatOccurrence})
+              {isSavingAvailability ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <FaSave className="w-4 h-4" />
+                  Save All (
+                  {Object.keys(slotToasters).length * globalRepeatOccurrence})
+                </>
+              )}
             </button>
           </div>
         </div>

@@ -130,7 +130,7 @@ const formatDateTimeToUTC = (date, timeRange, selectedTimezone) => {
 // API function to freeze a slot
 const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
   try {
-    const response = await fetch("http://live.jetlearn.com/api/freeze-slot/", {
+    const response = await fetch("https://live.jetlearn.com/api/freeze-slot/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -360,47 +360,6 @@ function App() {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   const { canAddBooking, canEditDeleteBooking, canAddTeacherAvailability } =
     usePermissions();
-
-  // Function to check URL parameters and make API calls
-  const checkUrlParametersAndFetchData = async () => {
-    console.log(
-      "🔍 FUNCTION CALLED: Checking URL parameters and fetching data"
-    );
-    const urlParams = new URLSearchParams(window.location.search);
-    const jetId = urlParams.get("jet_id");
-    const uuid = urlParams.get("uuid");
-
-    if (jetId) {
-      console.log("🔍 Found jet_id parameter:", jetId);
-      try {
-        const response = await fetch(
-          `http://live.jetlearn.com/api/dashboard/?jet_id=${jetId}`
-        );
-        const data = await response.json();
-        console.log("📊 API Response for jet_id:", data);
-        return { type: "jet_id", value: jetId, response: data };
-      } catch (error) {
-        console.error("❌ Error fetching data for jet_id:", error);
-        return { type: "jet_id", value: jetId, error: error.message };
-      }
-    } else if (uuid) {
-      console.log("🔍 Found uuid parameter:", uuid);
-      try {
-        const response = await fetch(
-          `http://live.jetlearn.com/api/dashboard/?uuid=${uuid}`
-        );
-        const data = await response.json();
-        console.log("📊 API Response for uuid:", data);
-        return { type: "uuid", value: uuid, response: data };
-      } catch (error) {
-        console.error("❌ Error fetching data for uuid:", error);
-        return { type: "uuid", value: uuid, error: error.message };
-      }
-    } else {
-      console.log("ℹ️ No jet_id or uuid parameters found in URL");
-      return null;
-    }
-  };
 
   // Check URL parameters on page load (moved after console.clear)
 

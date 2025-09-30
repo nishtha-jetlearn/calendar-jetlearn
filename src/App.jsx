@@ -361,8 +361,6 @@ function App() {
   const { canAddBooking, canEditDeleteBooking, canAddTeacherAvailability } =
     usePermissions();
 
-  // Check URL parameters on page load (moved after console.clear)
-
   // Show loading screen while checking authentication
   if (isLoading) {
     return (
@@ -381,13 +379,6 @@ function App() {
   }
 
   // Check URL parameters on page load (runs regardless of authentication)
-  useEffect(() => {
-    console.log("🚀 URL parameter check useEffect triggered");
-    console.log("📍 Current URL:", window.location.href);
-    console.log("📍 Current search params:", window.location.search);
-
-    checkUrlParametersAndFetchData();
-  }, []);
 
   // Add global error boundary for unhandled promises
 
@@ -747,8 +738,6 @@ function App() {
 
     // Simple test to make sure console is working
     console.log("🧪 TEST: Console is working!");
-
-    checkUrlParametersAndFetchData();
   }, []);
 
   // Handle click outside to close action menu

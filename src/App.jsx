@@ -133,7 +133,6 @@ const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
     const response = await fetch("http://live.jetlearn.com/api/freeze-slot/", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${sessionId}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

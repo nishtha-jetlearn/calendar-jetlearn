@@ -1331,25 +1331,25 @@ function App() {
     });
   }, [currentWeekStart]);
 
-  // Effect to trigger API calls when date range filter changes
-  useEffect(() => {
-    if (
-      dateRangeFilter.isActive &&
-      dateRangeFilter.startDate &&
-      dateRangeFilter.endDate
-    ) {
-      // Call the new fetchFilteredData function
-      fetchFilteredData(dateRangeFilter.startDate, dateRangeFilter.endDate);
+  // Manual filter function to be called by search button
+  const handleApplyDateFilter = () => {
+    if (dateRangeFilter.startDate && dateRangeFilter.endDate) {
+      const currentWeekStart = formatDate(weekDates[0]);
+      const currentWeekEnd = formatDate(weekDates[6]);
+      const isActive =
+        dateRangeFilter.startDate !== currentWeekStart ||
+        dateRangeFilter.endDate !== currentWeekEnd;
+
+      setDateRangeFilter((prev) => ({
+        ...prev,
+        isActive: isActive,
+      }));
+
+      if (isActive) {
+        fetchFilteredData(dateRangeFilter.startDate, dateRangeFilter.endDate);
+      }
     }
-  }, [
-    dateRangeFilter.isActive,
-    dateRangeFilter.startDate,
-    dateRangeFilter.endDate,
-    selectedTeacher,
-    selectedStudent,
-    selectedTimezone,
-    fetchFilteredData,
-  ]);
+  };
 
   // Function to send booking data to API
   const sendBookingToAPI = async (date, time, teacherUid = null) => {
@@ -6783,25 +6783,10 @@ function App() {
                     }
                     onChange={(e) => {
                       const newStartDate = e.target.value;
-                      const currentWeekStart = formatDate(weekDates[0]);
-                      const currentWeekEnd = formatDate(weekDates[6]);
-                      const isActive =
-                        newStartDate !== currentWeekStart ||
-                        dateRangeFilter.endDate !== currentWeekEnd;
-
                       setDateRangeFilter((prev) => ({
                         ...prev,
                         startDate: newStartDate,
-                        isActive: isActive,
                       }));
-
-                      // Call APIs if filter becomes active and we have both dates
-                      if (isActive && newStartDate && dateRangeFilter.endDate) {
-                        fetchFilteredData(
-                          newStartDate,
-                          dateRangeFilter.endDate
-                        );
-                      }
                     }}
                     className="px-2 py-1 text-xs bg-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-blue-300"
                     placeholder="Start Date"
@@ -6812,29 +6797,21 @@ function App() {
                     value={dateRangeFilter.endDate || formatDate(weekDates[6])}
                     onChange={(e) => {
                       const newEndDate = e.target.value;
-                      const currentWeekStart = formatDate(weekDates[0]);
-                      const currentWeekEnd = formatDate(weekDates[6]);
-                      const isActive =
-                        dateRangeFilter.startDate !== currentWeekStart ||
-                        newEndDate !== currentWeekEnd;
-
                       setDateRangeFilter((prev) => ({
                         ...prev,
                         endDate: newEndDate,
-                        isActive: isActive,
                       }));
-
-                      // Call APIs if filter becomes active and we have both dates
-                      if (isActive && dateRangeFilter.startDate && newEndDate) {
-                        fetchFilteredData(
-                          dateRangeFilter.startDate,
-                          newEndDate
-                        );
-                      }
                     }}
                     className="px-2 py-1 text-xs bg-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-blue-300"
                     placeholder="End Date"
                   />
+                  <button
+                    onClick={handleApplyDateFilter}
+                    className="ml-1 px-2 py-1 text-xs bg-white hover:bg-blue-50 text-blue-600 rounded transition-colors font-medium"
+                    title="Apply filter"
+                  >
+                    <FaSearch size={12} />
+                  </button>
                   {dateRangeFilter.isActive && (
                     <button
                       onClick={() => {

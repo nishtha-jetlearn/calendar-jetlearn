@@ -141,12 +141,23 @@ const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
         user_id: userId,
       }),
     });
-
+    console.log("🔍 freezeSlot response:", response.status);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log("🔍 freezeSlot data:", data);
+
+    // Check if the slot is held by another user
+    if (data.status === "held") {
+      return {
+        success: false,
+        held: true,
+        message: data.message || "This slot is currently held by another user",
+      };
+    }
+
     return { success: true, data };
   } catch (error) {
     console.error("Error freezing slot:", error);
@@ -7720,6 +7731,20 @@ function App() {
                                                                         result.data
                                                                       );
                                                                       // Optional: Show a subtle success notification
+                                                                    } else if (
+                                                                      result.held
+                                                                    ) {
+                                                                      // Slot is held by another user - close modal and show error
+                                                                      console.warn(
+                                                                        "Slot is held:",
+                                                                        result.message
+                                                                      );
+                                                                      setModalOpen(
+                                                                        false
+                                                                      );
+                                                                      alert(
+                                                                        result.message
+                                                                      );
                                                                     } else {
                                                                       console.error(
                                                                         "Failed to freeze slot:",

@@ -150,7 +150,11 @@ const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
     console.log("🔍 freezeSlot data:", data);
 
     // Check if the slot is held by another user
-    if (data.status === "held") {
+    if (
+      data.status === "held" &&
+      data.message !== "Slot successfully frozen" &&
+      data.message !== "Slot already held by you"
+    ) {
       return {
         success: false,
         held: true,

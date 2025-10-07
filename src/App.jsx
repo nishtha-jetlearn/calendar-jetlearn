@@ -4317,7 +4317,15 @@ function App() {
           return [utcDate, utcTime];
         }),
         class_type: selectedClassType || hiddenClassType || "1:1",
-        booking_type: editReschedulePopup.data?.booking_type || "Paid",
+        booking_type: (() => {
+          const summary = editReschedulePopup.data?.summary;
+          const hasCalibration = summary
+            ?.toLowerCase()
+            ?.includes("calibration");
+          return hasCalibration
+            ? "Trial"
+            : editReschedulePopup.data?.booking_type || "Paid";
+        })(),
         tags:
           selectedRecording.length > 0
             ? selectedRecording

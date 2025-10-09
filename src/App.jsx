@@ -1822,6 +1822,41 @@ function App() {
     }
   };
 
+  // Function to convert datetime string to selected timezone and get date
+  const convertDateTimeToTimezone = (datetimeString, targetTimezone) => {
+    if (!datetimeString || !targetTimezone) return null;
+
+    try {
+      // Parse the datetime string (e.g., "2025-10-13T21:00:00+02:00")
+      // This gives us a Date object with the UTC time
+      const dateObj = new Date(datetimeString);
+
+      // Extract timezone offset from targetTimezone (e.g., "(GMT+02:00) CET" -> +02:00)
+      const match = targetTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
+      if (!match) return null;
+
+      const targetOffsetHours = parseInt(match[1], 10);
+      const targetOffsetMinutes =
+        parseInt(match[2], 10) * (targetOffsetHours >= 0 ? 1 : -1);
+      const targetOffsetMs =
+        (targetOffsetHours * 60 + targetOffsetMinutes) * 60000;
+
+      // Get browser's timezone offset
+      const browserOffsetMs = dateObj.getTimezoneOffset() * 60000;
+
+      // Adjust the date: add browser offset to get UTC, then add target offset
+      // This creates a Date object that when displayed in UTC, shows the target timezone time
+      const adjustedDate = new Date(
+        dateObj.getTime() + browserOffsetMs + targetOffsetMs
+      );
+
+      return adjustedDate;
+    } catch (error) {
+      console.error("Error converting datetime to timezone:", error);
+      return null;
+    }
+  };
+
   // Function to convert time range to IST
   const convertTimeRangeToIST = (timeRange, bookingDate, selectedTimezone) => {
     if (timeRange === "N/A") return "N/A";
@@ -6996,7 +7031,7 @@ function App() {
                       </div>
 
                       {/* Stats Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {/* Subscription Start */}
                         <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-center gap-2 mb-2">
@@ -7016,7 +7051,7 @@ function App() {
                               </svg>
                             </div>
                             <span className="font-medium text-gray-700 text-xs">
-                              Start Date
+                              Current Subscription Start Date
                             </span>
                           </div>
                           <div className="text-blue-600 font-semibold text-sm">
@@ -7053,7 +7088,7 @@ function App() {
                               </svg>
                             </div>
                             <span className="font-medium text-gray-700 text-xs">
-                              End Date
+                              Current Subscription End Date
                             </span>
                           </div>
                           <div className="text-orange-600 font-semibold text-sm">
@@ -7090,7 +7125,7 @@ function App() {
                               </svg>
                             </div>
                             <span className="font-medium text-gray-700 text-xs">
-                              Total Classes
+                              Current Subscription Total Classes
                             </span>
                           </div>
                           <div className="text-purple-600 font-semibold text-sm">
@@ -7118,7 +7153,7 @@ function App() {
                               </svg>
                             </div>
                             <span className="font-medium text-gray-700 text-xs">
-                              Classes Taken
+                              Current Subscription Classes Taken
                             </span>
                           </div>
                           <div className="text-green-600 font-semibold text-sm">
@@ -7129,7 +7164,7 @@ function App() {
                         </div>
 
                         {/* No-Show Count */}
-                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                        {/*<div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="p-1.5 bg-red-100 rounded-md">
                               <svg
@@ -7155,8 +7190,13 @@ function App() {
                           </div>
                         </div>
 
+                       
+                          Block comment added here
+                          This section displays student statistics including attendance metrics
+                        */}
+
                         {/* Current Class Count */}
-                        <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
+                        {/*<div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-center gap-2 mb-2">
                             <div className="p-1.5 bg-indigo-100 rounded-md">
                               <svg
@@ -7180,7 +7220,7 @@ function App() {
                           <div className="text-indigo-600 font-semibold text-sm">
                             {selectedStudent.current_class_count || "N/A"}
                           </div>
-                        </div>
+                        </div>*/}
                       </div>
                     </div>
                   )}
@@ -7333,9 +7373,15 @@ function App() {
                                   booking,
                                   "booking"
                                 );
-                                const bookingDate = new Date(
-                                  booking.start_time || booking.date
-                                );
+                                // Convert start_time to selected timezone to get correct date
+                                const dateInTimezone =
+                                  convertDateTimeToTimezone(
+                                    extractedData.start_time,
+                                    selectedTimezone
+                                  );
+                                const bookingDate =
+                                  dateInTimezone ||
+                                  new Date(booking.date || booking.start_time);
 
                                 // Format time range properly with timezone consideration
                                 const formatTimeFromAPI = (dateTimeString) => {

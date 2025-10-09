@@ -20,17 +20,35 @@ export const getWeekDates = (startDate) => {
 };
 
 export const formatDate = (date) => {
-  // Ensure date is a Date object
+  // If it's already a string in YYYY-MM-DD format, return it directly
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date;
+  }
+
+  // Ensure date is a Date object (handles both Date objects and datetime strings)
   const dateObj = date instanceof Date ? date : new Date(date);
-  return dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
+
+  // Use UTC methods to format the date to match timezone-converted dates
+  const year = dateObj.getUTCFullYear();
+  const month = (dateObj.getUTCMonth() + 1).toString().padStart(2, "0");
+  const day = dateObj.getUTCDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`; // YYYY-MM-DD format
 };
 
 export const formatDisplayDate = (date) => {
-  // Ensure date is a Date object
+  // If it's a string in YYYY-MM-DD format (without time), parse it directly to avoid timezone issues
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split("-");
+    return `${day}-${month}-${year}`;
+  }
+
+  // Ensure date is a Date object (handles both Date objects and datetime strings)
   const dateObj = date instanceof Date ? date : new Date(date);
-  const day = dateObj.getDate().toString().padStart(2, "0");
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
-  const year = dateObj.getFullYear();
+
+  // Use UTC methods if it's a timezone-converted date to avoid further shifts
+  const day = dateObj.getUTCDate().toString().padStart(2, "0");
+  const month = (dateObj.getUTCMonth() + 1).toString().padStart(2, "0");
+  const year = dateObj.getUTCFullYear();
   return `${day}-${month}-${year}`;
 };
 
@@ -44,9 +62,20 @@ export const formatShortDate = (date) => {
 };
 
 export const getDayName = (date) => {
-  // Ensure date is a Date object
+  // If it's a string in YYYY-MM-DD format (without time), add time to ensure correct date parsing
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const dateObj = new Date(date + "T12:00:00");
+    return dateObj.toLocaleDateString("en-US", { weekday: "long" });
+  }
+
+  // Ensure date is a Date object (handles both Date objects and datetime strings)
   const dateObj = date instanceof Date ? date : new Date(date);
-  return dateObj.toLocaleDateString("en-US", { weekday: "long" });
+
+  // Use UTC to get the day name to match the timezone-converted date
+  return dateObj.toLocaleDateString("en-US", {
+    weekday: "long",
+    timeZone: "UTC",
+  });
 };
 
 export const isSameWeek = (date1, date2) => {

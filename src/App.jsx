@@ -582,6 +582,12 @@ function App() {
   // State for availability saving
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
 
+  // State for booking loading
+  const [isBookingLoading, setIsBookingLoading] = useState(false);
+
+  // State for general operations loading (delete, update, cancel)
+  const [isOperationLoading, setIsOperationLoading] = useState(false);
+
   // State for teacher leaves
   const [teacherLeaves, setTeacherLeaves] = useState({
     isLoading: false,
@@ -1971,6 +1977,10 @@ function App() {
     bookingData
   ) => {
     if (!selectedSlot) return;
+
+    // Set loading state
+    setIsBookingLoading(true);
+
     const dateStr = formatDate(selectedSlot.date);
     console.log("selectedStudent", selectedStudents);
     console.log("Booking Data", JSON.stringify(bookingData, null, 2));
@@ -1982,6 +1992,7 @@ function App() {
     console.log(student);
     if (!teacher) {
       alert("Teacher not found");
+      setIsBookingLoading(false);
       return;
     }
 
@@ -2140,7 +2151,11 @@ function App() {
       } catch (error) {
         console.error("❌ Error sending booking to API:", error);
         alert("Failed to send booking to API. Please try again.");
+      } finally {
+        setIsBookingLoading(false);
       }
+    } else {
+      setIsBookingLoading(false);
     }
   };
 
@@ -2817,6 +2832,9 @@ function App() {
   // Handle delete class API call
   const handleDeleteClass = async (eventId, upcomingEvents = false) => {
     try {
+      // Set loading state
+      setIsOperationLoading(true);
+
       console.log("🚀 Calling delete-class API:", {
         eventId,
         upcomingEvents,
@@ -2875,6 +2893,8 @@ function App() {
     } catch (error) {
       console.error("❌ Error calling delete-class API:", error);
       throw error;
+    } finally {
+      setIsOperationLoading(false);
     }
   };
 
@@ -2888,6 +2908,9 @@ function App() {
     upcomingEvents = false
   ) => {
     try {
+      // Set loading state
+      setIsOperationLoading(true);
+
       console.log("🚀 Canceling availability for:", {
         date,
         time,
@@ -2945,6 +2968,8 @@ function App() {
     } catch (error) {
       console.error("❌ Error canceling availability:", error);
       alert("Failed to cancel availability. Please try again.");
+    } finally {
+      setIsOperationLoading(false);
     }
   };
 
@@ -2958,6 +2983,9 @@ function App() {
     classCount = 1
   ) => {
     try {
+      // Set loading state
+      setIsOperationLoading(true);
+
       console.log("🚀 Canceling booking for:", {
         date,
         time,
@@ -3057,6 +3085,8 @@ function App() {
     } catch (error) {
       console.error("❌ Error canceling booking:", error);
       // alert("Failed to cancel booking. Please try again.");
+    } finally {
+      setIsOperationLoading(false);
     }
   };
 
@@ -4276,6 +4306,7 @@ function App() {
 
       // Set loading state
       setEditReschedulePopup((prev) => ({ ...prev, isLoading: true }));
+      setIsOperationLoading(true);
 
       // Extract JL IDs from selected students
       const jl_uid = selectedStudents.map((student) => student.jetlearner_id);
@@ -4303,6 +4334,7 @@ function App() {
       if (!teacher_uid) {
         alert("Teacher UID not found. Please ensure a teacher is selected.");
         setEditReschedulePopup((prev) => ({ ...prev, isLoading: false }));
+        setIsOperationLoading(false);
         return;
       }
 
@@ -4450,8 +4482,10 @@ function App() {
       } catch (error) {
         console.error("❌ Error updating booking:", error);
         alert(`Failed to update booking: ${error.message}`);
-        // Reset loading state on error
+      } finally {
+        // Reset loading state
         setEditReschedulePopup((prev) => ({ ...prev, isLoading: false }));
+        setIsOperationLoading(false);
       }
     };
 
@@ -8875,6 +8909,7 @@ function App() {
             teacherAvailability={weeklyApiData}
             selectedTeacherId={selectedTeacher?.uid}
             listViewBookingDetails={listViewBookingDetails}
+            isBookingLoading={isBookingLoading}
           />
         )}
       </Suspense>
@@ -8886,6 +8921,20 @@ function App() {
       <ConfirmationPopup />
       <ScheduleManagementPopup />
       <SuccessMessage />
+
+      {/* Global Loading Overlay */}
+      {(isBookingLoading || isOperationLoading) && (
+        <div className="fixed  inset-0 bg-opacity-30 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg p-6 flex items-center gap-4 shadow-xl border border-gray-200">
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-200 border-t-blue-600"></div>
+            <div className="text-gray-700 font-medium">
+              {isBookingLoading
+                ? "Processing booking request..."
+                : "Processing request..."}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Combined Slot Toasters Container */}
       {Object.keys(slotToasters).length > 0 && (

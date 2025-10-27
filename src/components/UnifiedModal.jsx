@@ -103,6 +103,7 @@ const UnifiedModalComponent = function UnifiedModal({
   teacherAvailability, // New prop for teacher availability data
   selectedTeacherId, // New prop for selected teacher ID
   listViewBookingDetails, // New prop for list view booking details to filter green dot availability
+  isBookingLoading, // New prop for booking loading state
 }) {
   const cleanedTimeRange = time.replace(/\s+/g, ""); // Remove all spaces
   const startTime = cleanedTimeRange.split("-")[0];
@@ -141,9 +142,6 @@ const UnifiedModalComponent = function UnifiedModal({
   // Calendar picker state
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
-
-  // Booking loading state
-  const [isBookingLoading, setIsBookingLoading] = useState(false);
 
   // Update calendar date when selected date changes or when calendar opens
   useEffect(() => {
@@ -793,9 +791,6 @@ const UnifiedModalComponent = function UnifiedModal({
       return;
     }
 
-    // Set loading state
-    setIsBookingLoading(true);
-
     // Validate attendees list
     // if (attendeesList.length === 0) {
     //   alert("Please add at least one attendee email.");
@@ -806,20 +801,17 @@ const UnifiedModalComponent = function UnifiedModal({
     // Validate schedule entries
     if (scheduleEntries.length === 0) {
       alert("Please add at least one schedule entry.");
-      setIsBookingLoading(false);
       return;
     }
 
     // Validate class type limits
     if (selectedClassType === "1:1" && selectedStudents.length > 1) {
       alert("Maximum 1 learner can be selected for 1:1 class type.");
-      setIsBookingLoading(false);
       return;
     }
 
     if (selectedClassType === "1:2" && selectedStudents.length > 2) {
       alert("Maximum 2 learners can be selected for 1:2 class type.");
-      setIsBookingLoading(false);
       return;
     }
 
@@ -827,14 +819,12 @@ const UnifiedModalComponent = function UnifiedModal({
     if (bookingType === "paid") {
       if (!selectedSubject || !selectedClassType || !selectedClassCount) {
         alert("Please fill in all required fields for paid booking.");
-        setIsBookingLoading(false);
         return;
       }
 
       // Validate batch number for batch class type
       if (selectedClassType === "batch" && !batchNumber.trim()) {
         alert("Please enter a batch Name for batch class type.");
-        setIsBookingLoading(false);
         return;
       }
     }
@@ -895,9 +885,6 @@ const UnifiedModalComponent = function UnifiedModal({
     } catch (error) {
       console.error("Error booking student:", error);
       alert("An error occurred while booking. Please try again.");
-    } finally {
-      // Reset loading state
-      setIsBookingLoading(false);
     }
   };
 

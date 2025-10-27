@@ -3671,6 +3671,7 @@ function App() {
         class_type: event.class_type,
         timezone: event.timezone,
         attendees: event.attendees || [], // Preserve attendees array from original event
+        updated_by: event.updated_by || "", // Add updated_by field
       };
     }
 
@@ -7572,6 +7573,18 @@ function App() {
                                       <div className="flex items-center justify-between">
                                         <div className="text-sm text-gray-900 break-words">
                                           {extractedData.summary || "N/A"}
+                                          {(extractedData.summary?.includes(
+                                            "Reserved"
+                                          ) ||
+                                            extractedData.summary?.includes(
+                                              "Future"
+                                            )) &&
+                                            extractedData.updated_by && (
+                                              <div className="text-xs text-gray-600 mt-1">
+                                                Updated by:{" "}
+                                                {extractedData.updated_by}
+                                              </div>
+                                            )}
                                         </div>
                                       </div>
                                     </td>

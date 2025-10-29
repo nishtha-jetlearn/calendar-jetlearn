@@ -574,6 +574,15 @@ function App() {
   const [selectedScheduleTime, setSelectedScheduleTime] = useState("");
   const [platformCredentials, setPlatformCredentials] = useState("");
 
+  // Debug: Log selectedScheduleDate changes
+  useEffect(() => {
+    console.log("🎯 selectedScheduleDate changed:", {
+      selectedScheduleDate,
+      selectedScheduleTime,
+      scheduleEntries,
+    });
+  }, [selectedScheduleDate, selectedScheduleTime, scheduleEntries]);
+
   // Enhanced state for better API integration
   const [weeklyApiData, setWeeklyApiData] = useState({});
   const [apiDataLoading, setApiDataLoading] = useState(false);
@@ -4934,18 +4943,6 @@ function App() {
                       {scheduleEntries.map((entry, index) => {
                         const [date, time] = entry;
 
-                        // Format date as DD-MM-YYYY (DayName)
-                        // Parse YYYY-MM-DD format properly to avoid timezone issues
-                        const [year, month, day] = date.split("-").map(Number);
-                        const dateObj = new Date(year, month - 1, day); // month is 0-indexed
-                        const formattedDay = day.toString().padStart(2, "0");
-                        const formattedMonth = month
-                          .toString()
-                          .padStart(2, "0");
-                        const dayName = dateObj.toLocaleDateString("en-US", {
-                          weekday: "long",
-                        });
-
                         // Extract only start time if it's a range (e.g., "16:00 - 17:00" -> "16:00")
                         const startTime = time.includes(" - ")
                           ? time.split(" - ")[0]
@@ -4956,14 +4953,56 @@ function App() {
                           ? startTime
                           : `${startTime.slice(0, 2)}:${startTime.slice(2, 4)}`;
 
+                        // Check if start time is in early morning hours (00:00 to 05:59)
+                        // If so, display as next day
+                        const [hours, minutes] = formattedTime
+                          .split(":")
+                          .map(Number);
+                        // Consider times from 00:00 to 05:59 as early morning (next day)
+                        const isEarlyMorning = hours >= 0 && hours <= 5;
+
+                        let displayDate, displayDayName;
+                        if (isEarlyMorning) {
+                          // Add one day to the date
+                          const [year, month, day] = date
+                            .split("-")
+                            .map(Number);
+                          const nextDay = new Date(year, month - 1, day + 1);
+                          const nextYear = nextDay.getFullYear();
+                          const nextMonth = (nextDay.getMonth() + 1)
+                            .toString()
+                            .padStart(2, "0");
+                          const nextDayNum = nextDay
+                            .getDate()
+                            .toString()
+                            .padStart(2, "0");
+
+                          displayDate = `${nextDayNum}-${nextMonth}-${nextYear}`;
+                          displayDayName = nextDay.toLocaleDateString("en-US", {
+                            weekday: "long",
+                          });
+                        } else {
+                          // Use original date
+                          const [year, month, day] = date
+                            .split("-")
+                            .map(Number);
+                          const formattedDay = day.toString().padStart(2, "0");
+                          const formattedMonth = month
+                            .toString()
+                            .padStart(2, "0");
+
+                          displayDate = `${formattedDay}-${formattedMonth}-${year}`;
+                          displayDayName = getDayName(date);
+                        }
+
                         return (
                           <div
                             key={index}
                             className="p-2 bg-white rounded-md border border-gray-200"
                           >
                             <span className="text-xs text-gray-700">
-                              {formattedDay}-{formattedMonth}-{year} ({dayName})
-                              at {formattedTime}
+                              {displayDate} ({displayDayName}) at{" "}
+                              {formattedTime}
                             </span>
                           </div>
                         );
@@ -6359,9 +6398,9 @@ function App() {
                         <input
                           type="date"
                           value={selectedScheduleDate}
-                          onChange={(e) =>
-                            setSelectedScheduleDate(e.target.value)
-                          }
+                          onChange={(e) => {
+                            setSelectedScheduleDate(e.target.value);
+                          }}
                           min={new Date().toISOString().split("T")[0]}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -6372,9 +6411,9 @@ function App() {
                         </label>
                         <select
                           value={selectedScheduleTime}
-                          onChange={(e) =>
-                            setSelectedScheduleTime(e.target.value)
-                          }
+                          onChange={(e) => {
+                            setSelectedScheduleTime(e.target.value);
+                          }}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select time...</option>

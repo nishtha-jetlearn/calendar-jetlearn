@@ -1480,7 +1480,44 @@ const UnifiedModalComponent = function UnifiedModal({
                                         key={i}
                                         onClick={() => {
                                           if (isAvailable) {
-                                            setSelectedScheduleDate(dayString);
+                                            let finalDate = dayString;
+
+                                            // Check if currently selected time crosses midnight
+                                            if (selectedScheduleTime) {
+                                              const [hours, minutes] =
+                                                selectedScheduleTime
+                                                  .split(":")
+                                                  .map(Number);
+                                              const isEarlyMorning =
+                                                hours >= 0 && hours <= 5;
+
+                                              if (isEarlyMorning) {
+                                                // Advance the selected date by one day
+                                                const [year, month, day] =
+                                                  dayString
+                                                    .split("-")
+                                                    .map(Number);
+                                                const nextDay = new Date(
+                                                  year,
+                                                  month - 1,
+                                                  day + 1
+                                                );
+                                                const nextYear =
+                                                  nextDay.getFullYear();
+                                                const nextMonth = (
+                                                  nextDay.getMonth() + 1
+                                                )
+                                                  .toString()
+                                                  .padStart(2, "0");
+                                                const nextDayNum = nextDay
+                                                  .getDate()
+                                                  .toString()
+                                                  .padStart(2, "0");
+                                                finalDate = `${nextYear}-${nextMonth}-${nextDayNum}`;
+                                              }
+                                            }
+
+                                            setSelectedScheduleDate(finalDate);
                                             setCalendarOpen(false);
                                           }
                                         }}
@@ -1554,9 +1591,42 @@ const UnifiedModalComponent = function UnifiedModal({
                         </label>
                         <select
                           value={selectedScheduleTime}
-                          onChange={(e) =>
-                            setSelectedScheduleTime(e.target.value)
-                          }
+                          onChange={(e) => {
+                            const selectedTime = e.target.value;
+                            setSelectedScheduleTime(selectedTime);
+
+                            // Check if the selected time crosses midnight (00:00 to 05:59)
+                            if (selectedTime) {
+                              const [hours, minutes] = selectedTime
+                                .split(":")
+                                .map(Number);
+                              // Consider times from 00:00 to 05:59 as early morning (next day)
+                              const isEarlyMorning = hours >= 0 && hours <= 5;
+
+                              if (isEarlyMorning && selectedScheduleDate) {
+                                // Advance the date by one day
+                                const [year, month, day] = selectedScheduleDate
+                                  .split("-")
+                                  .map(Number);
+                                const nextDay = new Date(
+                                  year,
+                                  month - 1,
+                                  day + 1
+                                );
+                                const nextYear = nextDay.getFullYear();
+                                const nextMonth = (nextDay.getMonth() + 1)
+                                  .toString()
+                                  .padStart(2, "0");
+                                const nextDayNum = nextDay
+                                  .getDate()
+                                  .toString()
+                                  .padStart(2, "0");
+                                const nextDate = `${nextYear}-${nextMonth}-${nextDayNum}`;
+
+                                setSelectedScheduleDate(nextDate);
+                              }
+                            }
+                          }}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select time...</option>

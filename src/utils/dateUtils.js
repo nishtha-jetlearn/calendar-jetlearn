@@ -72,11 +72,10 @@ export const getDayName = (date) => {
 
   // Ensure date is a Date object (handles both Date objects and datetime strings)
   const dateObj = date instanceof Date ? date : new Date(date);
-
+  const day = dateObj.getDate().toString().padStart(2, "0");
   // Use UTC to get the day name to match the timezone-converted date
   return dateObj.toLocaleDateString("en-US", {
     weekday: "long",
-    timeZone: "UTC",
   });
 };
 

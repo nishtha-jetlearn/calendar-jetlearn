@@ -1834,9 +1834,9 @@ function App() {
 
     try {
       // Parse the datetime string (e.g., "2025-10-13T21:00:00+02:00")
-      // This gives us a Date object with the UTC time
-      const dateObj = new Date(datetimeString);
 
+      const dateObj = new Date(datetimeString);
+      //console.log("dateObj", dateObj);
       // Extract timezone offset from targetTimezone (e.g., "(GMT+02:00) CET" -> +02:00)
       const match = targetTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
       if (!match) return null;
@@ -1855,7 +1855,6 @@ function App() {
       const adjustedDate = new Date(
         dateObj.getTime() + browserOffsetMs + targetOffsetMs
       );
-
       return adjustedDate;
     } catch (error) {
       console.error("Error converting datetime to timezone:", error);
@@ -1911,7 +1910,17 @@ function App() {
         return `${hours}:${minutes}`;
       };
 
-      return `${formatTime(startIST)} - ${formatTime(endIST)}`;
+      // Format the date (YYYY-MM-DD format)
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        const day = date.getDate().toString().padStart(2, "0");
+        return `${day}-${month}-${year}`;
+      };
+
+      return `${formatDate(startIST)}, ${formatTime(startIST)} - ${formatTime(
+        endIST
+      )}`;
     } catch (error) {
       console.error("Error converting time range to IST:", error);
       return timeRange;
@@ -7414,19 +7423,26 @@ function App() {
                                     extractedData.start_time,
                                     selectedTimezone
                                   );
+
                                 const bookingDate =
                                   dateInTimezone ||
                                   new Date(booking.date || booking.start_time);
-
                                 // Format time range properly with timezone consideration
                                 const formatTimeFromAPI = (dateTimeString) => {
                                   if (!dateTimeString) return "N/A";
                                   try {
+                                    console.log(
+                                      "dateTimeString in formatTimeFromAPI",
+                                      dateTimeString
+                                    );
                                     const formattedTime = dateTimeString.slice(
                                       11,
                                       16
                                     ); // "04:00"
-
+                                    console.log(
+                                      "formattedTime in formatTimeFromAPI",
+                                      formattedTime
+                                    );
                                     return formattedTime;
                                   } catch (error) {
                                     console.error(
@@ -7555,10 +7571,10 @@ function App() {
                                         ></div>
                                         <div className="flex-1">
                                           <div className="text-sm font-medium text-gray-900">
-                                            {formatDisplayDate(bookingDate)}
+                                            {formatDisplayDate(dateInTimezone)}
                                           </div>
                                           <div className="text-sm text-gray-500">
-                                            {getDayName(bookingDate)}
+                                            {getDayName(dateInTimezone)}
                                           </div>
                                         </div>
                                       </div>

@@ -39,16 +39,18 @@ export const formatDisplayDate = (date) => {
   // If it's a string in YYYY-MM-DD format (without time), parse it directly to avoid timezone issues
   if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
     const [year, month, day] = date.split("-");
+    console.log("year, month, day from formatDisplayDate", year, month, day);
     return `${day}-${month}-${year}`;
   }
 
   // Ensure date is a Date object (handles both Date objects and datetime strings)
   const dateObj = date instanceof Date ? date : new Date(date);
-
+  console.log("dateObj from formatDisplayDate", dateObj);
   // Use UTC methods if it's a timezone-converted date to avoid further shifts
-  const day = dateObj.getUTCDate().toString().padStart(2, "0");
-  const month = (dateObj.getUTCMonth() + 1).toString().padStart(2, "0");
-  const year = dateObj.getUTCFullYear();
+  const day = dateObj.getDate().toString().padStart(2, "0");
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+  const year = dateObj.getFullYear();
+  console.log("year, month, day from formatDisplayDate", year, month, day);
   return `${day}-${month}-${year}`;
 };
 

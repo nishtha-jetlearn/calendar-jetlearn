@@ -89,6 +89,61 @@ export const getDayName = (date) => {
   ];
   return days[dateObj.getDay()];
 };
+
+// Helper function to parse date from various formats
+const parseDateToYYYYMMDD = (dateInput) => {
+  if (!dateInput) return "";
+
+  // If it's already in YYYY-MM-DD format, return it
+  if (typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    return dateInput;
+  }
+
+  // If it's a Date object, convert to YYYY-MM-DD
+  if (dateInput instanceof Date) {
+    const year = dateInput.getFullYear();
+    const month = (dateInput.getMonth() + 1).toString().padStart(2, "0");
+    const day = dateInput.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // If it's a string in DD-MM-YYYY format
+  if (typeof dateInput === "string") {
+    const parts = dateInput.split("-");
+    if (parts.length === 3) {
+      // Check if it's DD-MM-YYYY (day > 12) or YYYY-MM-DD
+      const firstPart = parseInt(parts[0]);
+      if (firstPart > 12 && firstPart <= 31) {
+        // Likely DD-MM-YYYY format
+        const [day, month, year] = parts;
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      } else if (firstPart > 1000) {
+        // Likely YYYY-MM-DD format
+        return dateInput;
+      } else {
+        // Try parsing as DD-MM-YYYY
+        const [day, month, year] = parts;
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      }
+    }
+  }
+
+  // Fallback: try to parse as Date
+  try {
+    const dateObj = new Date(dateInput);
+    if (!isNaN(dateObj.getTime())) {
+      const year = dateObj.getFullYear();
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+      const day = dateObj.getDate().toString().padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+  } catch (e) {
+    console.error("Error parsing date:", e);
+  }
+
+  return "";
+};
+
 const UnifiedModalComponent = function UnifiedModal({
   isOpen,
   onClose,
@@ -105,9 +160,12 @@ const UnifiedModalComponent = function UnifiedModal({
   listViewBookingDetails, // New prop for list view booking details to filter green dot availability
   isBookingLoading, // New prop for booking loading state
 }) {
-  const cleanedTimeRange = time.replace(/\s+/g, ""); // Remove all spaces
-  const startTime = cleanedTimeRange.split("-")[0];
-  // console.log(startTime); // "8:00"
+  const cleanedTimeRange = time ? time.replace(/\s+/g, "") : ""; // Remove all spaces
+  const startTime = cleanedTimeRange ? cleanedTimeRange.split("-")[0] : "";
+
+  // Parse initial date
+  const initialDate = parseDateToYYYYMMDD(date);
+
   const [studentName, setStudentName] = useState("");
   const [selectedTeacher, setSelectedTeacher] = useState(availableTeachers);
   const [newTeacherId, setNewTeacherId] = useState("");
@@ -127,10 +185,24 @@ const UnifiedModalComponent = function UnifiedModal({
   // Enhanced booking form fields
   const [platformCredentials, setPlatformCredentials] = useState("");
   const [attendees, setAttendees] = useState("");
-  const [selectedScheduleDate, setSelectedScheduleDate] = useState(
-    new Date(date).toISOString().split("T")[0] // Keep YYYY-MM-DD for input
-  );
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState(initialDate);
   const [selectedScheduleTime, setSelectedScheduleTime] = useState(startTime);
+
+  // Update selectedScheduleDate and selectedScheduleTime when date/time props change
+  useEffect(() => {
+    if (date || time) {
+      const parsedDate = parseDateToYYYYMMDD(date);
+      const cleanedTime = time ? time.replace(/\s+/g, "") : "";
+      const parsedTime = cleanedTime ? cleanedTime.split("-")[0] : "";
+
+      if (parsedDate) {
+        setSelectedScheduleDate(parsedDate);
+      }
+      if (parsedTime) {
+        setSelectedScheduleTime(parsedTime);
+      }
+    }
+  }, [date, time]);
 
   // New Schedule section states
   const [scheduleEntries, setScheduleEntries] = useState([]);
@@ -1480,44 +1552,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                         key={i}
                                         onClick={() => {
                                           if (isAvailable) {
-                                            let finalDate = dayString;
-
-                                            // Check if currently selected time crosses midnight
-                                            if (selectedScheduleTime) {
-                                              const [hours, minutes] =
-                                                selectedScheduleTime
-                                                  .split(":")
-                                                  .map(Number);
-                                              const isEarlyMorning =
-                                                hours >= 0 && hours <= 5;
-
-                                              if (isEarlyMorning) {
-                                                // Advance the selected date by one day
-                                                const [year, month, day] =
-                                                  dayString
-                                                    .split("-")
-                                                    .map(Number);
-                                                const nextDay = new Date(
-                                                  year,
-                                                  month - 1,
-                                                  day + 1
-                                                );
-                                                const nextYear =
-                                                  nextDay.getFullYear();
-                                                const nextMonth = (
-                                                  nextDay.getMonth() + 1
-                                                )
-                                                  .toString()
-                                                  .padStart(2, "0");
-                                                const nextDayNum = nextDay
-                                                  .getDate()
-                                                  .toString()
-                                                  .padStart(2, "0");
-                                                finalDate = `${nextYear}-${nextMonth}-${nextDayNum}`;
-                                              }
-                                            }
-
-                                            setSelectedScheduleDate(finalDate);
+                                            setSelectedScheduleDate(dayString);
                                             setCalendarOpen(false);
                                           }
                                         }}
@@ -1594,38 +1629,6 @@ const UnifiedModalComponent = function UnifiedModal({
                           onChange={(e) => {
                             const selectedTime = e.target.value;
                             setSelectedScheduleTime(selectedTime);
-
-                            // Check if the selected time crosses midnight (00:00 to 05:59)
-                            if (selectedTime) {
-                              const [hours, minutes] = selectedTime
-                                .split(":")
-                                .map(Number);
-                              // Consider times from 00:00 to 05:59 as early morning (next day)
-                              const isEarlyMorning = hours >= 0 && hours <= 5;
-
-                              if (isEarlyMorning && selectedScheduleDate) {
-                                // Advance the date by one day
-                                const [year, month, day] = selectedScheduleDate
-                                  .split("-")
-                                  .map(Number);
-                                const nextDay = new Date(
-                                  year,
-                                  month - 1,
-                                  day + 1
-                                );
-                                const nextYear = nextDay.getFullYear();
-                                const nextMonth = (nextDay.getMonth() + 1)
-                                  .toString()
-                                  .padStart(2, "0");
-                                const nextDayNum = nextDay
-                                  .getDate()
-                                  .toString()
-                                  .padStart(2, "0");
-                                const nextDate = `${nextYear}-${nextMonth}-${nextDayNum}`;
-
-                                setSelectedScheduleDate(nextDate);
-                              }
-                            }
                           }}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                         >

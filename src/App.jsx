@@ -2192,6 +2192,43 @@ function App() {
     });
   };
 
+  // Sync teacher events API call
+  const syncTeacherEvents = async (teacherEmail) => {
+    if (!teacherEmail) {
+      console.warn("⚠️ No teacher email provided for sync");
+      return;
+    }
+
+    try {
+      console.log("🔄 Syncing teacher events for:", teacherEmail);
+
+      const formData = new URLSearchParams();
+      formData.append("calendar_id", teacherEmail);
+
+      const response = await fetch(
+        "https://live.jetlearn.com/sync/sync-teachers-events/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData.toString(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Teacher events synced successfully:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ Error syncing teacher events:", error);
+      throw error;
+    }
+  };
+
   const handleTeacherSelect = (teacher) => {
     console.log("🔍 Teacher selected from search:", teacher);
     console.log("📋 Teacher details:", {
@@ -2202,6 +2239,13 @@ function App() {
     });
 
     setSelectedTeacher(teacher);
+
+    // Sync teacher events when teacher is changed
+    if (teacher && teacher.email) {
+      syncTeacherEvents(teacher.email).catch((error) => {
+        console.error("Failed to sync teacher events:", error);
+      });
+    }
 
     // Switch to List View when filter is applied
     setCurrentView("list");

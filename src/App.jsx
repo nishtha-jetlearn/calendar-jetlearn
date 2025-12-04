@@ -7644,9 +7644,6 @@ function App() {
                                                   ) ||
                                                   extractedData.summary.includes(
                                                     "NO SHOW - TR"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "MAKE UP"
                                                   ))
                                               ? "bg-black"
                                               : "bg-red-500"
@@ -8042,9 +8039,6 @@ function App() {
                                               ) ||
                                               extractedData.summary.includes(
                                                 "NO SHOW - TR"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "MAKE UP"
                                               )
                                             ) &&
                                             canEditDeleteBooking() && (
@@ -8323,9 +8317,6 @@ function App() {
                                               ) ||
                                               extractedData.summary.includes(
                                                 "NO SHOW - TR"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "MAKE UP"
                                               )) &&
                                             canEditDeleteBooking() && (
                                               <div className="relative">

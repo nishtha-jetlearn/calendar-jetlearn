@@ -3764,6 +3764,7 @@ function App() {
         timezone: event.timezone,
         attendees: event.attendees || [], // Preserve attendees array from original event
         updated_by: event.updated_by || "", // Add updated_by field
+        jet_guide: event.jet_guide || "", // Add jet_guide field
       };
     }
 
@@ -7745,10 +7746,24 @@ function App() {
                                                 ),
                                                 (
                                                   <div>
-                                                    <div className="text-xs text-gray-500">
-                                                      {teacher.full_name ||
-                                                        selectedTeacher?.full_name}
+                                                    <div
+                                                      className={`text-xs text-gray-500 ${
+                                                        extractedData.jet_guide
+                                                          ? "font-bold"
+                                                          : ""
+                                                      }`}
+                                                    >
+                                                      {extractedData.jet_guide
+                                                        ? `Jet Guide -> ${extractedData.jet_guide}`
+                                                        : teacher.full_name ||
+                                                          selectedTeacher?.full_name}
                                                     </div>
+                                                    {extractedData.jet_guide && (
+                                                      <div className="text-xs text-gray-500 mt-1">
+                                                        {teacher.full_name ||
+                                                          selectedTeacher?.full_name}
+                                                      </div>
+                                                    )}
                                                     <div className="text-xs text-gray-500">
                                                       {teacher.email ||
                                                         selectedTeacher?.email}
@@ -7758,17 +7773,38 @@ function App() {
                                               );
                                             }
                                             return (
-                                              <span className="text-gray-500">
-                                                {teacherUid}
-                                              </span>
+                                              <div>
+                                                {extractedData.jet_guide && (
+                                                  <div className="text-xs text-gray-500 font-bold">
+                                                    Jet Guide {"->"}{" "}
+                                                    {extractedData.jet_guide}
+                                                  </div>
+                                                )}
+                                                <span className="text-gray-500">
+                                                  {teacherUid}
+                                                </span>
+                                              </div>
                                             );
                                           }
                                           return (
                                             <span className="text-gray-400">
                                               <div>
-                                                <div className="text-xs text-gray-500">
-                                                  {selectedTeacher?.full_name}
+                                                <div
+                                                  className={`text-xs text-gray-500 ${
+                                                    extractedData.jet_guide
+                                                      ? "font-bold"
+                                                      : ""
+                                                  }`}
+                                                >
+                                                  {extractedData.jet_guide
+                                                    ? `Jet Guide -> ${extractedData.jet_guide}`
+                                                    : selectedTeacher?.full_name}
                                                 </div>
+                                                {extractedData.jet_guide && (
+                                                  <div className="text-xs text-gray-500 mt-1">
+                                                    {selectedTeacher?.full_name}
+                                                  </div>
+                                                )}
                                                 <div className="text-xs text-gray-500">
                                                   {selectedTeacher?.email}
                                                 </div>

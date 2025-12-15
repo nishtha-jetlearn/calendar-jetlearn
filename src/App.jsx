@@ -36,6 +36,8 @@ import {
   FaSync,
   FaDownload,
   FaSave,
+  FaFile,
+  FaPaperclip,
 } from "react-icons/fa";
 import { MdManageAccounts } from "react-icons/md";
 import UnifiedModal from "./components/UnifiedModal";
@@ -96,19 +98,6 @@ const formatDateTimeToUTC = (date, timeRange, selectedTimezone) => {
       utcBaseDate.getTime() - totalOffsetMinutes * 60000
     );
 
-    // Debug logging
-    console.log("🕐 Timezone conversion debug:", {
-      originalDate: date,
-      timeRange,
-      selectedTimezone,
-      startTime,
-      offsetHours,
-      offsetMinutes,
-      totalOffsetMinutes,
-      utcBaseDate: utcBaseDate.toISOString(),
-      utcDateTime: utcDateTime.toISOString(),
-    });
-
     // Format to UTC string in the required format: "YYYY-MM-DD HH:MM"
     const utcYear = utcDateTime.getUTCFullYear();
     const utcMonth = String(utcDateTime.getUTCMonth() + 1).padStart(2, "0");
@@ -141,13 +130,11 @@ const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
         user_id: userId,
       }),
     });
-    console.log("🔍 freezeSlot response:", response.status);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log("🔍 freezeSlot data:", data);
 
     // Check if the slot is held by another user
     if (
@@ -172,11 +159,6 @@ const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
 // Helper function to check if a teacher is on leave for a specific date
 const isTeacherOnLeave = (teacherEmail, date, teacherLeaves) => {
   if (!teacherLeaves?.success || !teacherLeaves?.leaves) {
-    console.log("🔍 isTeacherOnLeave: No leave data available", {
-      teacherEmail,
-      date,
-      teacherLeaves,
-    });
     return false;
   }
 
@@ -187,44 +169,19 @@ const isTeacherOnLeave = (teacherEmail, date, teacherLeaves) => {
   const hasLeaves = leaves && typeof leaves === "object" && leaves.id;
 
   // Debug logging (can be removed in production)
-  console.log("🔍 isTeacherOnLeave check:", {
-    teacherEmail,
-    dateStr,
-    leaves,
-    hasLeaves,
-    availableDates: Object.keys(teacherLeaves.leaves),
-  });
 
   return hasLeaves;
 };
 
 // Helper function to check if a teacher has week off for a specific date
 const isTeacherWeekOff = (teacherEmail, date, availabilitySummary) => {
-  console.log("🔍 isTeacherWeekOff called with:", {
-    teacherEmail,
-    date,
-    availabilitySummary: availabilitySummary ? "exists" : "null/undefined",
-    isObject: typeof availabilitySummary === "object",
-    dataKeys:
-      availabilitySummary && typeof availabilitySummary === "object"
-        ? Object.keys(availabilitySummary)
-        : [],
-  });
-
   // Check if availabilitySummary exists and is an object (direct API response)
   if (!availabilitySummary || typeof availabilitySummary !== "object") {
-    console.log("🔍 isTeacherWeekOff: No valid data, returning false");
     return false;
   }
 
   const dateStr = formatDate(date);
   const dateData = availabilitySummary[dateStr];
-
-  console.log("🔍 isTeacherWeekOff date check:", {
-    dateStr,
-    dateData,
-    dateDataKeys: dateData ? Object.keys(dateData) : [],
-  });
 
   // Check if any time slot has week_off = 1 for this date
   let hasWeekOff = false;
@@ -233,36 +190,15 @@ const isTeacherWeekOff = (teacherEmail, date, availabilitySummary) => {
     hasWeekOff = Object.values(dateData).some((timeSlot) => {
       const isWeekOff =
         timeSlot && typeof timeSlot === "object" && timeSlot.week_off === 1;
-      if (isWeekOff) {
-        console.log("🔍 Found week_off = 1 in timeSlot:", timeSlot);
-      }
       return isWeekOff;
     });
   }
-
-  console.log("🔍 isTeacherWeekOff final result:", {
-    teacherEmail,
-    dateStr,
-    dateData,
-    hasWeekOff,
-    timeSlots: dateData ? Object.keys(dateData) : [],
-    weekOffSlots: dateData
-      ? Object.entries(dateData).filter(([, slot]) => slot?.week_off === 1)
-      : [],
-    availableDates: Object.keys(availabilitySummary || {}),
-  });
 
   return hasWeekOff;
 };
 
 // Helper function to get teacher email from event data
 const getTeacherEmailFromEvent = (eventData, selectedTeacher, teachers) => {
-  console.log("🔍 getTeacherEmailFromEvent:", {
-    eventData,
-    selectedTeacher,
-    teachers,
-  });
-
   // First try to get teacher email from the event data
   if (eventData.teacher_email) {
     console.log(
@@ -280,7 +216,6 @@ const getTeacherEmailFromEvent = (eventData, selectedTeacher, teachers) => {
         email.includes("@jetlearn.com") || email.includes("@jet-learn.com")
     );
     if (teacherEmail) {
-      console.log("🔍 Found teacher email in attendees:", teacherEmail);
       return teacherEmail;
     }
   }
@@ -291,7 +226,6 @@ const getTeacherEmailFromEvent = (eventData, selectedTeacher, teachers) => {
     const teacherUid = tlMatch[0];
     const teacher = teachers.find((t) => t.uid === teacherUid);
     if (teacher && teacher.email) {
-      console.log("🔍 Found teacher by UID from summary:", teacher.email);
       return teacher.email;
     }
   }
@@ -300,14 +234,12 @@ const getTeacherEmailFromEvent = (eventData, selectedTeacher, teachers) => {
   if (eventData.teacher_id) {
     const teacher = teachers.find((t) => t.uid === eventData.teacher_id);
     if (teacher && teacher.email) {
-      console.log("🔍 Found teacher by teacher_id:", teacher.email);
       return teacher.email;
     }
   }
 
   // Fallback to selected teacher
   const fallbackEmail = selectedTeacher?.email || null;
-  console.log("🔍 Using fallback teacher email:", fallbackEmail);
   return fallbackEmail;
 };
 
@@ -367,14 +299,23 @@ const safeErrorLog = (message, error) => {
 };
 
 function App() {
-  console.log("🎯 App component loaded!");
-
-  // Immediate test - this should always show
-  console.log("🔥 IMMEDIATE TEST - This should show right away!");
-
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   const { canAddBooking, canEditDeleteBooking, canAddTeacherAvailability } =
     usePermissions();
+
+  // Helper function to check if user has access to add leaves (tp, trial, admin, or tech team only)
+  const canAddLeaves = () => {
+    if (!user) return false;
+    const team =
+      user.team ||
+      user.role ||
+      user.fullUser?.team ||
+      user.fullUser?.role ||
+      "";
+    return (
+      team === "tp" || team === "trial" || team === "admin" || team === "tech"
+    );
+  };
 
   // Show loading screen while checking authentication
   if (isLoading) {
@@ -560,6 +501,9 @@ function App() {
   const [scheduleManagementPopup, setScheduleManagementPopup] = useState({
     isOpen: false,
     isLoading: false,
+    selectedSchedule: null, // Store selected schedule from Edit/Reschedule popup
+    teacherUid: null, // Store teacher UID for availability checking
+    onScheduleUpdate: null, // Callback to update schedule in Edit/Reschedule popup
   });
 
   // State for attendees in schedule management popup
@@ -573,20 +517,25 @@ function App() {
   const [selectedScheduleDate, setSelectedScheduleDate] = useState("");
   const [selectedScheduleTime, setSelectedScheduleTime] = useState("");
   const [platformCredentials, setPlatformCredentials] = useState("");
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfFileName, setPdfFileName] = useState("");
 
   // Debug: Log selectedScheduleDate changes
-  useEffect(() => {
-    console.log("🎯 selectedScheduleDate changed:", {
-      selectedScheduleDate,
-      selectedScheduleTime,
-      scheduleEntries,
-    });
-  }, [selectedScheduleDate, selectedScheduleTime, scheduleEntries]);
+  useEffect(() => {}, [
+    selectedScheduleDate,
+    selectedScheduleTime,
+    scheduleEntries,
+  ]);
 
   // Enhanced state for better API integration
   const [weeklyApiData, setWeeklyApiData] = useState({});
   const [apiDataLoading, setApiDataLoading] = useState(false);
   const [apiDataError, setApiDataError] = useState(null);
+
+  // State for storing new teacher's availability data separately (when teacher is changed in edit popup)
+  const [newTeacherAvailabilityData, setNewTeacherAvailabilityData] = useState(
+    {}
+  );
 
   // State for availability saving
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
@@ -690,6 +639,22 @@ function App() {
     upcomingEvents: false, // New field for upcoming events checkbox
   });
 
+  // State for apply leave popup
+  const [applyLeavePopup, setApplyLeavePopup] = useState({
+    isOpen: false,
+    startDate: "",
+    startTime: "00:00",
+    endDate: "",
+    endTime: "23:00",
+    reason: "",
+    isLoading: false,
+    errors: {
+      startDate: "",
+      endDate: "",
+      reason: "",
+    },
+  });
+
   // Update popup pagination when details popup changes
   useEffect(() => {
     if (detailsPopup.isOpen) {
@@ -723,8 +688,6 @@ function App() {
   // Initialize clean console and setup
   useEffect(() => {
     console.clear();
-    console.log("🚀 Calendar Application Started");
-    console.log("📱 Environment: Development");
     console.log(
       "🔧 Error Filtering: Active (Extension errors will be filtered)"
     );
@@ -762,8 +725,6 @@ function App() {
 
   // Check URL parameters on page load (after console.clear)
   useEffect(() => {
-    console.log("🚀 URL parameter check useEffect triggered");
-    console.log("📍 Current URL:", window.location.href);
     console.log("📍 Current search params:", window.location.search);
 
     // Simple test to make sure console is working
@@ -987,9 +948,6 @@ function App() {
         hasFilters = true;
         formData.append("teacherid", teacherToUse.uid);
         formData.append("email", teacherToUse.email);
-        console.log("✅ TEACHERID ADDED:", teacherToUse.uid);
-        console.log("✅ EMAIL ADDED:", teacherToUse.email);
-        console.log("👤 Teacher Name:", teacherToUse.full_name);
         console.log(
           "🎯 Teacher filter applied - teacherid and email will appear in Network Tab payload"
         );
@@ -1012,17 +970,9 @@ function App() {
       // Only add type parameter if we have filters (for list view, don't send type)
       if (hasFilters) {
         // For list view, don't send type parameter
-        console.log("🔍 FILTERED API CALL (List View)");
-        console.log("🚀 FILTERED PAYLOAD:", Object.fromEntries(formData));
-        console.log("📋 View will update with filtered data");
       } else {
         // For week view, send type parameter
         formData.append("type", "Availability");
-        console.log("📅 WEEK VIEW API CALL");
-        console.log("🚀 WEEK VIEW PAYLOAD:", Object.fromEntries(formData));
-        console.log(
-          "📋 Fetching complete dataset for all teachers and students"
-        );
       }
 
       const response = await fetch(
@@ -1128,6 +1078,86 @@ function App() {
     }
   };
 
+  // Function to apply teacher leave
+  const applyTeacherLeave = async (
+    teacherEmail,
+    startDate,
+    endDate,
+    reason,
+    teacherUid = null
+  ) => {
+    try {
+      // startDate and endDate are now arrays: ["YYYY-MM-DD", "HH:MM"]
+      const requestBody = {
+        teacher_email: teacherEmail,
+        teacher_uid: teacherUid || "",
+        start_date: startDate,
+        end_date: endDate,
+        reason: reason || "",
+      };
+
+      // Add updated_by if available (optional field)
+      if (user?.email) {
+        requestBody.updated_by = user.email;
+      }
+
+      console.log("🍃 Applying teacher leave:", requestBody);
+
+      const response = await fetch(
+        "https://live.jetlearn.com/api/apply-for-leave/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const result = await response.json();
+
+      // Check if status code is 201 and result status is "success"
+      if (response.status === 201 && result.status === "success") {
+        console.log("✅ Teacher leave applied successfully:", result);
+
+        // Refresh teacher leaves data
+        if (selectedTeacher?.email) {
+          const weekDates = getWeekDates(currentWeekStart);
+          const startDateStr = formatDate(weekDates[0]);
+          const endDateObj = new Date(startDateStr);
+          endDateObj.setMonth(endDateObj.getMonth() + 3);
+          const endDateStr = formatDate(endDateObj);
+          await fetchTeacherLeaves(
+            selectedTeacher.email,
+            startDateStr,
+            endDateStr
+          );
+        }
+
+        // Refresh booking details if in list view
+        if (currentView === "list") {
+          await fetchListViewBookingDetails();
+        }
+
+        // Refresh weekly data
+        if (currentView === "week") {
+          await refreshWeeklyDataForTeacher(selectedTeacher);
+        }
+
+        return result;
+      } else {
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${
+            result.message || "Unknown error"
+          }`
+        );
+      }
+    } catch (error) {
+      console.error("❌ Apply teacher leave API Error:", error);
+      throw error;
+    }
+  };
+
   // Load weekly data when week changes (teacher/student handled separately)
   useEffect(() => {
     const loadWeekData = async () => {
@@ -1203,6 +1233,45 @@ function App() {
   };
 
   // Get availability and booking counts from API or fallback to local
+  // Helper function to get slot counts from new teacher's availability data
+  const getNewTeacherSlotCounts = (date, time, newTeacherUid) => {
+    if (
+      !newTeacherUid ||
+      !newTeacherAvailabilityData ||
+      Object.keys(newTeacherAvailabilityData).length === 0
+    ) {
+      return null;
+    }
+
+    const dateObj = date instanceof Date ? date : new Date(date);
+    const dateStr = formatDate(dateObj);
+
+    // Check new teacher's availability data first
+    if (
+      newTeacherAvailabilityData[dateStr] &&
+      newTeacherAvailabilityData[dateStr][time]
+    ) {
+      const apiSlot = newTeacherAvailabilityData[dateStr][time];
+      // Only return if this slot belongs to the new teacher
+      if (
+        apiSlot.teacherid === newTeacherUid ||
+        apiSlot.uid === newTeacherUid
+      ) {
+        const teacher = getTeacherByTeacherId(apiSlot.teacherid || apiSlot.uid);
+        return {
+          available: apiSlot.availability || 0,
+          booked: apiSlot.bookings || 0,
+          teacherid: apiSlot.teacherid || apiSlot.uid || null,
+          teacherDetails: teacher || null,
+          apiData: apiSlot,
+          isFromAPI: true,
+          uid: apiSlot.uid || null,
+        };
+      }
+    }
+    return null;
+  };
+
   const getSlotCounts = (date, time) => {
     // Ensure date is a Date object
     const dateObj = date instanceof Date ? date : new Date(date);
@@ -2122,6 +2191,9 @@ function App() {
             event_id: bookingData.eventId, // Include event_id for edit operations
           }),
           time_zone: formatTimezoneForAPI(selectedTimezone),
+          ...(bookingData.pdf_attached && {
+            pdf_attached: bookingData.pdf_attached,
+          }),
         };
 
         console.log("📤 Sending booking to API:", apiPayload);
@@ -2230,14 +2302,6 @@ function App() {
   };
 
   const handleTeacherSelect = (teacher) => {
-    console.log("🔍 Teacher selected from search:", teacher);
-    console.log("📋 Teacher details:", {
-      id: teacher.id,
-      full_name: teacher.full_name,
-      uid: teacher.uid,
-      email: teacher.email,
-    });
-
     setSelectedTeacher(teacher);
 
     // Sync teacher events when teacher is changed
@@ -2290,14 +2354,6 @@ function App() {
   };
 
   const handleStudentSelect = (student) => {
-    console.log("🔍 Student selected from search:", student);
-    console.log("📋 Student details:", {
-      jetlearner_id: student.jetlearner_id,
-      deal_name: student.deal_name,
-      country: student.country,
-      age: student.age,
-    });
-
     setSelectedStudent(student);
 
     // Switch to List View when filter is applied
@@ -2376,18 +2432,61 @@ function App() {
   };
 
   // Handle schedule management popup open
-  const handleScheduleManagementOpen = () => {
+  const handleScheduleManagementOpen = (
+    selectedSchedule = null,
+    teacherUid = null,
+    onScheduleUpdate = null
+  ) => {
     setScheduleManagementPopup({
       isOpen: true,
       isLoading: false,
+      selectedSchedule: selectedSchedule,
+      teacherUid: teacherUid,
+      onScheduleUpdate: onScheduleUpdate,
     });
+    // If selectedSchedule is provided, set it as initial schedule entries
+    if (selectedSchedule && Array.isArray(selectedSchedule)) {
+      // Convert schedule format from [date, time] to {id, date, time}
+      const formattedSchedule = selectedSchedule.map((entry, index) => {
+        const [date, time] = Array.isArray(entry)
+          ? entry
+          : [entry.date || entry[0], entry.time || entry[1]];
+        return {
+          id: Date.now() + index,
+          date: date,
+          time: time,
+        };
+      });
+      setScheduleEntries(formattedSchedule);
+      // Set selectedScheduleDate and selectedScheduleTime from first entry
+      if (formattedSchedule.length > 0) {
+        setSelectedScheduleDate(formattedSchedule[0].date);
+        setSelectedScheduleTime(formattedSchedule[0].time);
+      }
+    }
   };
 
   // Handle schedule management popup close
   const handleScheduleManagementClose = () => {
+    // If there's a callback to update schedule (from Edit/Reschedule popup), call it
+    if (
+      scheduleManagementPopup.onScheduleUpdate &&
+      scheduleEntries.length > 0
+    ) {
+      // Convert schedule entries back to [date, time] format
+      const formattedSchedule = scheduleEntries.map((entry) => [
+        entry.date,
+        entry.time,
+      ]);
+      scheduleManagementPopup.onScheduleUpdate(formattedSchedule);
+    }
+
     setScheduleManagementPopup({
       isOpen: false,
       isLoading: false,
+      selectedSchedule: null,
+      teacherUid: null,
+      onScheduleUpdate: null,
     });
   };
 
@@ -2579,6 +2678,7 @@ function App() {
         class_type: "1:1",
         booking_type: "Trial", // Set as trial as requested
         time_zone: formatTimezoneForAPI(selectedTimezone),
+        pdf_attached: window.scheduleManagementPdfBase64 || "",
       };
 
       console.log("📤 Sending booking to API:", apiPayload);
@@ -2614,6 +2714,9 @@ function App() {
       setAttendeesList([]);
       setAttendees("");
       setPlatformCredentials("");
+      setPdfFile(null);
+      setPdfFileName("");
+      window.scheduleManagementPdfBase64 = "";
       await fetchListViewBookingDetails();
     } catch (error) {
       console.error("❌ Error booking student:", error);
@@ -2797,9 +2900,7 @@ function App() {
   const handleAvailabilityClick = async (date, time, teachers) => {
     // Ensure date is a Date object
     const dateObj = date instanceof Date ? date : new Date(date);
-    console.log("🔍 Availability clicked:", { date: dateObj, time, teachers });
     const { teacherid } = getSlotCounts(dateObj, time);
-    console.log("📋 Teacher ID from slot:", teacherid);
 
     // Always open popup if available count > 0
     setDetailsPopup({
@@ -2846,9 +2947,7 @@ function App() {
   const handleBookingClick = async (date, time, students) => {
     // Ensure date is a Date object
     const dateObj = date instanceof Date ? date : new Date(date);
-    console.log("🔍 Booking clicked:", { date: dateObj, time, students });
     const { teacherid } = getSlotCounts(dateObj, time);
-    console.log("📋 Teacher ID from slot:", teacherid);
 
     // Always open popup if booked count > 0
     setDetailsPopup({
@@ -3495,15 +3594,10 @@ function App() {
   const filterDataByTime = (data, targetTime, maxCount = null) => {
     if (!data) return [];
 
-    console.log("🔍 Filtering data for time:", targetTime);
-    console.log("📊 Raw data:", data);
-    console.log("📊 Max count limit:", maxCount);
-
     let filteredData = [];
 
     // Handle the new nested API response format: { "2025-07-23": { "17:00": { "events": [...] } } }
     const dates = Object.keys(data);
-    console.log("📅 Available dates:", dates);
 
     for (const date of dates) {
       const dateData = data[date];
@@ -3561,6 +3655,7 @@ function App() {
     if (summary.includes("MAKE UP")) recordingKeywords.push("MAKE UP");
     if (summary.includes("MAKE UP - S")) recordingKeywords.push("MAKE UP - S");
     if (summary.includes("Reserved")) recordingKeywords.push("Reserved");
+    if (summary.includes("Migration")) recordingKeywords.push("Migration");
 
     // Extract learner IDs starting with JL from summary
     const jlMatches = summary.match(/\bJL[A-Za-z0-9]+\b/g) || [];
@@ -3774,8 +3869,6 @@ function App() {
   // Function to parse booking details for list view
   const parseBookingDetails = (data) => {
     if (!data) return [];
-
-    console.log("🔍 parseBookingDetails - Raw API data:", data);
 
     const bookings = [];
 
@@ -3995,6 +4088,8 @@ function App() {
           return "bg-orange-500";
         case "no-show":
           return "bg-red-500";
+        case "leave":
+          return "bg-green-500";
         default:
           return "bg-blue-500";
       }
@@ -4008,6 +4103,8 @@ function App() {
           return <FaTimes size={20} />;
         case "no-show":
           return <FaExclamationTriangle size={20} />;
+        case "leave":
+          return <FaCheckCircle size={20} />;
         default:
           return <FaCheckCircle size={20} />;
       }
@@ -4139,9 +4236,21 @@ function App() {
     );
   };
 
+  // CRITICAL: Store ref outside component to persist across component remounts
+  // This ensures the teacher selection persists even if the component is recreated
+  const editReschedulePopupTeacherRef = React.useRef(null);
+
   // Edit/Reschedule Popup Component with Schedule Management functionality
   const EditReschedulePopup = () => {
     if (!editReschedulePopup.isOpen) return null;
+
+    // Teacher change functionality - must be declared before use
+    const [showTeacherChange, setShowTeacherChange] = useState(false);
+    const [newSelectedTeacher, setNewSelectedTeacher] = useState(null);
+    const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
+    const [teacherSearchResults, setTeacherSearchResults] = useState([]);
+    // Use the external ref to persist newSelectedTeacher across component remounts
+    const newSelectedTeacherRef = editReschedulePopupTeacherRef;
 
     // State for the edit/reschedule form
     const [attendees, setAttendees] = useState("");
@@ -4152,6 +4261,11 @@ function App() {
     // State for credentials edit mode
     const [isCredentialsEditing, setIsCredentialsEditing] = useState(false);
     const [tempDescription, setTempDescription] = useState("");
+
+    // State for PDF file
+    const [pdfFile, setPdfFile] = useState(null);
+    const [pdfFileName, setPdfFileName] = useState("");
+    const [pdfBase64, setPdfBase64] = useState("");
 
     // State for summary edit mode
     const [isSummaryEditing, setIsSummaryEditing] = useState(false);
@@ -4173,12 +4287,6 @@ function App() {
     // Form initialization state
     const [isFormInitialized, setIsFormInitialized] = useState(false);
 
-    // Teacher change functionality
-    const [showTeacherChange, setShowTeacherChange] = useState(false);
-    const [newSelectedTeacher, setNewSelectedTeacher] = useState(null);
-    const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
-    const [teacherSearchResults, setTeacherSearchResults] = useState([]);
-
     // Handle teacher search
     const handleTeacherSearch = (searchTerm) => {
       setTeacherSearchTerm(searchTerm);
@@ -4196,19 +4304,155 @@ function App() {
     };
 
     // Handle teacher selection
-    const handleTeacherSelect = (teacher) => {
+    const handleTeacherSelect = async (teacher, event) => {
+      // Prevent any default behavior that might cause page refresh
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      // CRITICAL: Set ref FIRST (synchronous) before state update
+      // This ensures ref is always set even if state update triggers re-renders
+      newSelectedTeacherRef.current = teacher;
+
+      // Then set state (asynchronous)
       setNewSelectedTeacher(teacher);
-      setShowTeacherChange(false);
+
+      // Safety check: ensure ref persists after state update
+      setTimeout(() => {
+        if (newSelectedTeacherRef.current?.uid !== teacher.uid) {
+          console.warn(
+            "🔵 [WARNING] Ref was cleared after setState! Restoring:",
+            {
+              expectedUid: teacher.uid,
+              actualRefUid: newSelectedTeacherRef.current?.uid,
+            }
+          );
+          newSelectedTeacherRef.current = teacher;
+        }
+      }, 0);
+
+      setShowTeacherChange(true);
       setTeacherSearchTerm("");
       setTeacherSearchResults([]);
+
+      // Fetch teacher availability when teacher changes - fetch for a month starting from today
+      if (teacher && teacher.uid) {
+        try {
+          // Calculate start date as today
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          // Calculate end date as one month from today
+          const endDate = new Date(today);
+          endDate.setMonth(endDate.getMonth() + 1);
+
+          // Format dates for API (YYYY-MM-DD format)
+          const startDateStr = formatDate(today);
+          const endDateStr = formatDate(endDate);
+
+          // Call API directly to fetch month of data
+          const formData = new URLSearchParams();
+          formData.append("start_date", startDateStr);
+          formData.append("end_date", endDateStr);
+          formData.append("timezone", formatTimezoneForAPI(selectedTimezone));
+          formData.append("teacherid", teacher.uid);
+          formData.append("email", teacher.email);
+
+          const response = await fetch(
+            "https://live.jetlearn.com/events/get-bookings-availability-summary/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: formData.toString(),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`API call failed: ${response.status}`);
+          }
+
+          const result = await response.json();
+
+          // API returns data in result.result (nested structure)
+          // Handle both result.result, result.data, and direct result object
+          const availabilityData = result.result || result.data || result;
+
+          if (availabilityData && typeof availabilityData === "object") {
+            // Dates are already in YYYY-MM-DD format, no conversion needed
+            // Just add teacherid and uid to each time slot
+            const convertedData = {};
+
+            Object.keys(availabilityData).forEach((dateKey) => {
+              // Date keys are already in YYYY-MM-DD format (e.g., "2025-12-11")
+              const dateData = availabilityData[dateKey];
+
+              if (dateData && typeof dateData === "object") {
+                convertedData[dateKey] = {};
+                Object.keys(dateData).forEach((timeKey) => {
+                  const timeSlot = dateData[timeKey];
+                  if (timeSlot && typeof timeSlot === "object") {
+                    // Add uid and teacherid to each time slot for filtering
+                    convertedData[dateKey][timeKey] = {
+                      ...timeSlot,
+                      teacherid: teacher.uid,
+                      uid: teacher.uid,
+                    };
+                  }
+                });
+              }
+            });
+
+            // Store new teacher's availability data separately (don't merge with weeklyApiData)
+            // This ensures we only show the new teacher's data, not mixed with old teacher's data
+            setNewTeacherAvailabilityData(convertedData);
+
+            // CRITICAL: Re-assert the teacher selection after setting availability data
+            // This ensures the teacher persists even after re-renders triggered by setNewTeacherAvailabilityData
+
+            // CRITICAL: Update ref first (synchronous) - this is the source of truth
+            // Store teacher object in ref BEFORE any state updates that might trigger re-renders
+            newSelectedTeacherRef.current = teacher;
+            // Then update state using functional update to ensure it's set correctly
+            setNewSelectedTeacher(() => {
+              // Double-check ref is still set (defensive programming)
+              if (!newSelectedTeacherRef.current) {
+                newSelectedTeacherRef.current = teacher;
+              }
+              return teacher;
+            });
+
+            // CRITICAL: Use setTimeout to ensure ref persists after all state updates
+            // This is a safety net in case something clears the ref during re-renders
+            setTimeout(() => {
+              if (newSelectedTeacherRef.current?.uid !== teacher.uid) {
+                newSelectedTeacherRef.current = teacher;
+                setNewSelectedTeacher(teacher);
+              }
+            }, 100);
+          } else {
+            console.warn(
+              "⚠️ Availability data is not an object:",
+              availabilityData
+            );
+          }
+        } catch (error) {
+          console.error("❌ Error fetching teacher availability:", error);
+        }
+      }
     };
 
     // Handle teacher change cancel
     const handleTeacherChangeCancel = () => {
       setShowTeacherChange(false);
       setNewSelectedTeacher(null);
+      newSelectedTeacherRef.current = null;
       setTeacherSearchTerm("");
       setTeacherSearchResults([]);
+      // Clear new teacher's availability data when cancelled
+      setNewTeacherAvailabilityData({});
     };
 
     const formatTime = (time) => {
@@ -4229,8 +4473,29 @@ function App() {
 
     // Initialize form with pre-processed data
     React.useEffect(() => {
+      // CRITICAL: Check if ref was cleared and restore from a backup if needed
+      // This is a safety net in case something clears the ref unexpectedly
+      const refBackup = newSelectedTeacherRef.current;
+
       if (editReschedulePopup.data) {
         const bookingData = editReschedulePopup.data;
+
+        // CRITICAL: ALWAYS preserve newSelectedTeacher from ref if it was already set
+        // This maintains the intermediate state when teacher is changed, even when popup data refreshes
+        // If ref is null but state has a teacher, restore ref from state
+        if (!newSelectedTeacherRef.current && newSelectedTeacher) {
+          console.log(
+            "🔵 [DEBUG] Ref was cleared but state has teacher - restoring ref from state:",
+            {
+              stateTeacherUid: newSelectedTeacher.uid,
+              stateTeacherName: newSelectedTeacher.full_name,
+            }
+          );
+          newSelectedTeacherRef.current = newSelectedTeacher;
+        }
+
+        const currentNewTeacher =
+          newSelectedTeacherRef.current || newSelectedTeacher;
 
         // Set form fields directly from pre-processed data
         setSelectedClassType(bookingData.class_type || "");
@@ -4239,13 +4504,53 @@ function App() {
         setSelectedRecording(bookingData.recording || []);
         setDescription(bookingData.description || "");
         setSummary(bookingData.summary || "");
+        // Reset PDF file when popup opens
+        setPdfFile(null);
+        setPdfFileName("");
+        setPdfBase64("");
 
-        // Set schedule from pre-processed data
+        // CRITICAL: Always restore newSelectedTeacher from ref if it was set
+        // This ensures teacher change persists even when popup data refreshes
+        // Priority: ref > current state (ref is source of truth for teacher change)
+
+        if (newSelectedTeacherRef.current) {
+          // Ref has the teacher - always use it (this is the source of truth)
+          // Use functional update to ensure we set the correct value
+          setNewSelectedTeacher(() => {
+            return newSelectedTeacherRef.current;
+          });
+        } else if (currentNewTeacher) {
+          // Fallback: use current state if ref is not set
+          setNewSelectedTeacher(() => currentNewTeacher);
+          newSelectedTeacherRef.current = currentNewTeacher;
+        } else {
+          // Only clear if ref is also null (popup just opened, no teacher change)
+          // CRITICAL: Never clear if ref has a value, even if state is null
+          if (!newSelectedTeacherRef.current) {
+            setNewSelectedTeacher(null);
+          } else {
+            // Ref has value but state doesn't - restore from ref
+            setNewSelectedTeacher(() => newSelectedTeacherRef.current);
+          }
+        }
+
+        // Set schedule from pre-processed data - convert to {id, date, time} format like ScheduleManagementPopup
         if (bookingData.schedule && Array.isArray(bookingData.schedule)) {
-          setScheduleEntries(bookingData.schedule);
-          if (bookingData.schedule.length > 0) {
-            setSelectedScheduleDate(bookingData.schedule[0][0] || "");
-            setSelectedScheduleTime(bookingData.schedule[0][1] || "");
+          // Convert schedule format from [date, time] to {id, date, time}
+          const formattedSchedule = bookingData.schedule.map((entry, index) => {
+            const [date, time] = Array.isArray(entry)
+              ? entry
+              : [entry.date || entry[0], entry.time || entry[1]];
+            return {
+              id: Date.now() + index,
+              date: date,
+              time: time,
+            };
+          });
+          setScheduleEntries(formattedSchedule);
+          if (formattedSchedule.length > 0) {
+            setSelectedScheduleDate(formattedSchedule[0].date);
+            setSelectedScheduleTime(formattedSchedule[0].time);
           }
         }
 
@@ -4267,9 +4572,39 @@ function App() {
         }
 
         setIsFormInitialized(true);
-        console.log("✅ Form initialized instantly with pre-processed data");
       }
     }, [editReschedulePopup.data]);
+
+    // Additional useEffect to ensure teacher persists when availability data is set
+    React.useEffect(() => {
+      console.log(
+        "🔵 [DEBUG] useEffect [newTeacherAvailabilityData] TRIGGERED:",
+        {
+          hasAvailabilityData:
+            Object.keys(newTeacherAvailabilityData || {}).length > 0,
+          refTeacher: newSelectedTeacherRef.current?.uid,
+          refTeacherName: newSelectedTeacherRef.current?.full_name,
+          stateTeacher: newSelectedTeacher?.uid,
+          stateTeacherName: newSelectedTeacher?.full_name,
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      // CRITICAL: Always restore from ref if it exists and doesn't match state
+      // This ensures teacher persists even if state gets cleared
+      if (newSelectedTeacherRef.current) {
+        const refUid = newSelectedTeacherRef.current.uid;
+        const stateUid = newSelectedTeacher?.uid;
+
+        // If ref has teacher but state doesn't match, restore from ref
+        if (refUid !== stateUid) {
+          // Use functional update to ensure correct value is set
+          setNewSelectedTeacher(() => {
+            return newSelectedTeacherRef.current;
+          });
+        }
+      }
+    }, [newTeacherAvailabilityData, newSelectedTeacher]);
 
     // Handle student search
     const handleStudentSearch = (searchTerm) => {
@@ -4328,15 +4663,28 @@ function App() {
     // Add schedule entry
     const addScheduleEntry = () => {
       if (selectedScheduleDate && selectedScheduleTime) {
-        const newEntry = [selectedScheduleDate, selectedScheduleTime];
-        if (
-          scheduleEntries.length < 3 &&
-          !scheduleEntries.some(
-            (entry) =>
+        // Check if entry already exists (handle both array and object formats)
+        const entryExists = scheduleEntries.some((entry) => {
+          if (Array.isArray(entry)) {
+            return (
               entry[0] === selectedScheduleDate &&
               entry[1] === selectedScheduleTime
-          )
-        ) {
+            );
+          } else {
+            return (
+              entry.date === selectedScheduleDate &&
+              entry.time === selectedScheduleTime
+            );
+          }
+        });
+
+        if (scheduleEntries.length < 3 && !entryExists) {
+          // Create entry in object format with id
+          const newEntry = {
+            id: Date.now() + Math.random(), // Unique ID
+            date: selectedScheduleDate,
+            time: selectedScheduleTime,
+          };
           setScheduleEntries([...scheduleEntries, newEntry]);
           setSelectedScheduleDate("");
           setSelectedScheduleTime("");
@@ -4344,9 +4692,19 @@ function App() {
       }
     };
 
-    // Remove schedule entry
-    const removeScheduleEntry = (index) => {
-      setScheduleEntries(scheduleEntries.filter((_, i) => i !== index));
+    // Remove schedule entry by id
+    const removeScheduleEntry = (entryId) => {
+      setScheduleEntries(
+        scheduleEntries.filter((entry) => {
+          // Handle both array format (legacy) and object format
+          if (Array.isArray(entry)) {
+            // For array format, use index-based removal (fallback)
+            return true; // Keep all arrays for now, or implement index-based logic if needed
+          } else {
+            return entry.id !== entryId;
+          }
+        })
+      );
     };
 
     // Helper function to get hidden field values for API
@@ -4425,8 +4783,9 @@ function App() {
         platform_credentials: description || "",
         summary: summary || "",
         schedule: scheduleEntries.map((entry) => {
-          // Convert local time to UTC for API
-          const [date, time] = entry;
+          // Handle both array format [date, time] and object format {id, date, time}
+          const date = Array.isArray(entry) ? entry[0] : entry.date;
+          const time = Array.isArray(entry) ? entry[1] : entry.time;
 
           // Extract only start time if it's a range (e.g., "16:00 - 17:00" -> "16:00")
           const startTime = time.includes(" - ") ? time.split(" - ")[0] : time;
@@ -4470,14 +4829,11 @@ function App() {
         updated_by: user?.email || "",
         upcoming_events: upcomingEvents ? "true" : "false",
         time_zone: formatTimezoneForAPI(selectedTimezone),
+        pdf_attached: pdfBase64 || "",
       };
 
       console.log("📤 Sending UPDATE/EDIT Class API request:");
       console.log("📊 Payload:", JSON.stringify(apiPayload, null, 2));
-      console.log("🔍 API Payload Breakdown:");
-      console.log("  - event_id:", apiPayload.event_id);
-      console.log("  - jl_uid:", apiPayload.jl_uid);
-      console.log("  - teacher_uid:", apiPayload.teacher_uid);
       console.log("  - platform_credentials:", apiPayload.platform_credentials);
       console.log("  - schedule (UTC):", apiPayload.schedule);
       console.log("  - timezone offset:", `${offsetHours}:${offsetMinutes}`);
@@ -4535,6 +4891,13 @@ function App() {
               message: "",
               type: "",
             });
+            // Clear teacher change state
+            setNewSelectedTeacher(null);
+            newSelectedTeacherRef.current = null;
+            setNewTeacherAvailabilityData({});
+            setShowTeacherChange(false);
+            setTeacherSearchTerm("");
+            setTeacherSearchResults([]);
           }, 2000);
 
           // Refresh the data after successful update
@@ -4594,6 +4957,13 @@ function App() {
                   setSelectedClassCount("");
                   setSelectedRecording([]);
                   setIsFormInitialized(false);
+                  // Clear teacher change state
+                  setNewSelectedTeacher(null);
+                  newSelectedTeacherRef.current = null;
+                  setNewTeacherAvailabilityData({});
+                  setShowTeacherChange(false);
+                  setTeacherSearchTerm("");
+                  setTeacherSearchResults([]);
                 }}
                 className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 sm:p-2 rounded-full transition-all duration-200 flex-shrink-0"
               >
@@ -4611,11 +4981,9 @@ function App() {
               const teacherUid = tlMatch ? tlMatch[0] : selectedTeacher?.uid;
 
               if (teacherUid) {
-                console.log("🔍 Teacher UID Block  inside:", teacherUid);
                 // Find teacher in teachers array
                 const teacher = teachers.find((t) => t.uid === teacherUid);
                 if (teacher) {
-                  console.log("🔍 Teacher Data From Summary :", teacher);
                   // Render hidden fields with teacher data
                   return (
                     <>
@@ -4691,11 +5059,6 @@ function App() {
                       const hasCalibration = summary
                         ?.toLowerCase()
                         .includes("calibration");
-                      console.log("🔍 Booking Type Debug:", {
-                        summary: summary,
-                        hasCalibration: hasCalibration,
-                        booking_type: editReschedulePopup.data.booking_type,
-                      });
                       return hasCalibration ? "Trial" : "Paid";
                     })()}
                   </div>
@@ -4714,14 +5077,13 @@ function App() {
                     <div className="flex items-center gap-2">
                       <strong>Teacher:</strong>{" "}
                       {(() => {
-                        // Use newSelectedTeacher if available, otherwise extract from data
-                        if (newSelectedTeacher) {
-                          console.log(
-                            "🔍 New Selected Teacher :",
-                            newSelectedTeacher
-                          );
-                          return `${newSelectedTeacher.uid} (${
-                            newSelectedTeacher.full_name || " "
+                        // Use newSelectedTeacher (from state or ref) if available, otherwise extract from data
+                        const currentNewTeacher =
+                          newSelectedTeacherRef.current || newSelectedTeacher;
+
+                        if (currentNewTeacher) {
+                          return `${currentNewTeacher.uid} (${
+                            currentNewTeacher.full_name || " "
                           })`;
                         }
 
@@ -4737,10 +5099,6 @@ function App() {
                         if (teacherUid) {
                           const teacher = teachers.find(
                             (t) => t.uid === teacherUid
-                          );
-                          console.log(
-                            "🔍 Teacher Data From Summary :",
-                            teacher
                           );
                           return teacher
                             ? `${teacher.uid} (${teacher.full_name || " "})`
@@ -4811,7 +5169,11 @@ function App() {
                     {teacherSearchResults.map((teacher) => (
                       <div
                         key={teacher.id}
-                        onClick={() => handleTeacherSelect(teacher)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTeacherSelect(teacher, e);
+                        }}
                         className="p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
                       >
                         <div className="flex items-center gap-3">
@@ -4901,6 +5263,70 @@ function App() {
                     )}
                   </div>
                 )}
+
+                {/* PDF File Upload */}
+                <div className="mt-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Attach PDF File
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          if (file.size > 10 * 1024 * 1024) {
+                            alert("File size must be less than 10MB");
+                            return;
+                          }
+                          setPdfFileName(file.name);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            const base64String = reader.result.split(",")[1];
+                            setPdfBase64(base64String);
+                          };
+                          reader.readAsDataURL(file);
+                          setPdfFile(file);
+                        }
+                      }}
+                      className="hidden"
+                      id="pdf-upload-edit"
+                    />
+                    <label
+                      htmlFor="pdf-upload-edit"
+                      className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-xs"
+                    >
+                      <FaPaperclip size={12} className="text-gray-600" />
+                      <span className="text-gray-700">
+                        {pdfFileName || "Choose PDF file"}
+                      </span>
+                    </label>
+                    {pdfFileName && (
+                      <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md p-2">
+                        <div className="flex items-center gap-2">
+                          <FaFile size={12} className="text-blue-600" />
+                          <span className="text-xs text-gray-700 truncate">
+                            {pdfFileName}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfFile(null);
+                            setPdfFileName("");
+                            setPdfBase64("");
+                            document.getElementById("pdf-upload-edit").value =
+                              "";
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <FaTimes size={10} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Summary */}
@@ -4965,7 +5391,7 @@ function App() {
 
             {/* Schedule and Learners - Side by Side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3">
-              {/* Schedule Display */}
+              {/* Schedule Display with Inline Editing */}
               <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-gray-900 mb-2">
                   <div className="p-0.5 bg-orange-100 rounded">
@@ -4975,20 +5401,191 @@ function App() {
                 </h3>
 
                 <div className="space-y-2">
-                  {scheduleEntries.length === 0 ? (
-                    <div className="text-center py-4 text-gray-500">
-                      <FaCalendarAlt
-                        size={20}
-                        className="mx-auto mb-2 text-gray-300"
+                  {/* Schedule Entry Form */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Date
+                      </label>
+                      <input
+                        type="date"
+                        value={selectedScheduleDate}
+                        onChange={(e) => {
+                          setSelectedScheduleDate(e.target.value);
+                          setSelectedScheduleTime("");
+                        }}
+                        min={new Date().toISOString().split("T")[0]}
+                        className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-orange-500 focus:border-transparent"
                       />
-                      <p className="text-xs">No schedule entries</p>
                     </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {scheduleEntries.map((entry, index) => {
-                        const [date, time] = entry;
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Time
+                      </label>
+                      <select
+                        value={selectedScheduleTime}
+                        onChange={(e) => {
+                          setSelectedScheduleTime(e.target.value);
+                        }}
+                        className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-orange-500 focus:border-transparent"
+                      >
+                        <option value="">Select time...</option>
+                        {(() => {
+                          // Get teacher UID - prioritize newSelectedTeacher from ref or state
+                          const currentNewTeacher =
+                            newSelectedTeacherRef.current || newSelectedTeacher;
+                          const teacherUid =
+                            currentNewTeacher?.uid ||
+                            (() => {
+                              const tlMatch =
+                                editReschedulePopup.data?.summary?.match(
+                                  /\bTJ[A-Za-z0-9]+\b/
+                                );
+                              return tlMatch
+                                ? tlMatch[0]
+                                : selectedTeacher?.uid;
+                            })();
 
-                        // Extract only start time if it's a range (e.g., "16:00 - 17:00" -> "16:00")
+                          // Check if date is in the past
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const selectedDate = selectedScheduleDate
+                            ? new Date(selectedScheduleDate)
+                            : null;
+                          const isPastDate =
+                            selectedDate && selectedDate < today;
+
+                          // Generate all time slots
+                          const allTimeSlots = Array.from(
+                            { length: 48 },
+                            (_, i) => {
+                              const hour = Math.floor(i / 2);
+                              const minute = (i % 2) * 30;
+                              return `${String(hour).padStart(2, "0")}:${String(
+                                minute
+                              ).padStart(2, "0")}`;
+                            }
+                          );
+
+                          // If no date selected or no teacher, show all slots (except past dates)
+                          if (!selectedScheduleDate || !teacherUid) {
+                            return allTimeSlots.map((timeString) => (
+                              <option
+                                key={timeString}
+                                value={timeString}
+                                disabled={isPastDate}
+                                style={{
+                                  color: isPastDate ? "#999" : "inherit",
+                                }}
+                              >
+                                {timeString}
+                              </option>
+                            ));
+                          }
+
+                          // Use same approach as ScheduleManagementPopup - filter available slots
+                          // Check new teacher's data first if teacher was changed
+                          const dateStr = formatDate(
+                            new Date(selectedScheduleDate)
+                          );
+
+                          const availableSlots = allTimeSlots.filter(
+                            (timeString) => {
+                              const dateObj = new Date(selectedScheduleDate);
+
+                              // If new teacher is selected, ONLY use new teacher's availability data
+                              const currentNewTeacher =
+                                newSelectedTeacherRef.current ||
+                                newSelectedTeacher;
+                              let slotCounts = null;
+                              if (currentNewTeacher?.uid) {
+                                // Use new teacher's data exclusively
+                                slotCounts = getNewTeacherSlotCounts(
+                                  dateObj,
+                                  timeString,
+                                  currentNewTeacher.uid
+                                );
+
+                                // Only show slots where availability > bookings (slots remaining)
+                                if (slotCounts) {
+                                  const hasAvailableSlots =
+                                    slotCounts.available > slotCounts.booked &&
+                                    (slotCounts.teacherid ===
+                                      currentNewTeacher.uid ||
+                                      slotCounts.uid === currentNewTeacher.uid);
+                                  // Slot is available for new teacher
+                                  return hasAvailableSlots;
+                                }
+                                // If new teacher selected but no data for this slot, don't show it
+                                return false;
+                              }
+
+                              // Fallback to regular getSlotCounts if no new teacher selected
+                              slotCounts = getSlotCounts(dateObj, timeString);
+
+                              // Only show slots where availability > bookings (slots remaining)
+                              const isAvailable =
+                                slotCounts.available > slotCounts.booked &&
+                                (slotCounts.teacherid === teacherUid ||
+                                  slotCounts.uid === teacherUid);
+                              return isAvailable;
+                            }
+                          );
+
+                          console.log(
+                            "📋 Available slots found:",
+                            availableSlots.length,
+                            availableSlots
+                          );
+
+                          // Render only available slots
+                          return availableSlots.map((timeString) => (
+                            <option key={timeString} value={timeString}>
+                              {timeString}
+                            </option>
+                          ));
+                        })()}
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={addScheduleEntry}
+                    disabled={
+                      !selectedScheduleDate ||
+                      !selectedScheduleTime ||
+                      scheduleEntries.length >= 3
+                    }
+                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white py-2 rounded hover:from-orange-700 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-1.5 font-medium text-xs"
+                  >
+                    <FaPlus size={12} />
+                    Add Schedule Entry {scheduleEntries.length}/3
+                  </button>
+
+                  {/* Schedule Entries List */}
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                    {scheduleEntries.length === 0 ? (
+                      <div className="text-center py-2 text-gray-500">
+                        <FaCalendarAlt
+                          size={16}
+                          className="mx-auto mb-1 text-gray-300"
+                        />
+                        <p className="text-xs">No schedule entries added</p>
+                      </div>
+                    ) : (
+                      scheduleEntries.map((entry) => {
+                        // Handle both array format [date, time] and object format {id, date, time}
+                        const date = Array.isArray(entry)
+                          ? entry[0]
+                          : entry.date;
+                        const time = Array.isArray(entry)
+                          ? entry[1]
+                          : entry.time;
+                        const entryId = Array.isArray(entry)
+                          ? scheduleEntries.indexOf(entry)
+                          : entry.id;
+
+                        // Extract only start time if it's a range
                         const startTime = time.includes(" - ")
                           ? time.split(" - ")[0]
                           : time;
@@ -4999,16 +5596,13 @@ function App() {
                           : `${startTime.slice(0, 2)}:${startTime.slice(2, 4)}`;
 
                         // Check if start time is in early morning hours (00:00 to 05:59)
-                        // If so, display as next day
                         const [hours, minutes] = formattedTime
                           .split(":")
                           .map(Number);
-                        // Consider times from 00:00 to 05:59 as early morning (next day)
                         const isEarlyMorning = hours >= 0 && hours <= 5;
 
                         let displayDate, displayDayName;
                         if (isEarlyMorning) {
-                          // Add one day to the date
                           const [year, month, day] = date
                             .split("-")
                             .map(Number);
@@ -5027,7 +5621,6 @@ function App() {
                             weekday: "long",
                           });
                         } else {
-                          // Use original date
                           const [year, month, day] = date
                             .split("-")
                             .map(Number);
@@ -5040,20 +5633,76 @@ function App() {
                           displayDayName = getDayName(date);
                         }
 
+                        // Check teacher availability
+                        let availabilityStatus = null;
+                        const teacherUid =
+                          newSelectedTeacher?.uid ||
+                          (() => {
+                            const tlMatch =
+                              editReschedulePopup.data?.summary?.match(
+                                /\bTJ[A-Za-z0-9]+\b/
+                              );
+                            return tlMatch ? tlMatch[0] : selectedTeacher?.uid;
+                          })();
+                        if (teacherUid && date) {
+                          const dateObj = new Date(date);
+                          const slotCounts = getSlotCounts(dateObj, time);
+                          const isAvailable =
+                            slotCounts.available > 0 &&
+                            (slotCounts.teacherid === teacherUid ||
+                              slotCounts.uid === teacherUid);
+                          availabilityStatus = isAvailable;
+                        }
+
+                        // Check if date is in the past
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const entryDate = date ? new Date(date) : null;
+                        const isPastDate = entryDate && entryDate < today;
+
                         return (
                           <div
-                            key={index}
-                            className="p-2 bg-white rounded-md border border-gray-200"
+                            key={entryId}
+                            className={`bg-white rounded p-2 border shadow-sm flex justify-between items-center ${
+                              isPastDate
+                                ? "border-red-300 bg-red-50"
+                                : availabilityStatus === false
+                                ? "border-orange-300 bg-orange-50"
+                                : availabilityStatus === true
+                                ? "border-green-300 bg-green-50"
+                                : "border-gray-200"
+                            }`}
                           >
-                            <span className="text-xs text-gray-700">
-                              {displayDate} ({displayDayName}) at{" "}
-                              {formattedTime}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                              <FaCalendarAlt
+                                size={12}
+                                className={
+                                  isPastDate
+                                    ? "text-red-600"
+                                    : availabilityStatus === false
+                                    ? "text-orange-600"
+                                    : availabilityStatus === true
+                                    ? "text-green-600"
+                                    : "text-gray-600"
+                                }
+                              />
+                              <span className="text-xs font-medium text-gray-900 truncate">
+                                {displayDate} ({displayDayName}) at{" "}
+                                {formattedTime}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => removeScheduleEntry(entryId)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200 flex-shrink-0"
+                              title="Remove schedule entry"
+                            >
+                              <FaTrash size={10} />
+                            </button>
                           </div>
                         );
-                      })}
-                    </div>
-                  )}
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -5325,35 +5974,39 @@ function App() {
                   {/* Recording Options */}
                   <div>
                     <div className="space-y-1">
-                      {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map(
-                        (option) => (
-                          <label
-                            key={option}
-                            className="flex items-center gap-2 text-xs"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedRecording.includes(option)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedRecording([
-                                    ...selectedRecording,
-                                    option,
-                                  ]);
-                                } else {
-                                  setSelectedRecording(
-                                    selectedRecording.filter(
-                                      (item) => item !== option
-                                    )
-                                  );
-                                }
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            {option}
-                          </label>
-                        )
-                      )}
+                      {[
+                        "DNREC",
+                        "MAKE UP",
+                        "MAKE UP - S",
+                        "Reserved",
+                        "Migration",
+                      ].map((option) => (
+                        <label
+                          key={option}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedRecording.includes(option)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedRecording([
+                                  ...selectedRecording,
+                                  option,
+                                ]);
+                              } else {
+                                setSelectedRecording(
+                                  selectedRecording.filter(
+                                    (item) => item !== option
+                                  )
+                                );
+                              }
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          {option}
+                        </label>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -5552,27 +6205,6 @@ function App() {
             filteredBookingData.length,
             popupPagination.itemsPerPage
           );
-
-    // Debug logging
-    console.log("🔍 Popup Debug Info:", {
-      time: detailsPopup.time,
-      type: detailsPopup.type,
-      gridAvailableCount,
-      gridBookedCount,
-      availabilityResponse: availabilityAPI.response,
-      bookingResponse: bookingApiResponse.data,
-      filteredAvailability: filteredAvailabilityData,
-      filteredBooking: filteredBookingData,
-      availableTimes: availabilityAPI.response
-        ? Object.keys(availabilityAPI.response)
-        : [],
-      bookingTimes: bookingApiResponse.data
-        ? Object.keys(bookingApiResponse.data)
-        : [],
-      pagination: popupPagination,
-      currentData: currentData,
-      totalPages: totalPages,
-    });
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-3 md:p-4 animate-in fade-in duration-200">
@@ -6213,6 +6845,479 @@ function App() {
     );
   };
 
+  // Apply Leave Popup Component
+  const ApplyLeavePopup = () => {
+    if (!applyLeavePopup.isOpen) return null;
+
+    const today = formatDate(new Date());
+    // Local state for reason to allow smooth typing
+    const [reasonText, setReasonText] = useState("");
+
+    // Reset reason text when popup opens
+    React.useEffect(() => {
+      if (applyLeavePopup.isOpen) {
+        setReasonText(applyLeavePopup.reason || "");
+      }
+    }, [applyLeavePopup.isOpen]);
+
+    const handleSubmit = async () => {
+      // Reset errors
+      setApplyLeavePopup((prev) => ({
+        ...prev,
+        errors: { startDate: "", endDate: "", reason: "" },
+      }));
+
+      // Validation
+      let hasErrors = false;
+      const newErrors = { startDate: "", endDate: "", reason: "" };
+
+      if (!applyLeavePopup.startDate) {
+        newErrors.startDate = "Start date is required";
+        hasErrors = true;
+      } else {
+        const startDateStr = applyLeavePopup.startDate;
+        const startTimeStr = applyLeavePopup.startTime || "00:00";
+        const startDateTime = new Date(`${startDateStr}T${startTimeStr}`);
+        const todayObj = new Date(today);
+        todayObj.setHours(0, 0, 0, 0);
+
+        if (startDateTime < todayObj) {
+          newErrors.startDate = "Start date must be from today onwards";
+          hasErrors = true;
+        }
+      }
+
+      if (!applyLeavePopup.endDate) {
+        newErrors.endDate = "End date is required";
+        hasErrors = true;
+      } else if (applyLeavePopup.startDate) {
+        const startDateStr = applyLeavePopup.startDate;
+        const startTimeStr = applyLeavePopup.startTime || "00:00";
+        const endDateStr = applyLeavePopup.endDate;
+        const endTimeStr = applyLeavePopup.endTime || "23:00";
+
+        const startDateTime = new Date(`${startDateStr}T${startTimeStr}`);
+        const endDateTime = new Date(`${endDateStr}T${endTimeStr}`);
+
+        if (endDateTime < startDateTime) {
+          newErrors.endDate =
+            "End date/time must be greater than or equal to start date/time";
+          hasErrors = true;
+        }
+      }
+
+      if (!reasonText || reasonText.trim() === "") {
+        newErrors.reason = "Reason is required";
+        hasErrors = true;
+      }
+
+      if (hasErrors) {
+        setApplyLeavePopup((prev) => ({ ...prev, errors: newErrors }));
+        return;
+      }
+
+      try {
+        setApplyLeavePopup((prev) => ({ ...prev, isLoading: true }));
+
+        // Format dates as ["YYYY-MM-DD", "HH:MM"]
+        const startDateFormatted = [
+          applyLeavePopup.startDate,
+          applyLeavePopup.startTime || "00:00",
+        ];
+        const endDateFormatted = [
+          applyLeavePopup.endDate,
+          applyLeavePopup.endTime || "23:00",
+        ];
+
+        await applyTeacherLeave(
+          selectedTeacher.email,
+          startDateFormatted,
+          endDateFormatted,
+          reasonText,
+          selectedTeacher.uid || null
+        );
+
+        // Close popup immediately
+        setApplyLeavePopup({
+          isOpen: false,
+          startDate: "",
+          startTime: "00:00",
+          endDate: "",
+          endTime: "23:00",
+          reason: "",
+          isLoading: false,
+          errors: { startDate: "", endDate: "", reason: "" },
+        });
+        setReasonText("");
+
+        // Show success message as toaster (auto-hides after 3 seconds)
+        setSuccessMessage({
+          show: true,
+          message: "Leave added successfully!",
+          type: "leave",
+        });
+      } catch (error) {
+        console.error("Error applying leave:", error);
+        alert(`Failed to apply leave: ${error.message}`);
+        setApplyLeavePopup((prev) => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    const handleClose = () => {
+      setApplyLeavePopup({
+        isOpen: false,
+        startDate: "",
+        startTime: "00:00",
+        endDate: "",
+        endTime: "23:00",
+        reason: "",
+        isLoading: false,
+        errors: { startDate: "", endDate: "", reason: "" },
+      });
+      setReasonText("");
+    };
+
+    const handleStartDateChange = (e) => {
+      const newStartDate = e.target.value;
+      setApplyLeavePopup((prev) => ({ ...prev, startDate: newStartDate }));
+
+      // If end date is before new start date, clear it
+      if (applyLeavePopup.endDate && newStartDate) {
+        const startTimeStr = applyLeavePopup.startTime || "00:00";
+        const endTimeStr = applyLeavePopup.endTime || "23:00";
+        const startDateTime = new Date(`${newStartDate}T${startTimeStr}`);
+        const endDateTime = new Date(
+          `${applyLeavePopup.endDate}T${endTimeStr}`
+        );
+
+        if (endDateTime < startDateTime) {
+          setApplyLeavePopup((prev) => ({ ...prev, endDate: "" }));
+        }
+      }
+
+      // Clear error
+      if (applyLeavePopup.errors.startDate) {
+        setApplyLeavePopup((prev) => ({
+          ...prev,
+          errors: { ...prev.errors, startDate: "" },
+        }));
+      }
+    };
+
+    const handleStartTimeChange = (e) => {
+      const newStartTime = e.target.value;
+      setApplyLeavePopup((prev) => ({ ...prev, startTime: newStartTime }));
+
+      // Validate end date/time if both dates are set
+      if (applyLeavePopup.startDate && applyLeavePopup.endDate) {
+        const startTimeStr = newStartTime || "00:00";
+        const endTimeStr = applyLeavePopup.endTime || "23:00";
+        const startDateTime = new Date(
+          `${applyLeavePopup.startDate}T${startTimeStr}`
+        );
+        const endDateTime = new Date(
+          `${applyLeavePopup.endDate}T${endTimeStr}`
+        );
+
+        if (
+          endDateTime < startDateTime &&
+          applyLeavePopup.errors.endDate === ""
+        ) {
+          setApplyLeavePopup((prev) => ({
+            ...prev,
+            errors: {
+              ...prev.errors,
+              endDate:
+                "End date/time must be greater than or equal to start date/time",
+            },
+          }));
+        } else if (
+          endDateTime >= startDateTime &&
+          applyLeavePopup.errors.endDate
+        ) {
+          setApplyLeavePopup((prev) => ({
+            ...prev,
+            errors: { ...prev.errors, endDate: "" },
+          }));
+        }
+      }
+
+      // Clear error
+      if (applyLeavePopup.errors.startDate) {
+        setApplyLeavePopup((prev) => ({
+          ...prev,
+          errors: { ...prev.errors, startDate: "" },
+        }));
+      }
+    };
+
+    const handleEndDateChange = (e) => {
+      const newEndDate = e.target.value;
+      setApplyLeavePopup((prev) => ({ ...prev, endDate: newEndDate }));
+
+      // Validate end date/time if both dates are set
+      if (applyLeavePopup.startDate && newEndDate) {
+        const startTimeStr = applyLeavePopup.startTime || "00:00";
+        const endTimeStr = applyLeavePopup.endTime || "23:00";
+        const startDateTime = new Date(
+          `${applyLeavePopup.startDate}T${startTimeStr}`
+        );
+        const endDateTime = new Date(`${newEndDate}T${endTimeStr}`);
+
+        if (endDateTime < startDateTime) {
+          setApplyLeavePopup((prev) => ({
+            ...prev,
+            errors: {
+              ...prev.errors,
+              endDate:
+                "End date/time must be greater than or equal to start date/time",
+            },
+          }));
+        } else {
+          setApplyLeavePopup((prev) => ({
+            ...prev,
+            errors: { ...prev.errors, endDate: "" },
+          }));
+        }
+      } else if (applyLeavePopup.errors.endDate) {
+        setApplyLeavePopup((prev) => ({
+          ...prev,
+          errors: { ...prev.errors, endDate: "" },
+        }));
+      }
+    };
+
+    const handleEndTimeChange = (e) => {
+      const newEndTime = e.target.value;
+      setApplyLeavePopup((prev) => ({ ...prev, endTime: newEndTime }));
+
+      // Validate end date/time if both dates are set
+      if (applyLeavePopup.startDate && applyLeavePopup.endDate) {
+        const startTimeStr = applyLeavePopup.startTime || "00:00";
+        const endTimeStr = newEndTime || "23:00";
+        const startDateTime = new Date(
+          `${applyLeavePopup.startDate}T${startTimeStr}`
+        );
+        const endDateTime = new Date(
+          `${applyLeavePopup.endDate}T${endTimeStr}`
+        );
+
+        if (endDateTime < startDateTime) {
+          setApplyLeavePopup((prev) => ({
+            ...prev,
+            errors: {
+              ...prev.errors,
+              endDate:
+                "End date/time must be greater than or equal to start date/time",
+            },
+          }));
+        } else {
+          setApplyLeavePopup((prev) => ({
+            ...prev,
+            errors: { ...prev.errors, endDate: "" },
+          }));
+        }
+      }
+
+      // Clear error
+      if (applyLeavePopup.errors.endDate) {
+        setApplyLeavePopup((prev) => ({
+          ...prev,
+          errors: { ...prev.errors, endDate: "" },
+        }));
+      }
+    };
+
+    // Calculate min end date (should be >= start date)
+    const minEndDate = applyLeavePopup.startDate || today;
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 animate-in fade-in duration-200">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden border border-gray-100 backdrop-blur-lg animate-in slide-in-from-bottom-4 duration-300">
+          {/* Header */}
+          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-gray-200">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-orange-800 flex items-center gap-2">
+                <FaCalendarAlt size={14} className="flex-shrink-0" />
+                <span className="truncate">Add Leaves</span>
+              </h2>
+            </div>
+            <button
+              onClick={handleClose}
+              disabled={applyLeavePopup.isLoading}
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-2 flex-shrink-0 p-1 rounded-full hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FaTimes size={14} />
+            </button>
+          </div>
+
+          <div className="p-4">
+            {/* Teacher Info */}
+            {selectedTeacher && (
+              <div className="mb-4 p-2 bg-blue-50 rounded border border-blue-200">
+                <p className="text-xs text-blue-800">
+                  <span className="font-semibold">Teacher:</span>{" "}
+                  {selectedTeacher.full_name}
+                </p>
+              </div>
+            )}
+
+            {/* Start Date */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Start Date <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={applyLeavePopup.startDate}
+                  onChange={handleStartDateChange}
+                  min={today}
+                  disabled={applyLeavePopup.isLoading}
+                  className={`flex-1 px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    applyLeavePopup.errors.startDate
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                />
+                <select
+                  value={applyLeavePopup.startTime}
+                  onChange={handleStartTimeChange}
+                  disabled={applyLeavePopup.isLoading}
+                  className={`px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    applyLeavePopup.errors.startDate
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                >
+                  {Array.from({ length: 24 }, (_, i) => {
+                    const hour = String(i).padStart(2, "0");
+                    return (
+                      <option key={hour} value={`${hour}:00`}>
+                        {hour}:00
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              {applyLeavePopup.errors.startDate && (
+                <p className="text-xs text-red-500 mt-1">
+                  {applyLeavePopup.errors.startDate}
+                </p>
+              )}
+            </div>
+
+            {/* End Date */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                End Date <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={applyLeavePopup.endDate}
+                  onChange={handleEndDateChange}
+                  min={minEndDate}
+                  disabled={
+                    applyLeavePopup.isLoading || !applyLeavePopup.startDate
+                  }
+                  className={`flex-1 px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    applyLeavePopup.errors.endDate
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                />
+                <select
+                  value={applyLeavePopup.endTime}
+                  onChange={handleEndTimeChange}
+                  disabled={
+                    applyLeavePopup.isLoading || !applyLeavePopup.startDate
+                  }
+                  className={`px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    applyLeavePopup.errors.endDate
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                >
+                  {Array.from({ length: 24 }, (_, i) => {
+                    const hour = String(i).padStart(2, "0");
+                    return (
+                      <option key={hour} value={`${hour}:00`}>
+                        {hour}:00
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              {applyLeavePopup.errors.endDate && (
+                <p className="text-xs text-red-500 mt-1">
+                  {applyLeavePopup.errors.endDate}
+                </p>
+              )}
+            </div>
+
+            {/* Reason */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={reasonText}
+                onChange={(e) => {
+                  setReasonText(e.target.value);
+                  if (applyLeavePopup.errors.reason) {
+                    setApplyLeavePopup((prev) => ({
+                      ...prev,
+                      errors: { ...prev.errors, reason: "" },
+                    }));
+                  }
+                }}
+                disabled={applyLeavePopup.isLoading}
+                rows={4}
+                placeholder="Enter reason for leave..."
+                className={`w-full p-2 text-xs border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none hover:border-orange-400 transition-colors duration-200 ${
+                  applyLeavePopup.errors.reason
+                    ? "border-red-500"
+                    : "border-gray-300"
+                } disabled:bg-gray-100 disabled:cursor-not-allowed`}
+              />
+              {applyLeavePopup.errors.reason && (
+                <p className="text-xs text-red-500 mt-1">
+                  {applyLeavePopup.errors.reason}
+                </p>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={handleClose}
+                disabled={applyLeavePopup.isLoading}
+                className="px-4 py-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={applyLeavePopup.isLoading}
+                className="px-4 py-2 text-xs font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {applyLeavePopup.isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+                    Adding...
+                  </>
+                ) : (
+                  "Add Leaves"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Schedule Management Popup Component
   const ScheduleManagementPopup = () => {
     if (!scheduleManagementPopup.isOpen) return null;
@@ -6290,6 +7395,74 @@ function App() {
                         rows={3}
                         className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent resize-none"
                       />
+                    </div>
+
+                    {/* PDF File Upload */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Attach PDF File
+                      </label>
+                      <div className="space-y-1.5">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              if (file.size > 10 * 1024 * 1024) {
+                                alert("File size must be less than 10MB");
+                                return;
+                              }
+                              setPdfFileName(file.name);
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                const base64String =
+                                  reader.result.split(",")[1];
+                                // Store in a way that can be accessed in handleBookStudentFromPopup
+                                window.scheduleManagementPdfBase64 =
+                                  base64String;
+                              };
+                              reader.readAsDataURL(file);
+                              setPdfFile(file);
+                            }
+                          }}
+                          className="hidden"
+                          id="pdf-upload-schedule"
+                        />
+                        <label
+                          htmlFor="pdf-upload-schedule"
+                          className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-xs"
+                        >
+                          <FaPaperclip size={12} className="text-gray-600" />
+                          <span className="text-gray-700">
+                            {pdfFileName || "Choose PDF file"}
+                          </span>
+                        </label>
+                        {pdfFileName && (
+                          <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
+                            <div className="flex items-center gap-2">
+                              <FaFile size={12} className="text-green-600" />
+                              <span className="text-xs text-gray-700 truncate">
+                                {pdfFileName}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPdfFile(null);
+                                setPdfFileName("");
+                                window.scheduleManagementPdfBase64 = "";
+                                document.getElementById(
+                                  "pdf-upload-schedule"
+                                ).value = "";
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <FaTimes size={10} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Attendees with Email Validation */}
@@ -6445,6 +7618,8 @@ function App() {
                           value={selectedScheduleDate}
                           onChange={(e) => {
                             setSelectedScheduleDate(e.target.value);
+                            // Reset time selection when date changes
+                            setSelectedScheduleTime("");
                           }}
                           min={new Date().toISOString().split("T")[0]}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
@@ -6462,20 +7637,88 @@ function App() {
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">Select time...</option>
-                          {Array.from({ length: 48 }, (_, i) => {
-                            const hour = Math.floor(i / 2);
-                            const minute = (i % 2) * 30;
-                            const timeString = `${String(hour).padStart(
-                              2,
-                              "0"
-                            )}:${String(minute).padStart(2, "0")}`;
-                            return (
+                          {(() => {
+                            // Check if date is in the past
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const selectedDate = selectedScheduleDate
+                              ? new Date(selectedScheduleDate)
+                              : null;
+                            const isPastDate =
+                              selectedDate && selectedDate < today;
+
+                            // Generate all time slots
+                            const allTimeSlots = Array.from(
+                              { length: 48 },
+                              (_, i) => {
+                                const hour = Math.floor(i / 2);
+                                const minute = (i % 2) * 30;
+                                return `${String(hour).padStart(
+                                  2,
+                                  "0"
+                                )}:${String(minute).padStart(2, "0")}`;
+                              }
+                            );
+
+                            // If no date selected or no teacher, show all slots (except past dates)
+                            if (
+                              !selectedScheduleDate ||
+                              !scheduleManagementPopup.teacherUid
+                            ) {
+                              return allTimeSlots.map((timeString) => (
+                                <option
+                                  key={timeString}
+                                  value={timeString}
+                                  disabled={isPastDate}
+                                  style={{
+                                    color: isPastDate ? "#999" : "inherit",
+                                  }}
+                                >
+                                  {timeString}
+                                </option>
+                              ));
+                            }
+
+                            // Filter to only show available slots
+                            const availableSlots = allTimeSlots.filter(
+                              (timeString) => {
+                                const dateObj = new Date(selectedScheduleDate);
+                                const slotCounts = getSlotCounts(
+                                  dateObj,
+                                  timeString
+                                );
+                                const teacherUid =
+                                  scheduleManagementPopup.teacherUid;
+                                return (
+                                  slotCounts.available > 0 &&
+                                  (slotCounts.teacherid === teacherUid ||
+                                    slotCounts.uid === teacherUid)
+                                );
+                              }
+                            );
+
+                            // Render only available slots
+                            return availableSlots.map((timeString) => (
                               <option key={timeString} value={timeString}>
                                 {timeString}
                               </option>
-                            );
-                          })}
+                            ));
+                          })()}
                         </select>
+                        {selectedScheduleDate &&
+                          scheduleManagementPopup.teacherUid && (
+                            <div className="mt-1 text-[10px] text-gray-500">
+                              {(() => {
+                                const dateObj = new Date(selectedScheduleDate);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                if (dateObj < today) {
+                                  return "⚠️ Past dates are disabled";
+                                }
+                                return "Slots with teacher availability are enabled";
+                              })()}
+                            </div>
+                          )}
                       </div>
                     </div>
 
@@ -6494,28 +7737,91 @@ function App() {
 
                     {/* Schedule Entries List */}
                     <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                      {scheduleEntries.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="bg-white rounded p-2 border border-blue-200 shadow-sm flex justify-between items-center"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <FaCalendarAlt
-                              size={12}
-                              className="text-blue-600"
-                            />
-                            <span className="text-xs font-medium text-gray-900">
-                              {entry.date} at {entry.time}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => removeScheduleEntry(entry.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200"
+                      {scheduleEntries.map((entry) => {
+                        // Handle both array format [date, time] and object format {id, date, time}
+                        const entryId = Array.isArray(entry)
+                          ? scheduleEntries.indexOf(entry)
+                          : entry.id;
+
+                        // Check teacher availability for this entry
+                        let availabilityStatus = null;
+                        if (scheduleManagementPopup.teacherUid && entry.date) {
+                          const dateObj = new Date(entry.date);
+                          const slotCounts = getSlotCounts(dateObj, entry.time);
+                          const teacherUid = scheduleManagementPopup.teacherUid;
+                          const isAvailable =
+                            slotCounts.available > 0 &&
+                            (slotCounts.teacherid === teacherUid ||
+                              slotCounts.uid === teacherUid);
+                          availabilityStatus = isAvailable;
+                        }
+
+                        // Check if date is in the past
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const entryDate = entry.date
+                          ? new Date(entry.date)
+                          : null;
+                        const isPastDate = entryDate && entryDate < today;
+
+                        return (
+                          <div
+                            key={entryId}
+                            className={`bg-white rounded p-2 border shadow-sm flex justify-between items-center ${
+                              isPastDate
+                                ? "border-red-300 bg-red-50"
+                                : availabilityStatus === false
+                                ? "border-orange-300 bg-orange-50"
+                                : availabilityStatus === true
+                                ? "border-green-300 bg-green-50"
+                                : "border-blue-200"
+                            }`}
                           >
-                            <FaTrash size={10} />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                              <FaCalendarAlt
+                                size={12}
+                                className={
+                                  isPastDate
+                                    ? "text-red-600"
+                                    : availabilityStatus === false
+                                    ? "text-orange-600"
+                                    : availabilityStatus === true
+                                    ? "text-green-600"
+                                    : "text-blue-600"
+                                }
+                              />
+                              <span className="text-xs font-medium text-gray-900 truncate">
+                                {entry.date} at {entry.time}
+                              </span>
+                              {isPastDate && (
+                                <span className="text-[10px] text-red-600 font-medium ml-1">
+                                  (Past Date)
+                                </span>
+                              )}
+                              {!isPastDate &&
+                                availabilityStatus === false &&
+                                scheduleManagementPopup.teacherUid && (
+                                  <span className="text-[10px] text-orange-600 font-medium ml-1">
+                                    (Not Available)
+                                  </span>
+                                )}
+                              {!isPastDate &&
+                                availabilityStatus === true &&
+                                scheduleManagementPopup.teacherUid && (
+                                  <span className="text-[10px] text-green-600 font-medium ml-1">
+                                    (Available)
+                                  </span>
+                                )}
+                            </div>
+                            <button
+                              onClick={() => removeScheduleEntry(entryId)}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-0.5 rounded transition-all duration-200 flex-shrink-0"
+                            >
+                              <FaTrash size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
                       {scheduleEntries.length === 0 && (
                         <div className="text-center py-2 text-gray-500">
                           <FaCalendarAlt
@@ -7106,11 +8412,31 @@ function App() {
                     )}
                   </div>
                 </div> */}
-                <div className="flex flex-wrap gap-1">
-                  {selectedTeacher && (
-                    <span className="px-1 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
-                      Teacher: {selectedTeacher.full_name}
-                    </span>
+                <div className="flex flex-wrap gap-1 items-center justify-between w-full">
+                  <div className="flex flex-wrap gap-1">
+                    {selectedTeacher && (
+                      <span className="px-1 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
+                        Teacher: {selectedTeacher.full_name}
+                      </span>
+                    )}
+                  </div>
+                  {selectedTeacher && canAddLeaves() && (
+                    <button
+                      onClick={() =>
+                        setApplyLeavePopup({
+                          isOpen: true,
+                          startDate: "",
+                          endDate: "",
+                          reason: "",
+                          isLoading: false,
+                          errors: { startDate: "", endDate: "", reason: "" },
+                        })
+                      }
+                      className="px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded hover:bg-orange-200 transition-colors flex items-center gap-1"
+                    >
+                      <FaCalendarAlt size={10} />
+                      Add Leaves
+                    </button>
                   )}
                   {selectedStudent && (
                     <div className="w-full bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl shadow-sm p-4">
@@ -7563,13 +8889,6 @@ function App() {
                                   );
 
                                 // Debug logging (can be removed in production)
-                                console.log("🔍 Leave Check Debug:", {
-                                  teacherEmail,
-                                  bookingDate: formatDate(bookingDate),
-                                  teacherLeavesData: teacherLeaves,
-                                  teacherOnLeave,
-                                  extractedData: extractedData,
-                                });
 
                                 return (
                                   <tr
@@ -8759,12 +10078,6 @@ function App() {
                     // Check if teacher has week off for this date
                     const teacherEmail = selectedTeacher?.email;
 
-                    console.log("🔍 Week view header - weeklyApiData:", {
-                      weeklyApiData,
-                      teacherEmail,
-                      date: formatDate(date),
-                    });
-
                     const isWeekOff =
                       teacherEmail &&
                       isTeacherWeekOff(teacherEmail, date, weeklyApiData);
@@ -9046,6 +10359,7 @@ function App() {
       <EditReschedulePopup />
       <ConfirmationPopup />
       <ScheduleManagementPopup />
+      <ApplyLeavePopup />
       <SuccessMessage />
 
       {/* Global Loading Overlay */}

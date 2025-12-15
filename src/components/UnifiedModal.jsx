@@ -13,6 +13,8 @@ import {
   FaExclamationTriangle,
   FaChevronLeft,
   FaChevronRight,
+  FaPaperclip,
+  FaFile,
 } from "react-icons/fa";
 import { formatDisplayDate } from "../utils/dateUtils";
 import { useDebounce } from "../hooks/useDebounce";
@@ -48,6 +50,7 @@ const RECORDING_OPTIONS = [
   { value: "MAKE UP", label: "Make Up Class" },
   { value: "MAKE UP - S", label: "Make Up - Substitute" },
   { value: "Reserved", label: "Reserve Slot" },
+  { value: "Migration", label: "Migration" },
 ];
 
 export const formatDate = (date) => {
@@ -187,6 +190,9 @@ const UnifiedModalComponent = function UnifiedModal({
   const [attendees, setAttendees] = useState("");
   const [selectedScheduleDate, setSelectedScheduleDate] = useState(initialDate);
   const [selectedScheduleTime, setSelectedScheduleTime] = useState(startTime);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfFileName, setPdfFileName] = useState("");
+  const [pdfBase64, setPdfBase64] = useState("");
 
   // Update selectedScheduleDate and selectedScheduleTime when date/time props change
   useEffect(() => {
@@ -918,6 +924,7 @@ const UnifiedModalComponent = function UnifiedModal({
           platformCredentials,
           attendees: attendeesList.map((item) => item.email).join(", "),
           schedule,
+          ...(pdfBase64 && { pdf_attached: pdfBase64 }),
           ...(bookingType === "paid" && {
             subject: selectedSubject,
             classType: selectedClassType,
@@ -954,6 +961,14 @@ const UnifiedModalComponent = function UnifiedModal({
       setSelectedStudents([]);
       setAttendeesError("");
       setAttendeesList([]);
+      setPdfFile(null);
+      setPdfFileName("");
+      setPdfBase64("");
+      // Reset file input
+      const fileInput = document.getElementById("pdf-upload-unified-modal");
+      if (fileInput) {
+        fileInput.value = "";
+      }
     } catch (error) {
       console.error("Error booking student:", error);
       alert("An error occurred while booking. Please try again.");
@@ -1071,6 +1086,72 @@ const UnifiedModalComponent = function UnifiedModal({
                         rows={3}
                         className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent resize-none"
                       />
+                    </div>
+
+                    {/* PDF File Upload */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-0.5">
+                        Attach PDF File
+                      </label>
+                      <div className="space-y-1.5">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              if (file.size > 10 * 1024 * 1024) {
+                                alert("File size must be less than 10MB");
+                                return;
+                              }
+                              setPdfFileName(file.name);
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                const base64String =
+                                  reader.result.split(",")[1];
+                                setPdfBase64(base64String);
+                              };
+                              reader.readAsDataURL(file);
+                              setPdfFile(file);
+                            }
+                          }}
+                          className="hidden"
+                          id="pdf-upload-unified-modal"
+                        />
+                        <label
+                          htmlFor="pdf-upload-unified-modal"
+                          className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-xs"
+                        >
+                          <FaPaperclip size={12} className="text-gray-600" />
+                          <span className="text-gray-700">
+                            {pdfFileName || "Choose PDF file"}
+                          </span>
+                        </label>
+                        {pdfFileName && (
+                          <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
+                            <div className="flex items-center gap-2">
+                              <FaFile size={12} className="text-green-600" />
+                              <span className="text-xs text-gray-700 truncate">
+                                {pdfFileName}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPdfFile(null);
+                                setPdfFileName("");
+                                setPdfBase64("");
+                                document.getElementById(
+                                  "pdf-upload-unified-modal"
+                                ).value = "";
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <FaTimes size={10} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Attendees with Email Validation */}

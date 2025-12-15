@@ -3191,7 +3191,7 @@ function App() {
     if (summary.includes("MAKE UP")) recordingKeywords.push("MAKE UP");
     if (summary.includes("MAKE UP - S")) recordingKeywords.push("MAKE UP - S");
     if (summary.includes("Reserved")) recordingKeywords.push("Reserved");
-
+    if (summary.includes("Migration")) recordingKeywords.push("Migration");
     // Extract learner IDs starting with JL from summary
     const jlMatches = summary.match(/\bJL[A-Za-z0-9]+\b/g) || [];
     const extractedLearners = jlMatches.map((jlId) => {
@@ -4768,7 +4768,7 @@ function App() {
                   {/* Recording Options */}
                   <div>
                     <div className="space-y-1">
-                      {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved"].map(
+                      {["DNREC", "MAKE UP", "MAKE UP - S", "Reserved","Migration"].map(
                         (option) => (
                           <label
                             key={option}

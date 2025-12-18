@@ -16,7 +16,7 @@ import {
   FaPaperclip,
   FaFile,
 } from "react-icons/fa";
-import { formatDisplayDate } from "../utils/dateUtils";
+import { formatDisplayDate, isLockedHoliday } from "../utils/dateUtils";
 import { useDebounce } from "../hooks/useDebounce";
 
 const SUBJECTS = [
@@ -1622,6 +1622,9 @@ const UnifiedModalComponent = function UnifiedModal({
                                         ).toDateString() === date.toDateString()
                                     );
 
+                                    // Check if date is a locked holiday
+                                    const isLocked = isLockedHoliday(date);
+
                                     const dayString = `${date.getFullYear()}-${String(
                                       date.getMonth() + 1
                                     ).padStart(2, "0")}-${String(
@@ -1632,12 +1635,12 @@ const UnifiedModalComponent = function UnifiedModal({
                                       <button
                                         key={i}
                                         onClick={() => {
-                                          if (isAvailable) {
+                                          if (isAvailable && !isLocked) {
                                             setSelectedScheduleDate(dayString);
                                             setCalendarOpen(false);
                                           }
                                         }}
-                                        disabled={!isAvailable}
+                                        disabled={!isAvailable || isLocked}
                                         className={`
                                           w-8 h-8 text-xs rounded flex items-center justify-center transition-all duration-200
                                           ${
@@ -1657,6 +1660,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                           }
                                           ${
                                             isAvailable &&
+                                            !isLocked &&
                                             isCurrentMonth &&
                                             !isToday &&
                                             !isSelected
@@ -1664,7 +1668,14 @@ const UnifiedModalComponent = function UnifiedModal({
                                               : ""
                                           }
                                           ${
-                                            !isAvailable && isCurrentMonth
+                                            isLocked && isCurrentMonth
+                                              ? "bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
+                                              : ""
+                                          }
+                                          ${
+                                            !isAvailable &&
+                                            !isLocked &&
+                                            isCurrentMonth
                                               ? "text-gray-400 cursor-not-allowed"
                                               : ""
                                           }

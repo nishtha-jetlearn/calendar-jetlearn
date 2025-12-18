@@ -57,6 +57,7 @@ import {
   getDayName,
   getCurrentWeekStart,
   formatDisplayDate,
+  isLockedHoliday,
 } from "./utils/dateUtils";
 
 // Helper function to format datetime to UTC format for API
@@ -5411,7 +5412,17 @@ function App() {
                         type="date"
                         value={selectedScheduleDate}
                         onChange={(e) => {
-                          setSelectedScheduleDate(e.target.value);
+                          const selectedDate = e.target.value;
+                          if (selectedDate) {
+                            const dateObj = new Date(selectedDate);
+                            if (isLockedHoliday(dateObj)) {
+                              alert(
+                                "This date is locked due to holiday. Please select another date."
+                              );
+                              return;
+                            }
+                          }
+                          setSelectedScheduleDate(selectedDate);
                           setSelectedScheduleTime("");
                         }}
                         min={new Date().toISOString().split("T")[0]}
@@ -7617,7 +7628,17 @@ function App() {
                           type="date"
                           value={selectedScheduleDate}
                           onChange={(e) => {
-                            setSelectedScheduleDate(e.target.value);
+                            const selectedDate = e.target.value;
+                            if (selectedDate) {
+                              const dateObj = new Date(selectedDate);
+                              if (isLockedHoliday(dateObj)) {
+                                alert(
+                                  "This date is locked due to holiday. Please select another date."
+                                );
+                                return;
+                              }
+                            }
+                            setSelectedScheduleDate(selectedDate);
                             // Reset time selection when date changes
                             setSelectedScheduleTime("");
                           }}
@@ -8917,7 +8938,10 @@ function App() {
                                               extractedData.summary
                                                 .toLowerCase()
                                                 .includes("hours"))
-                                              ? "bg-green-500"
+                                              ? bookingDate &&
+                                                isLockedHoliday(bookingDate)
+                                                ? "bg-gray-700"
+                                                : "bg-green-500"
                                               : extractedData.summary &&
                                                 (extractedData.summary
                                                   .toLowerCase()
@@ -9137,6 +9161,21 @@ function App() {
                                       <div className="flex items-center justify-between">
                                         {/* Action Menu Dropdown */}
                                         <div className="relative ml-3">
+                                          {/* Check if date is a locked holiday */}
+                                          {bookingDate &&
+                                            isLockedHoliday(bookingDate) &&
+                                            extractedData.summary &&
+                                            (extractedData.summary
+                                              .toLowerCase()
+                                              .includes("availability") ||
+                                              extractedData.summary
+                                                .toLowerCase()
+                                                .includes("hours")) && (
+                                              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded border border-gray-200">
+                                                <span className="w-2 h-2 bg-gray-700 rounded-full mr-1"></span>
+                                                (Locked - Holiday)
+                                              </div>
+                                            )}
                                           {/* Disabled Actions Message for Availability Hours on Leave */}
                                           {teacherOnLeave &&
                                             extractedData.summary &&
@@ -9168,6 +9207,10 @@ function App() {
                                                 .includes("off")
                                             ) &&
                                             !teacherOnLeave &&
+                                            !(
+                                              bookingDate &&
+                                              isLockedHoliday(bookingDate)
+                                            ) &&
                                             canAddBooking() && (
                                               <div className="relative">
                                                 <button
@@ -10082,6 +10125,9 @@ function App() {
                       teacherEmail &&
                       isTeacherWeekOff(teacherEmail, date, weeklyApiData);
 
+                    // Check if date is a locked holiday
+                    const isLockedHolidayDate = isLockedHoliday(date);
+
                     return (
                       <div
                         key={dateStr}
@@ -10089,6 +10135,10 @@ function App() {
                           isOnLeave ? "bg-orange-100 border-orange-300" : ""
                         } ${
                           isWeekOff ? "bg-yellow-100 border-yellow-300" : ""
+                        } ${
+                          isLockedHolidayDate
+                            ? "bg-gray-200 border-gray-400"
+                            : ""
                         }`}
                       >
                         <div className="text-xs sm:text-sm">
@@ -10097,6 +10147,16 @@ function App() {
                         <div className="text-xs text-gray-500 font-bold">
                           {formatShortDate(date)}
                         </div>
+
+                        {/* Locked holiday indicator */}
+                        {isLockedHolidayDate && (
+                          <div
+                            className="absolute top-0 right-0 w-3 h-3 bg-gray-700 rounded-full border border-white"
+                            title="Locked - Holiday"
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center"></div>
+                          </div>
+                        )}
 
                         {/* Leave indicator */}
                         {isOnLeave && (
@@ -10141,11 +10201,21 @@ function App() {
                           teacherEmail &&
                           isTeacherWeekOff(teacherEmail, date, weeklyApiData);
 
+                        // Check if date is a locked holiday
+                        const isLockedHolidayDate = isLockedHoliday(date);
+
                         // Show week off/leave colors only when there are no availability or bookings
                         let cellColor = getCellColor(available, booked);
 
-                        // Only apply week off/leave colors when there are no actual availability or bookings
+                        // Only apply week off/leave/locked holiday colors when there are no actual availability or bookings
                         if (
+                          isLockedHolidayDate &&
+                          selectedTeacher &&
+                          available === 0 &&
+                          booked === 0
+                        ) {
+                          cellColor = "bg-gray-200 hover:bg-gray-300";
+                        } else if (
                           isOnLeave &&
                           selectedTeacher &&
                           available === 0 &&
@@ -10169,6 +10239,9 @@ function App() {
                             {/* Show + icon for gray blocks (no availability) when teacher is selected and slot hasn't been clicked */}
                             {/* Allow availability marking even during week off and leave periods */}
                             {(() => {
+                              // Check if date is a locked holiday
+                              const isLockedHolidayDate = isLockedHoliday(date);
+
                               const shouldShow =
                                 available === 0 &&
                                 booked === 0 &&
@@ -10176,6 +10249,7 @@ function App() {
                                 !clickedSlots.has(
                                   `${formatDate(date)}-${time}`
                                 ) &&
+                                !isLockedHolidayDate &&
                                 canAddTeacherAvailability();
 
                               // Debug logging for TJL1309 on 24th

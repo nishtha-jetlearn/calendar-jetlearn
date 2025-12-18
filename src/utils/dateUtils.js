@@ -72,7 +72,6 @@ export const getDayName = (date) => {
 
   // Ensure date is a Date object (handles both Date objects and datetime strings)
   const dateObj = date instanceof Date ? date : new Date(date);
-  const day = dateObj.getDate().toString().padStart(2, "0");
   // Use UTC to get the day name to match the timezone-converted date
   return dateObj.toLocaleDateString("en-US", {
     weekday: "long",
@@ -105,4 +104,35 @@ export const getCurrentMonthRange = () => {
     startOfMonth: formatDate(startOfMonth), // 'yyyy-mm-dd'
     endOfMonth: formatDate(endOfMonth), // 'yyyy-mm-dd'
   };
+};
+
+/**
+ * Check if a date is a locked holiday
+ * Locked dates: 24th Dec, 25th Dec, 31st Dec, 1st Jan 2026
+ * @param {Date|string} date - The date to check
+ * @returns {boolean} - True if the date is a locked holiday
+ */
+export const isLockedHoliday = (date) => {
+  // Ensure date is a Date object
+  const dateObj = date instanceof Date ? date : new Date(date);
+
+  // Get date components (using UTC to avoid timezone issues)
+  const year = dateObj.getUTCFullYear();
+  const month = dateObj.getUTCMonth() + 1; // getUTCMonth() returns 0-11
+  const day = dateObj.getUTCDate();
+
+  // Check for locked holidays:
+  // - 24th December (any year)
+  // - 25th December (any year)
+  // - 31st December (any year)
+  // - 1st January 2026
+  if (month === 12 && (day === 24 || day === 25 || day === 31)) {
+    return true;
+  }
+
+  if (month === 1 && day === 1 && year === 2026) {
+    return true;
+  }
+
+  return false;
 };

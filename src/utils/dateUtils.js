@@ -116,10 +116,31 @@ export const isLockedHoliday = (date) => {
   // Ensure date is a Date object
   const dateObj = date instanceof Date ? date : new Date(date);
 
-  // Get date components (using UTC to avoid timezone issues)
-  const year = dateObj.getUTCFullYear();
-  const month = dateObj.getUTCMonth() + 1; // getUTCMonth() returns 0-11
-  const day = dateObj.getUTCDate();
+  // If date is a string in YYYY-MM-DD format, parse it directly
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+    const dateStr = date.substring(0, 10); // Get YYYY-MM-DD part
+    const [year, month, day] = dateStr.split("-").map(Number);
+
+    // Check for locked holidays:
+    // - 24th December (any year)
+    // - 25th December (any year)
+    // - 31st December (any year)
+    // - 1st January 2026
+    if (month === 12 && (day === 24 || day === 25 || day === 31)) {
+      return true;
+    }
+
+    if (month === 1 && day === 1 && year === 2026) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Get date components - use local date methods since date may already be timezone-adjusted
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth() + 1; // getMonth() returns 0-11
+  const day = dateObj.getDate();
 
   // Check for locked holidays:
   // - 24th December (any year)

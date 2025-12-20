@@ -2901,6 +2901,15 @@ function App() {
   const handleAvailabilityClick = async (date, time, teachers) => {
     // Ensure date is a Date object
     const dateObj = date instanceof Date ? date : new Date(date);
+
+    // Check if date is a locked holiday
+    if (isLockedHoliday(dateObj)) {
+      alert(
+        "This date is locked due to holiday. No actions can be performed on this date."
+      );
+      return;
+    }
+
     const { teacherid } = getSlotCounts(dateObj, time);
 
     // Always open popup if available count > 0
@@ -2948,6 +2957,15 @@ function App() {
   const handleBookingClick = async (date, time, students) => {
     // Ensure date is a Date object
     const dateObj = date instanceof Date ? date : new Date(date);
+
+    // Check if date is a locked holiday
+    if (isLockedHoliday(dateObj)) {
+      alert(
+        "This date is locked due to holiday. No actions can be performed on this date."
+      );
+      return;
+    }
+
     const { teacherid } = getSlotCounts(dateObj, time);
 
     // Always open popup if booked count > 0
@@ -3260,6 +3278,14 @@ function App() {
       // Ensure date is a Date object
       const dateObj = date instanceof Date ? date : new Date(date);
 
+      // Check if date is a locked holiday
+      if (isLockedHoliday(dateObj)) {
+        alert(
+          "This date is locked due to holiday. No booking can be rescheduled to this date."
+        );
+        return;
+      }
+
       // For now, we'll just show a message that reschedule functionality is coming
       // You can implement the actual reschedule logic here
       // alert("Reschedule functionality is coming soon!");
@@ -3287,6 +3313,15 @@ function App() {
   const handleAddAvailability = (date, time) => {
     if (!selectedTeacher) {
       alert("Please select a teacher first to add availability.");
+      return;
+    }
+
+    // Check if date is a locked holiday
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isLockedHoliday(dateObj)) {
+      alert(
+        "This date is locked due to holiday. No availability can be added on this date."
+      );
       return;
     }
 
@@ -8296,6 +8331,15 @@ function App() {
                     }
                     onChange={(e) => {
                       const newStartDate = e.target.value;
+                      if (newStartDate) {
+                        const dateObj = new Date(newStartDate);
+                        if (isLockedHoliday(dateObj)) {
+                          alert(
+                            "This date is locked due to holiday. Please select another date."
+                          );
+                          return;
+                        }
+                      }
                       setDateRangeFilter((prev) => ({
                         ...prev,
                         startDate: newStartDate,
@@ -8310,6 +8354,15 @@ function App() {
                     value={dateRangeFilter.endDate || formatDate(weekDates[6])}
                     onChange={(e) => {
                       const newEndDate = e.target.value;
+                      if (newEndDate) {
+                        const dateObj = new Date(newEndDate);
+                        if (isLockedHoliday(dateObj)) {
+                          alert(
+                            "This date is locked due to holiday. Please select another date."
+                          );
+                          return;
+                        }
+                      }
                       setDateRangeFilter((prev) => ({
                         ...prev,
                         endDate: newEndDate,
@@ -8848,7 +8901,69 @@ function App() {
                                   booking,
                                   "booking"
                                 );
-                                // Convert start_time to selected timezone to get correct date
+
+                                // Extract date directly from start_time string before timezone conversion
+                                // This ensures we check the actual calendar date, not a timezone-shifted date
+                                // Extract date for locked holiday check - try multiple sources
+                                let bookingDateForCheck = null;
+
+                                // Try extractedData.start_time first
+                                if (extractedData.start_time) {
+                                  const dateStr = String(
+                                    extractedData.start_time
+                                  );
+                                  // Extract YYYY-MM-DD from ISO datetime string (e.g., "2025-12-24T20:00:00+01:00")
+                                  const dateMatch =
+                                    dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+                                  if (dateMatch) {
+                                    bookingDateForCheck = dateMatch[1]; // "2025-12-24"
+                                  }
+                                }
+
+                                // Fallback to booking.start_time
+                                if (
+                                  !bookingDateForCheck &&
+                                  booking.start_time
+                                ) {
+                                  const dateStr = String(booking.start_time);
+                                  const dateMatch =
+                                    dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+                                  if (dateMatch) {
+                                    bookingDateForCheck = dateMatch[1];
+                                  }
+                                }
+
+                                // Fallback to booking.date
+                                if (!bookingDateForCheck && booking.date) {
+                                  const dateStr = String(booking.date);
+                                  const dateMatch =
+                                    dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+                                  if (dateMatch) {
+                                    bookingDateForCheck = dateMatch[1];
+                                  }
+                                }
+
+                                // Final fallback: use formatDate on bookingDate
+                                if (!bookingDateForCheck && bookingDate) {
+                                  bookingDateForCheck = formatDate(bookingDate);
+                                }
+
+                                // Debug: Log when we detect a locked holiday
+                                if (bookingDateForCheck) {
+                                  const isLocked =
+                                    isLockedHoliday(bookingDateForCheck);
+                                  if (isLocked) {
+                                    console.log("🔒 Locked holiday detected:", {
+                                      date: bookingDateForCheck,
+                                      start_time: extractedData.start_time,
+                                      booking_start_time: booking.start_time,
+                                      booking_date: booking.date,
+                                      summary: extractedData.summary,
+                                    });
+                                  }
+                                }
+
+                                // Convert start_time to selected timezone to get correct date for display
                                 const dateInTimezone =
                                   convertDateTimeToTimezone(
                                     extractedData.start_time,
@@ -8858,6 +8973,7 @@ function App() {
                                 const bookingDate =
                                   dateInTimezone ||
                                   new Date(booking.date || booking.start_time);
+
                                 // Format time range properly with timezone consideration
                                 const formatTimeFromAPI = (dateTimeString) => {
                                   if (!dateTimeString) return "N/A";
@@ -8931,17 +9047,18 @@ function App() {
                                         )}
                                         <div
                                           className={`w-3 h-3 rounded-full mr-3 ${
-                                            extractedData.summary &&
-                                            (extractedData.summary
-                                              .toLowerCase()
-                                              .includes("availability") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("hours"))
-                                              ? bookingDate &&
-                                                isLockedHoliday(bookingDate)
-                                                ? "bg-gray-700"
-                                                : "bg-green-500"
+                                            // Check for locked holiday first - override all other colors
+                                            bookingDateForCheck &&
+                                            isLockedHoliday(bookingDateForCheck)
+                                              ? "bg-gray-700"
+                                              : extractedData.summary &&
+                                                (extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("availability") ||
+                                                  extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("hours"))
+                                              ? "bg-green-500"
                                               : extractedData.summary &&
                                                 (extractedData.summary
                                                   .toLowerCase()
@@ -9161,16 +9278,11 @@ function App() {
                                       <div className="flex items-center justify-between">
                                         {/* Action Menu Dropdown */}
                                         <div className="relative ml-3">
-                                          {/* Check if date is a locked holiday */}
-                                          {bookingDate &&
-                                            isLockedHoliday(bookingDate) &&
-                                            extractedData.summary &&
-                                            (extractedData.summary
-                                              .toLowerCase()
-                                              .includes("availability") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("hours")) && (
+                                          {/* Check if date is a locked holiday - Apply to ALL events on locked dates */}
+                                          {bookingDateForCheck &&
+                                            isLockedHoliday(
+                                              bookingDateForCheck
+                                            ) && (
                                               <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded border border-gray-200">
                                                 <span className="w-2 h-2 bg-gray-700 rounded-full mr-1"></span>
                                                 (Locked - Holiday)
@@ -9190,7 +9302,7 @@ function App() {
                                                 (Leave)
                                               </div>
                                             )}
-                                          {/* Availability Actions (Green Dot) */}
+                                          {/* Availability Actions (Green Dot) - Disable for locked holidays */}
                                           {extractedData.summary &&
                                             (extractedData.summary
                                               .toLowerCase()
@@ -9208,8 +9320,10 @@ function App() {
                                             ) &&
                                             !teacherOnLeave &&
                                             !(
-                                              bookingDate &&
-                                              isLockedHoliday(bookingDate)
+                                              bookingDateForCheck &&
+                                              isLockedHoliday(
+                                                bookingDateForCheck
+                                              )
                                             ) &&
                                             canAddBooking() && (
                                               <div className="relative">
@@ -9248,6 +9362,22 @@ function App() {
                                                       <button
                                                         onClick={async () => {
                                                           try {
+                                                            // Check if date is a locked holiday
+                                                            // Use the bookingDateForCheck already defined above (extracted from start_time)
+                                                            if (
+                                                              bookingDateForCheck &&
+                                                              isLockedHoliday(
+                                                                bookingDateForCheck
+                                                              )
+                                                            ) {
+                                                              alert(
+                                                                "This date is locked due to holiday. No actions can be performed on this date."
+                                                              );
+                                                              setActionMenuOpen(
+                                                                null
+                                                              );
+                                                              return;
+                                                            }
                                                             // First, execute the original functionality - Open UnifiedModal
                                                             let timeSlot =
                                                               timeRange;
@@ -9381,7 +9511,7 @@ function App() {
                                               </div>
                                             )}
 
-                                          {/* Booking Actions (Red Dot) */}
+                                          {/* Booking Actions (Red Dot) - Disable for locked holidays */}
                                           {extractedData.summary &&
                                             !(
                                               extractedData.summary
@@ -9439,6 +9569,12 @@ function App() {
                                                 "NO SHOW - TR"
                                               )
                                             ) &&
+                                            !(
+                                              bookingDateForCheck &&
+                                              isLockedHoliday(
+                                                bookingDateForCheck
+                                              )
+                                            ) &&
                                             canEditDeleteBooking() && (
                                               <div className="relative">
                                                 <button
@@ -9474,6 +9610,22 @@ function App() {
                                                     <div className="py-1">
                                                       <button
                                                         onClick={() => {
+                                                          // Check if date is a locked holiday
+                                                          if (
+                                                            bookingDateForCheck &&
+                                                            isLockedHoliday(
+                                                              bookingDateForCheck
+                                                            )
+                                                          ) {
+                                                            alert(
+                                                              "This date is locked due to holiday. No actions can be performed on this date."
+                                                            );
+                                                            setActionMenuOpen(
+                                                              null
+                                                            );
+                                                            return;
+                                                          }
+
                                                           // Extract time from the booking data
                                                           let timeSlot =
                                                             "00:00";
@@ -10304,16 +10456,22 @@ function App() {
 
                             <div
                               className={`font-medium text-gray-800 ${
-                                available > 0
+                                available > 0 && !isLockedHolidayDate
                                   ? "cursor-pointer hover:text-blue-600 hover:underline"
+                                  : isLockedHolidayDate
+                                  ? "text-gray-400 cursor-not-allowed"
                                   : ""
                               }`}
                               onClick={() => {
-                                if (available > 0) {
+                                if (available > 0 && !isLockedHolidayDate) {
                                   handleAvailabilityClick(
                                     date,
                                     time,
                                     slot.teachers
+                                  );
+                                } else if (isLockedHolidayDate) {
+                                  alert(
+                                    "This date is locked due to holiday. No actions can be performed."
                                   );
                                 }
                               }}
@@ -10327,8 +10485,10 @@ function App() {
 
                             <div
                               className={`font-medium text-gray-800 ${
-                                booked > 0
+                                booked > 0 && !isLockedHolidayDate
                                   ? "cursor-pointer hover:text-green-600 hover:underline"
+                                  : isLockedHolidayDate
+                                  ? "text-gray-400 cursor-not-allowed"
                                   : ""
                               }`}
                               onClick={() => {
@@ -10337,8 +10497,12 @@ function App() {
                                   date,
                                   time,
                                 });
-                                if (booked > 0) {
+                                if (booked > 0 && !isLockedHolidayDate) {
                                   handleBookingClick(date, time, slot.students);
+                                } else if (isLockedHolidayDate) {
+                                  alert(
+                                    "This date is locked due to holiday. No actions can be performed."
+                                  );
                                 }
                               }}
                             >

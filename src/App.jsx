@@ -9027,11 +9027,25 @@ function App() {
 
                                 // Debug logging (can be removed in production)
 
+                                // Check if summary contains "Migration" or "Future slot"
+                                const hasMigrationOrFutureSlot =
+                                  extractedData.summary &&
+                                  (extractedData.summary
+                                    .toLowerCase()
+                                    .includes("migration") ||
+                                    extractedData.summary
+                                      .toLowerCase()
+                                      .includes("future slot"));
+
                                 return (
                                   <tr
                                     key={index}
                                     className={`hover:bg-gray-50 transition-colors ${
-                                      teacherOnLeave ? "bg-orange-50" : ""
+                                      hasMigrationOrFutureSlot
+                                        ? "bg-blue-100"
+                                        : teacherOnLeave
+                                        ? "bg-orange-50"
+                                        : ""
                                     }`}
                                   >
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -9279,91 +9293,363 @@ function App() {
                                         {/* Action Menu Dropdown */}
                                         <div className="relative ml-3">
                                           {/* Check if date is a locked holiday - Apply to ALL events on locked dates */}
-                                          {bookingDateForCheck &&
-                                            isLockedHoliday(
-                                              bookingDateForCheck
-                                            ) && (
-                                              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded border border-gray-200">
-                                                <span className="w-2 h-2 bg-gray-700 rounded-full mr-1"></span>
-                                                (Locked - Holiday)
-                                              </div>
-                                            )}
-                                          {/* Disabled Actions Message for Availability Hours on Leave */}
-                                          {teacherOnLeave &&
-                                            extractedData.summary &&
-                                            (extractedData.summary
-                                              .toLowerCase()
-                                              .includes("availability") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("hours")) && (
-                                              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded border border-gray-200">
-                                                <span className="w-2 h-2 bg-orange-500 rounded-full mr-1"></span>
-                                                (Leave)
-                                              </div>
-                                            )}
-                                          {/* Availability Actions (Green Dot) - Disable for locked holidays */}
-                                          {extractedData.summary &&
-                                            (extractedData.summary
-                                              .toLowerCase()
-                                              .includes("availability") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("hours")) &&
-                                            !(
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("week off") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("off")
-                                            ) &&
-                                            !teacherOnLeave &&
-                                            !(
+                                          {(() => {
+                                            const isLocked =
                                               bookingDateForCheck &&
                                               isLockedHoliday(
                                                 bookingDateForCheck
-                                              )
-                                            ) &&
-                                            canAddBooking() && (
-                                              <div className="relative">
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    // Toggle dropdown for this specific row
-                                                    setActionMenuOpen(
-                                                      actionMenuOpen === index
-                                                        ? null
-                                                        : index
-                                                    );
-                                                  }}
-                                                  className="flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                  title="Manage Actions"
-                                                >
-                                                  <MdManageAccounts
-                                                    size={8}
-                                                    className="sm:w-3 sm:h-3"
-                                                  />
-                                                  <span className="hidden sm:inline">
-                                                    Manage
-                                                  </span>
-                                                  <FaChevronDown
-                                                    size={8}
-                                                    className="sm:w-3 sm:h-3"
-                                                  />
-                                                </button>
+                                              );
 
-                                                {actionMenuOpen === index && (
-                                                  <div
-                                                    className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
-                                                    data-dropdown-menu
-                                                  >
-                                                    <div className="py-1">
+                                            // If locked, only show the locked holiday message and return early
+                                            if (isLocked) {
+                                              return (
+                                                <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded border border-gray-200">
+                                                  <span className="w-2 h-2 bg-gray-700 rounded-full mr-1"></span>
+                                                  (Locked - Holiday)
+                                                </div>
+                                              );
+                                            }
+
+                                            return (
+                                              <>
+                                                {/* Disabled Actions Message for Availability Hours on Leave */}
+                                                {teacherOnLeave &&
+                                                  extractedData.summary &&
+                                                  (extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("availability") ||
+                                                    extractedData.summary
+                                                      .toLowerCase()
+                                                      .includes("hours")) && (
+                                                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded border border-gray-200">
+                                                      <span className="w-2 h-2 bg-orange-500 rounded-full mr-1"></span>
+                                                      (Leave)
+                                                    </div>
+                                                  )}
+                                                {/* Availability Actions (Green Dot) */}
+                                                {extractedData.summary &&
+                                                  (extractedData.summary
+                                                    .toLowerCase()
+                                                    .includes("availability") ||
+                                                    extractedData.summary
+                                                      .toLowerCase()
+                                                      .includes("hours")) &&
+                                                  !(
+                                                    extractedData.summary
+                                                      .toLowerCase()
+                                                      .includes("week off") ||
+                                                    extractedData.summary
+                                                      .toLowerCase()
+                                                      .includes("off")
+                                                  ) &&
+                                                  !teacherOnLeave &&
+                                                  canAddBooking() && (
+                                                    <div className="relative">
                                                       <button
-                                                        onClick={async () => {
-                                                          try {
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          // Toggle dropdown for this specific row
+                                                          setActionMenuOpen(
+                                                            actionMenuOpen ===
+                                                              index
+                                                              ? null
+                                                              : index
+                                                          );
+                                                        }}
+                                                        className="flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                        title="Manage Actions"
+                                                      >
+                                                        <MdManageAccounts
+                                                          size={8}
+                                                          className="sm:w-3 sm:h-3"
+                                                        />
+                                                        <span className="hidden sm:inline">
+                                                          Manage
+                                                        </span>
+                                                        <FaChevronDown
+                                                          size={8}
+                                                          className="sm:w-3 sm:h-3"
+                                                        />
+                                                      </button>
+
+                                                      {actionMenuOpen ===
+                                                        index && (
+                                                        <div
+                                                          className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                                          data-dropdown-menu
+                                                        >
+                                                          <div className="py-1">
+                                                            <button
+                                                              onClick={async () => {
+                                                                try {
+                                                                  // Check if date is a locked holiday
+                                                                  // Use the bookingDateForCheck already defined above (extracted from start_time)
+                                                                  if (
+                                                                    bookingDateForCheck &&
+                                                                    isLockedHoliday(
+                                                                      bookingDateForCheck
+                                                                    )
+                                                                  ) {
+                                                                    alert(
+                                                                      "This date is locked due to holiday. No actions can be performed on this date."
+                                                                    );
+                                                                    setActionMenuOpen(
+                                                                      null
+                                                                    );
+                                                                    return;
+                                                                  }
+                                                                  // First, execute the original functionality - Open UnifiedModal
+                                                                  let timeSlot =
+                                                                    timeRange;
+                                                                  const slotData =
+                                                                    getSlotCounts(
+                                                                      bookingDate,
+                                                                      timeSlot
+                                                                    );
+                                                                  setSelectedSlot(
+                                                                    {
+                                                                      date: bookingDate,
+                                                                      time: timeSlot,
+                                                                      teacherid:
+                                                                        slotData.teacherid ||
+                                                                        extractedData.teacherid ||
+                                                                        null,
+                                                                      teacherDetails:
+                                                                        slotData.teacherDetails,
+                                                                      isFromAPI:
+                                                                        slotData.isFromAPI ||
+                                                                        true,
+                                                                    }
+                                                                  );
+                                                                  setModalOpen(
+                                                                    true
+                                                                  );
+
+                                                                  // Then, execute the new functionality - Freeze slot API call
+                                                                  // Get teacher UID from selected teacher
+                                                                  const teacherUid =
+                                                                    selectedTeacher?.uid;
+
+                                                                  if (
+                                                                    !teacherUid
+                                                                  ) {
+                                                                    console.warn(
+                                                                      "Teacher UID not found for freeze slot API"
+                                                                    );
+                                                                    // Don't return here, still allow modal to open
+                                                                  } else {
+                                                                    // Format datetime to UTC
+                                                                    const slotDateTime =
+                                                                      formatDateTimeToUTC(
+                                                                        bookingDate,
+                                                                        timeRange,
+                                                                        selectedTimezone
+                                                                      );
+
+                                                                    if (
+                                                                      !slotDateTime
+                                                                    ) {
+                                                                      console.warn(
+                                                                        "Error formatting slot datetime for freeze slot API"
+                                                                      );
+                                                                    } else {
+                                                                      // Get user info from auth context
+                                                                      const userId =
+                                                                        user?.username ||
+                                                                        user?.id;
+                                                                      const sessionId =
+                                                                        user?.sessionId;
+
+                                                                      if (
+                                                                        !userId ||
+                                                                        !sessionId
+                                                                      ) {
+                                                                        console.warn(
+                                                                          "User authentication information not found for freeze slot API"
+                                                                        );
+                                                                      } else {
+                                                                        // Call freeze slot API in background
+                                                                        try {
+                                                                          const result =
+                                                                            await freezeSlot(
+                                                                              teacherUid,
+                                                                              slotDateTime,
+                                                                              userId,
+                                                                              sessionId
+                                                                            );
+
+                                                                          if (
+                                                                            result.success
+                                                                          ) {
+                                                                            console.log(
+                                                                              "Slot frozen successfully:",
+                                                                              result.data
+                                                                            );
+                                                                            // Optional: Show a subtle success notification
+                                                                          } else if (
+                                                                            result.held
+                                                                          ) {
+                                                                            // Slot is held by another user - close modal and show error
+                                                                            console.warn(
+                                                                              "Slot is held:",
+                                                                              result.message
+                                                                            );
+                                                                            setModalOpen(
+                                                                              false
+                                                                            );
+                                                                            alert(
+                                                                              result.message
+                                                                            );
+                                                                          } else {
+                                                                            console.error(
+                                                                              "Failed to freeze slot:",
+                                                                              result.error
+                                                                            );
+                                                                          }
+                                                                        } catch (apiError) {
+                                                                          console.error(
+                                                                            "Error calling freeze slot API:",
+                                                                            apiError
+                                                                          );
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                } catch (error) {
+                                                                  console.error(
+                                                                    "Error in manage booking:",
+                                                                    error
+                                                                  );
+                                                                } finally {
+                                                                  setActionMenuOpen(
+                                                                    null
+                                                                  );
+                                                                }
+                                                              }}
+                                                              className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
+                                                            >
+                                                              <FaUsers
+                                                                size={10}
+                                                              />
+                                                              Manage Booking
+                                                            </button>
+                                                          </div>
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  )}
+                                              </>
+                                            );
+                                          })()}
+
+                                          {/* Booking Actions (Red Dot) - Hide if locked holiday */}
+                                          {(() => {
+                                            const isLocked =
+                                              bookingDateForCheck &&
+                                              isLockedHoliday(
+                                                bookingDateForCheck
+                                              );
+
+                                            if (isLocked) {
+                                              return null;
+                                            }
+
+                                            if (
+                                              extractedData.summary &&
+                                              !(
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("availability") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("hours")
+                                              ) &&
+                                              !(
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("leave") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("training") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("week off") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("jloh") ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes(
+                                                    "non available hour"
+                                                  ) ||
+                                                extractedData.summary
+                                                  .toLowerCase()
+                                                  .includes("off")
+                                              ) &&
+                                              !(
+                                                extractedData.summary.includes(
+                                                  "B&R"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBT/PL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBT/UL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBP/PL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBP/UL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBO"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "NO SHOW - LR"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "NO SHOW - TR"
+                                                )
+                                              ) &&
+                                              canEditDeleteBooking()
+                                            ) {
+                                              return (
+                                                <div className="relative">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setActionMenuOpen(
+                                                        actionMenuOpen === index
+                                                          ? null
+                                                          : index
+                                                      );
+                                                    }}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                    title="Manage Actions"
+                                                  >
+                                                    <MdManageAccounts
+                                                      size={8}
+                                                      className="sm:w-3 sm:h-3"
+                                                    />
+                                                    <span className="hidden sm:inline">
+                                                      Manage
+                                                    </span>
+                                                    <FaChevronDown
+                                                      size={8}
+                                                      className="sm:w-3 sm:h-3"
+                                                    />
+                                                  </button>
+
+                                                  {actionMenuOpen === index && (
+                                                    <div
+                                                      className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                                      data-dropdown-menu
+                                                    >
+                                                      <div className="py-1">
+                                                        <button
+                                                          onClick={() => {
                                                             // Check if date is a locked holiday
-                                                            // Use the bookingDateForCheck already defined above (extracted from start_time)
                                                             if (
                                                               bookingDateForCheck &&
                                                               isLockedHoliday(
@@ -9378,676 +9664,463 @@ function App() {
                                                               );
                                                               return;
                                                             }
-                                                            // First, execute the original functionality - Open UnifiedModal
+
+                                                            // Extract time from the booking data
                                                             let timeSlot =
-                                                              timeRange;
-                                                            const slotData =
-                                                              getSlotCounts(
-                                                                bookingDate,
-                                                                timeSlot
-                                                              );
-                                                            setSelectedSlot({
-                                                              date: bookingDate,
-                                                              time: timeSlot,
-                                                              teacherid:
-                                                                slotData.teacherid ||
-                                                                extractedData.teacherid ||
-                                                                null,
-                                                              teacherDetails:
-                                                                slotData.teacherDetails,
-                                                              isFromAPI:
-                                                                slotData.isFromAPI ||
-                                                                true,
-                                                            });
-                                                            setModalOpen(true);
-
-                                                            // Then, execute the new functionality - Freeze slot API call
-                                                            // Get teacher UID from selected teacher
-                                                            const teacherUid =
-                                                              selectedTeacher?.uid;
-
-                                                            if (!teacherUid) {
-                                                              console.warn(
-                                                                "Teacher UID not found for freeze slot API"
-                                                              );
-                                                              // Don't return here, still allow modal to open
-                                                            } else {
-                                                              // Format datetime to UTC
-                                                              const slotDateTime =
-                                                                formatDateTimeToUTC(
-                                                                  bookingDate,
-                                                                  timeRange,
-                                                                  selectedTimezone
+                                                              "00:00";
+                                                            if (
+                                                              extractedData.summary
+                                                            ) {
+                                                              const timeMatch =
+                                                                extractedData.summary.match(
+                                                                  /(\d{1,2}:\d{2})/
                                                                 );
-
-                                                              if (
-                                                                !slotDateTime
-                                                              ) {
-                                                                console.warn(
-                                                                  "Error formatting slot datetime for freeze slot API"
-                                                                );
-                                                              } else {
-                                                                // Get user info from auth context
-                                                                const userId =
-                                                                  user?.username ||
-                                                                  user?.id;
-                                                                const sessionId =
-                                                                  user?.sessionId;
-
-                                                                if (
-                                                                  !userId ||
-                                                                  !sessionId
-                                                                ) {
-                                                                  console.warn(
-                                                                    "User authentication information not found for freeze slot API"
-                                                                  );
-                                                                } else {
-                                                                  // Call freeze slot API in background
-                                                                  try {
-                                                                    const result =
-                                                                      await freezeSlot(
-                                                                        teacherUid,
-                                                                        slotDateTime,
-                                                                        userId,
-                                                                        sessionId
-                                                                      );
-
-                                                                    if (
-                                                                      result.success
-                                                                    ) {
-                                                                      console.log(
-                                                                        "Slot frozen successfully:",
-                                                                        result.data
-                                                                      );
-                                                                      // Optional: Show a subtle success notification
-                                                                    } else if (
-                                                                      result.held
-                                                                    ) {
-                                                                      // Slot is held by another user - close modal and show error
-                                                                      console.warn(
-                                                                        "Slot is held:",
-                                                                        result.message
-                                                                      );
-                                                                      setModalOpen(
-                                                                        false
-                                                                      );
-                                                                      alert(
-                                                                        result.message
-                                                                      );
-                                                                    } else {
-                                                                      console.error(
-                                                                        "Failed to freeze slot:",
-                                                                        result.error
-                                                                      );
-                                                                    }
-                                                                  } catch (apiError) {
-                                                                    console.error(
-                                                                      "Error calling freeze slot API:",
-                                                                      apiError
-                                                                    );
-                                                                  }
-                                                                }
+                                                              if (timeMatch) {
+                                                                timeSlot =
+                                                                  timeMatch[1];
                                                               }
                                                             }
-                                                          } catch (error) {
-                                                            console.error(
-                                                              "Error in manage booking:",
-                                                              error
-                                                            );
-                                                          } finally {
+                                                            if (
+                                                              timeSlot ===
+                                                                "00:00" &&
+                                                              extractedData.start_time
+                                                            ) {
+                                                              const timeFromStart =
+                                                                extractedData.start_time.match(
+                                                                  /(\d{2}:\d{2})/
+                                                                );
+                                                              if (
+                                                                timeFromStart
+                                                              ) {
+                                                                timeSlot =
+                                                                  timeFromStart[1];
+                                                              }
+                                                            }
+                                                            if (
+                                                              timeSlot ===
+                                                              "00:00"
+                                                            ) {
+                                                              timeSlot =
+                                                                "09:00";
+                                                            }
+
+                                                            setCancelPopup({
+                                                              isOpen: true,
+                                                              type: "booking",
+                                                              data: extractedData,
+                                                              date: bookingDate,
+                                                              time: timeSlot,
+                                                              reason: "",
+                                                              studentDetails: {
+                                                                learner_name:
+                                                                  extractedData.learner_name,
+                                                                jlid: extractedData.jlid,
+                                                                name: extractedData.learner_name,
+                                                                jetlearner_id:
+                                                                  extractedData.jlid,
+                                                              },
+                                                              teacherDetails:
+                                                                getTeacherByTeacherId(
+                                                                  extractedData.teacherid
+                                                                ) ||
+                                                                selectedTeacher,
+                                                              upcomingEvents: false,
+                                                              classCount: 1,
+                                                              isLoading: false,
+                                                            });
                                                             setActionMenuOpen(
                                                               null
                                                             );
-                                                          }
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2"
-                                                      >
-                                                        <FaUsers size={10} />
-                                                        Manage Booking
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            )}
+                                                          }}
+                                                          className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                                        >
+                                                          <FaTimes size={10} />
+                                                          Cancel/No Show
+                                                        </button>
+                                                        <button
+                                                          onClick={() => {
+                                                            // Process booking data for edit popup
+                                                            const processedData =
+                                                              processBookingDataForEdit(
+                                                                extractedData,
+                                                                bookingDate,
+                                                                timeRange
+                                                              );
 
-                                          {/* Booking Actions (Red Dot) - Disable for locked holidays */}
-                                          {extractedData.summary &&
-                                            !(
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("availability") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("hours")
-                                            ) &&
-                                            !(
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("leave") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("training") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("week off") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("jloh") ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes(
-                                                  "non available hour"
-                                                ) ||
-                                              extractedData.summary
-                                                .toLowerCase()
-                                                .includes("off")
-                                            ) &&
-                                            !(
-                                              extractedData.summary.includes(
-                                                "B&R"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBT/PL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBT/UL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBP/PL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBP/UL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBO"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "NO SHOW - LR"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "NO SHOW - TR"
-                                              )
-                                            ) &&
-                                            !(
+                                                            console.log(
+                                                              "📝 Edit button clicked - Processed data:",
+                                                              processedData
+                                                            );
+
+                                                            // Open Edit/Reschedule popup with processed data
+                                                            setEditReschedulePopup(
+                                                              {
+                                                                isOpen: true,
+                                                                data: processedData,
+                                                                date: bookingDate,
+                                                                time: timeRange,
+                                                                isLoading: false,
+                                                              }
+                                                            );
+                                                            setActionMenuOpen(
+                                                              null
+                                                            );
+                                                          }}
+                                                          className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
+                                                        >
+                                                          <FaCalendarAlt
+                                                            size={10}
+                                                          />
+                                                          Edit/Reschedule
+                                                          Booking
+                                                        </button>
+                                                        <button
+                                                          onClick={() => {
+                                                            // Show confirmation popup for delete booking
+                                                            setConfirmationPopup(
+                                                              {
+                                                                isOpen: true,
+                                                                type: "delete-booking",
+                                                                title:
+                                                                  "Confirm Delete",
+                                                                message:
+                                                                  "Are you sure you want to delete the booking?",
+                                                                data: extractedData,
+                                                                date: bookingDate,
+                                                                time: timeRange,
+                                                                eventId:
+                                                                  extractedData.event_id ||
+                                                                  null,
+                                                                upcomingEvents: false,
+                                                                onConfirm:
+                                                                  async (
+                                                                    upcomingEvents
+                                                                  ) => {
+                                                                    try {
+                                                                      // Call delete-class API
+                                                                      console.log(
+                                                                        "🚀 Calling delete-class API for booking deletion"
+                                                                      );
+                                                                      console.log(
+                                                                        "📊 Event ID:",
+                                                                        extractedData.event_id
+                                                                      );
+                                                                      console.log(
+                                                                        "📊 Upcoming events:",
+                                                                        upcomingEvents
+                                                                      );
+
+                                                                      if (
+                                                                        !extractedData.event_id
+                                                                      ) {
+                                                                        throw new Error(
+                                                                          "No event_id available for deletion"
+                                                                        );
+                                                                      }
+
+                                                                      const deleteResult =
+                                                                        await handleDeleteClass(
+                                                                          extractedData.event_id,
+                                                                          upcomingEvents ||
+                                                                            false
+                                                                        );
+
+                                                                      if (
+                                                                        deleteResult ==
+                                                                        "success"
+                                                                      ) {
+                                                                        // Close the action menu
+                                                                        setActionMenuOpen(
+                                                                          null
+                                                                        );
+
+                                                                        // Show success message
+                                                                        setSuccessMessage(
+                                                                          {
+                                                                            show: true,
+                                                                            message:
+                                                                              "Booking Successfully Deleted !!",
+                                                                            type: "delete",
+                                                                          }
+                                                                        );
+
+                                                                        // Close success message after delay
+                                                                        setTimeout(
+                                                                          () => {
+                                                                            setSuccessMessage(
+                                                                              {
+                                                                                show: false,
+                                                                                message:
+                                                                                  "",
+                                                                                type: "",
+                                                                              }
+                                                                            );
+                                                                          },
+                                                                          2000
+                                                                        );
+
+                                                                        // Refresh the data after deletion
+                                                                        await fetchListViewBookingDetails();
+                                                                      }
+                                                                    } catch (error) {
+                                                                      console.error(
+                                                                        "Error deleting booking:",
+                                                                        error
+                                                                      );
+                                                                      alert(
+                                                                        `Failed to delete booking: ${error.message}`
+                                                                      );
+                                                                    }
+                                                                  },
+                                                              }
+                                                            );
+                                                            setActionMenuOpen(
+                                                              null
+                                                            );
+                                                          }}
+                                                          className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                                        >
+                                                          <FaTrash size={10} />
+                                                          Delete Booking
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              );
+                                            }
+
+                                            return null;
+                                          })()}
+
+                                          {/* Black Dot Actions - Hide if locked holiday */}
+                                          {(() => {
+                                            const isLocked =
                                               bookingDateForCheck &&
                                               isLockedHoliday(
                                                 bookingDateForCheck
-                                              )
-                                            ) &&
-                                            canEditDeleteBooking() && (
-                                              <div className="relative">
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setActionMenuOpen(
-                                                      actionMenuOpen === index
-                                                        ? null
-                                                        : index
-                                                    );
-                                                  }}
-                                                  className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                  title="Manage Actions"
-                                                >
-                                                  <MdManageAccounts
-                                                    size={8}
-                                                    className="sm:w-3 sm:h-3"
-                                                  />
-                                                  <span className="hidden sm:inline">
-                                                    Manage
-                                                  </span>
-                                                  <FaChevronDown
-                                                    size={8}
-                                                    className="sm:w-3 sm:h-3"
-                                                  />
-                                                </button>
+                                              );
 
-                                                {actionMenuOpen === index && (
-                                                  <div
-                                                    className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
-                                                    data-dropdown-menu
+                                            if (isLocked) {
+                                              return null;
+                                            }
+
+                                            if (
+                                              extractedData.summary &&
+                                              (extractedData.summary.includes(
+                                                "B&R"
+                                              ) ||
+                                                extractedData.summary.includes(
+                                                  "CBT/PL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBT/UL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBP/PL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBP/UL"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "CBO"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "NO SHOW - LR"
+                                                ) ||
+                                                extractedData.summary.includes(
+                                                  "NO SHOW - TR"
+                                                )) &&
+                                              canEditDeleteBooking()
+                                            ) {
+                                              return (
+                                                <div className="relative">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setActionMenuOpen(
+                                                        actionMenuOpen === index
+                                                          ? null
+                                                          : index
+                                                      );
+                                                    }}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
+                                                    title="Manage Actions"
                                                   >
-                                                    <div className="py-1">
-                                                      <button
-                                                        onClick={() => {
-                                                          // Check if date is a locked holiday
-                                                          if (
-                                                            bookingDateForCheck &&
-                                                            isLockedHoliday(
-                                                              bookingDateForCheck
-                                                            )
-                                                          ) {
-                                                            alert(
-                                                              "This date is locked due to holiday. No actions can be performed on this date."
+                                                    <MdManageAccounts
+                                                      size={8}
+                                                      className="sm:w-3 sm:h-3"
+                                                    />
+                                                    <span className="hidden sm:inline">
+                                                      Manage
+                                                    </span>
+                                                    <FaChevronDown
+                                                      size={8}
+                                                      className="sm:w-3 sm:h-3"
+                                                    />
+                                                  </button>
+
+                                                  {actionMenuOpen === index && (
+                                                    <div
+                                                      className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                                                      data-dropdown-menu
+                                                    >
+                                                      <div className="py-1">
+                                                        <button
+                                                          onClick={() => {
+                                                            // Show confirmation popup for delete events
+                                                            setConfirmationPopup(
+                                                              {
+                                                                isOpen: true,
+                                                                type: "delete-events",
+                                                                title:
+                                                                  "Confirm Delete",
+                                                                message:
+                                                                  "Are you sure you want to delete this event?",
+                                                                data: extractedData,
+                                                                date: bookingDate,
+                                                                time: timeRange,
+                                                                eventId:
+                                                                  extractedData.event_id ||
+                                                                  null,
+                                                                upcomingEvents: false,
+                                                                onConfirm:
+                                                                  async (
+                                                                    upcomingEvents
+                                                                  ) => {
+                                                                    try {
+                                                                      // Call delete-class API for event deletion
+                                                                      console.log(
+                                                                        "🚀 Calling delete-class API for event deletion"
+                                                                      );
+                                                                      console.log(
+                                                                        "📊 Event ID:",
+                                                                        extractedData.event_id
+                                                                      );
+                                                                      console.log(
+                                                                        "📊 Upcoming events:",
+                                                                        upcomingEvents
+                                                                      );
+
+                                                                      if (
+                                                                        !extractedData.event_id
+                                                                      ) {
+                                                                        throw new Error(
+                                                                          "No event_id available for deletion"
+                                                                        );
+                                                                      }
+
+                                                                      const deleteResult =
+                                                                        await handleDeleteClass(
+                                                                          extractedData.event_id,
+                                                                          upcomingEvents ||
+                                                                            false
+                                                                        );
+
+                                                                      if (
+                                                                        deleteResult ==
+                                                                        "success"
+                                                                      ) {
+                                                                        // Close the action menu
+                                                                        setActionMenuOpen(
+                                                                          null
+                                                                        );
+
+                                                                        // Show success message
+                                                                        setSuccessMessage(
+                                                                          {
+                                                                            show: true,
+                                                                            message:
+                                                                              "Event Successfully Deleted !!",
+                                                                            type: "delete",
+                                                                          }
+                                                                        );
+
+                                                                        // Close success message after delay
+                                                                        setTimeout(
+                                                                          () => {
+                                                                            setSuccessMessage(
+                                                                              {
+                                                                                show: false,
+                                                                                message:
+                                                                                  "",
+                                                                                type: "",
+                                                                              }
+                                                                            );
+                                                                          },
+                                                                          2000
+                                                                        );
+
+                                                                        // Refresh the data after deletion
+                                                                        await fetchListViewBookingDetails();
+                                                                      }
+                                                                    } catch (error) {
+                                                                      console.error(
+                                                                        "Error deleting event:",
+                                                                        error
+                                                                      );
+                                                                      alert(
+                                                                        `Failed to delete event: ${error.message}`
+                                                                      );
+                                                                    }
+                                                                  },
+                                                              }
                                                             );
                                                             setActionMenuOpen(
                                                               null
                                                             );
-                                                            return;
-                                                          }
-
-                                                          // Extract time from the booking data
-                                                          let timeSlot =
-                                                            "00:00";
-                                                          if (
-                                                            extractedData.summary
-                                                          ) {
-                                                            const timeMatch =
-                                                              extractedData.summary.match(
-                                                                /(\d{1,2}:\d{2})/
+                                                          }}
+                                                          className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
+                                                        >
+                                                          <FaTrash size={10} />
+                                                          Delete Events
+                                                        </button>
+                                                        <button
+                                                          onClick={() => {
+                                                            // Process booking data for edit popup
+                                                            const processedData =
+                                                              processBookingDataForEdit(
+                                                                extractedData,
+                                                                bookingDate,
+                                                                timeRange
                                                               );
-                                                            if (timeMatch) {
-                                                              timeSlot =
-                                                                timeMatch[1];
-                                                            }
-                                                          }
-                                                          if (
-                                                            timeSlot ===
-                                                              "00:00" &&
-                                                            extractedData.start_time
-                                                          ) {
-                                                            const timeFromStart =
-                                                              extractedData.start_time.match(
-                                                                /(\d{2}:\d{2})/
-                                                              );
-                                                            if (timeFromStart) {
-                                                              timeSlot =
-                                                                timeFromStart[1];
-                                                            }
-                                                          }
-                                                          if (
-                                                            timeSlot === "00:00"
-                                                          ) {
-                                                            timeSlot = "09:00";
-                                                          }
 
-                                                          setCancelPopup({
-                                                            isOpen: true,
-                                                            type: "booking",
-                                                            data: extractedData,
-                                                            date: bookingDate,
-                                                            time: timeSlot,
-                                                            reason: "",
-                                                            studentDetails: {
-                                                              learner_name:
-                                                                extractedData.learner_name,
-                                                              jlid: extractedData.jlid,
-                                                              name: extractedData.learner_name,
-                                                              jetlearner_id:
-                                                                extractedData.jlid,
-                                                            },
-                                                            teacherDetails:
-                                                              getTeacherByTeacherId(
-                                                                extractedData.teacherid
-                                                              ) ||
-                                                              selectedTeacher,
-                                                            upcomingEvents: false,
-                                                            classCount: 1,
-                                                            isLoading: false,
-                                                          });
-                                                          setActionMenuOpen(
-                                                            null
-                                                          );
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
-                                                      >
-                                                        <FaTimes size={10} />
-                                                        Cancel/No Show
-                                                      </button>
-                                                      <button
-                                                        onClick={() => {
-                                                          // Process booking data for edit popup
-                                                          const processedData =
-                                                            processBookingDataForEdit(
-                                                              extractedData,
-                                                              bookingDate,
-                                                              timeRange
+                                                            console.log(
+                                                              "📝 Edit button clicked - Processed data:",
+                                                              processedData
                                                             );
 
-                                                          console.log(
-                                                            "📝 Edit button clicked - Processed data:",
-                                                            processedData
-                                                          );
-
-                                                          // Open Edit/Reschedule popup with processed data
-                                                          setEditReschedulePopup(
-                                                            {
-                                                              isOpen: true,
-                                                              data: processedData,
-                                                              date: bookingDate,
-                                                              time: timeRange,
-                                                              isLoading: false,
-                                                            }
-                                                          );
-                                                          setActionMenuOpen(
-                                                            null
-                                                          );
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
-                                                      >
-                                                        <FaCalendarAlt
-                                                          size={10}
-                                                        />
-                                                        Edit/Reschedule Booking
-                                                      </button>
-                                                      <button
-                                                        onClick={() => {
-                                                          // Show confirmation popup for delete booking
-                                                          setConfirmationPopup({
-                                                            isOpen: true,
-                                                            type: "delete-booking",
-                                                            title:
-                                                              "Confirm Delete",
-                                                            message:
-                                                              "Are you sure you want to delete the booking?",
-                                                            data: extractedData,
-                                                            date: bookingDate,
-                                                            time: timeRange,
-                                                            eventId:
-                                                              extractedData.event_id ||
-                                                              null,
-                                                            upcomingEvents: false,
-                                                            onConfirm: async (
-                                                              upcomingEvents
-                                                            ) => {
-                                                              try {
-                                                                // Call delete-class API
-                                                                console.log(
-                                                                  "🚀 Calling delete-class API for booking deletion"
-                                                                );
-                                                                console.log(
-                                                                  "📊 Event ID:",
-                                                                  extractedData.event_id
-                                                                );
-                                                                console.log(
-                                                                  "📊 Upcoming events:",
-                                                                  upcomingEvents
-                                                                );
-
-                                                                if (
-                                                                  !extractedData.event_id
-                                                                ) {
-                                                                  throw new Error(
-                                                                    "No event_id available for deletion"
-                                                                  );
-                                                                }
-
-                                                                const deleteResult =
-                                                                  await handleDeleteClass(
-                                                                    extractedData.event_id,
-                                                                    upcomingEvents ||
-                                                                      false
-                                                                  );
-
-                                                                if (
-                                                                  deleteResult ==
-                                                                  "success"
-                                                                ) {
-                                                                  // Close the action menu
-                                                                  setActionMenuOpen(
-                                                                    null
-                                                                  );
-
-                                                                  // Show success message
-                                                                  setSuccessMessage(
-                                                                    {
-                                                                      show: true,
-                                                                      message:
-                                                                        "Booking Successfully Deleted !!",
-                                                                      type: "delete",
-                                                                    }
-                                                                  );
-
-                                                                  // Close success message after delay
-                                                                  setTimeout(
-                                                                    () => {
-                                                                      setSuccessMessage(
-                                                                        {
-                                                                          show: false,
-                                                                          message:
-                                                                            "",
-                                                                          type: "",
-                                                                        }
-                                                                      );
-                                                                    },
-                                                                    2000
-                                                                  );
-
-                                                                  // Refresh the data after deletion
-                                                                  await fetchListViewBookingDetails();
-                                                                }
-                                                              } catch (error) {
-                                                                console.error(
-                                                                  "Error deleting booking:",
-                                                                  error
-                                                                );
-                                                                alert(
-                                                                  `Failed to delete booking: ${error.message}`
-                                                                );
+                                                            // Open Edit/Reschedule popup with processed data
+                                                            setEditReschedulePopup(
+                                                              {
+                                                                isOpen: true,
+                                                                data: processedData,
+                                                                date: bookingDate,
+                                                                time: timeRange,
+                                                                isLoading: false,
                                                               }
-                                                            },
-                                                          });
-                                                          setActionMenuOpen(
-                                                            null
-                                                          );
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
-                                                      >
-                                                        <FaTrash size={10} />
-                                                        Delete Booking
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            )}
-
-                                          {/* Black Dot Actions */}
-                                          {extractedData.summary &&
-                                            (extractedData.summary.includes(
-                                              "B&R"
-                                            ) ||
-                                              extractedData.summary.includes(
-                                                "CBT/PL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBT/UL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBP/PL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBP/UL"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "CBO"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "NO SHOW - LR"
-                                              ) ||
-                                              extractedData.summary.includes(
-                                                "NO SHOW - TR"
-                                              )) &&
-                                            canEditDeleteBooking() && (
-                                              <div className="relative">
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setActionMenuOpen(
-                                                      actionMenuOpen === index
-                                                        ? null
-                                                        : index
-                                                    );
-                                                  }}
-                                                  className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
-                                                  title="Manage Actions"
-                                                >
-                                                  <MdManageAccounts
-                                                    size={8}
-                                                    className="sm:w-3 sm:h-3"
-                                                  />
-                                                  <span className="hidden sm:inline">
-                                                    Manage
-                                                  </span>
-                                                  <FaChevronDown
-                                                    size={8}
-                                                    className="sm:w-3 sm:h-3"
-                                                  />
-                                                </button>
-
-                                                {actionMenuOpen === index && (
-                                                  <div
-                                                    className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
-                                                    data-dropdown-menu
-                                                  >
-                                                    <div className="py-1">
-                                                      <button
-                                                        onClick={() => {
-                                                          // Show confirmation popup for delete events
-                                                          setConfirmationPopup({
-                                                            isOpen: true,
-                                                            type: "delete-events",
-                                                            title:
-                                                              "Confirm Delete",
-                                                            message:
-                                                              "Are you sure you want to delete this event?",
-                                                            data: extractedData,
-                                                            date: bookingDate,
-                                                            time: timeRange,
-                                                            eventId:
-                                                              extractedData.event_id ||
-                                                              null,
-                                                            upcomingEvents: false,
-                                                            onConfirm: async (
-                                                              upcomingEvents
-                                                            ) => {
-                                                              try {
-                                                                // Call delete-class API for event deletion
-                                                                console.log(
-                                                                  "🚀 Calling delete-class API for event deletion"
-                                                                );
-                                                                console.log(
-                                                                  "📊 Event ID:",
-                                                                  extractedData.event_id
-                                                                );
-                                                                console.log(
-                                                                  "📊 Upcoming events:",
-                                                                  upcomingEvents
-                                                                );
-
-                                                                if (
-                                                                  !extractedData.event_id
-                                                                ) {
-                                                                  throw new Error(
-                                                                    "No event_id available for deletion"
-                                                                  );
-                                                                }
-
-                                                                const deleteResult =
-                                                                  await handleDeleteClass(
-                                                                    extractedData.event_id,
-                                                                    upcomingEvents ||
-                                                                      false
-                                                                  );
-
-                                                                if (
-                                                                  deleteResult ==
-                                                                  "success"
-                                                                ) {
-                                                                  // Close the action menu
-                                                                  setActionMenuOpen(
-                                                                    null
-                                                                  );
-
-                                                                  // Show success message
-                                                                  setSuccessMessage(
-                                                                    {
-                                                                      show: true,
-                                                                      message:
-                                                                        "Event Successfully Deleted !!",
-                                                                      type: "delete",
-                                                                    }
-                                                                  );
-
-                                                                  // Close success message after delay
-                                                                  setTimeout(
-                                                                    () => {
-                                                                      setSuccessMessage(
-                                                                        {
-                                                                          show: false,
-                                                                          message:
-                                                                            "",
-                                                                          type: "",
-                                                                        }
-                                                                      );
-                                                                    },
-                                                                    2000
-                                                                  );
-
-                                                                  // Refresh the data after deletion
-                                                                  await fetchListViewBookingDetails();
-                                                                }
-                                                              } catch (error) {
-                                                                console.error(
-                                                                  "Error deleting event:",
-                                                                  error
-                                                                );
-                                                                alert(
-                                                                  `Failed to delete event: ${error.message}`
-                                                                );
-                                                              }
-                                                            },
-                                                          });
-                                                          setActionMenuOpen(
-                                                            null
-                                                          );
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
-                                                      >
-                                                        <FaTrash size={10} />
-                                                        Delete Events
-                                                      </button>
-                                                      <button
-                                                        onClick={() => {
-                                                          // Process booking data for edit popup
-                                                          const processedData =
-                                                            processBookingDataForEdit(
-                                                              extractedData,
-                                                              bookingDate,
-                                                              timeRange
                                                             );
-
-                                                          console.log(
-                                                            "📝 Edit button clicked - Processed data:",
-                                                            processedData
-                                                          );
-
-                                                          // Open Edit/Reschedule popup with processed data
-                                                          setEditReschedulePopup(
-                                                            {
-                                                              isOpen: true,
-                                                              data: processedData,
-                                                              date: bookingDate,
-                                                              time: timeRange,
-                                                              isLoading: false,
-                                                            }
-                                                          );
-                                                          setActionMenuOpen(
-                                                            null
-                                                          );
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
-                                                      >
-                                                        <FaCalendarAlt
-                                                          size={10}
-                                                        />
-                                                        Edit/Reschedule Booking
-                                                      </button>
+                                                            setActionMenuOpen(
+                                                              null
+                                                            );
+                                                          }}
+                                                          className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
+                                                        >
+                                                          <FaCalendarAlt
+                                                            size={10}
+                                                          />
+                                                          Edit/Reschedule
+                                                          Booking
+                                                        </button>
+                                                      </div>
                                                     </div>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            )}
+                                                  )}
+                                                </div>
+                                              );
+                                            }
+
+                                            return null;
+                                          })()}
                                         </div>
                                       </div>
                                     </td>

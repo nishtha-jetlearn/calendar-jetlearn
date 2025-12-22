@@ -2192,9 +2192,10 @@ function App() {
             event_id: bookingData.eventId, // Include event_id for edit operations
           }),
           time_zone: formatTimezoneForAPI(selectedTimezone),
-          ...(bookingData.pdf_attached && {
-            pdf_attached: bookingData.pdf_attached,
-          }),
+          ...(bookingData.pdf_attached &&
+            String(bookingData.pdf_attached).trim() && {
+              pdf_attached: bookingData.pdf_attached,
+            }),
         };
 
         console.log("📤 Sending booking to API:", apiPayload);
@@ -2679,7 +2680,9 @@ function App() {
         class_type: "1:1",
         booking_type: "Trial", // Set as trial as requested
         time_zone: formatTimezoneForAPI(selectedTimezone),
-        pdf_attached: window.scheduleManagementPdfBase64 || "",
+        ...(window.scheduleManagementPdfBase64 && {
+          pdf_attached: window.scheduleManagementPdfBase64,
+        }),
       };
 
       console.log("📤 Sending booking to API:", apiPayload);
@@ -4865,7 +4868,9 @@ function App() {
         updated_by: user?.email || "",
         upcoming_events: upcomingEvents ? "true" : "false",
         time_zone: formatTimezoneForAPI(selectedTimezone),
-        pdf_attached: pdfBase64 || "",
+        ...(pdfBase64 && {
+          pdf_attached: pdfBase64,
+        }),
       };
 
       console.log("📤 Sending UPDATE/EDIT Class API request:");

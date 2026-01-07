@@ -51,6 +51,7 @@ const RECORDING_OPTIONS = [
   { value: "MAKE UP - S", label: "Make Up - Substitute" },
   { value: "Reserved", label: "Reserve Slot" },
   { value: "Migration", label: "Migration" },
+  { value: "GMeet", label: "Google Meet" },
 ];
 
 export const formatDate = (date) => {

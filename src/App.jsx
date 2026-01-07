@@ -1594,14 +1594,18 @@ function App() {
           }
         );
       } else {
+        // When fetching all teachers, include time_slot parameter
+        if (time) {
+          formData.append("time_slot", time);
+        }
         console.log(
           "🚀 Sending Availability API Request for time slot (all teachers):",
           {
             start_date: dateStr,
             end_date: dateStr,
             type: "Availability",
-            teacherid: "all",
             time_slot: time,
+            timezone: formatTimezoneForAPI(selectedTimezone),
           }
         );
       }
@@ -2913,7 +2917,7 @@ function App() {
       return;
     }
 
-    const { teacherid } = getSlotCounts(dateObj, time);
+    const { teacherid, available } = getSlotCounts(dateObj, time);
 
     // Always open popup if available count > 0
     setDetailsPopup({
@@ -2933,9 +2937,17 @@ function App() {
       response: null,
     });
 
-    // Always trigger API call for availability data, with or without teacher
+    // In week view, if availability count > 1, fetch ALL teachers for that time slot
+    // Don't filter by a specific teacher when multiple teachers are available
     try {
-      if (teacherid) {
+      if (currentView === "week" && available > 1) {
+        // Week view with multiple teachers - fetch all availability for this time slot
+        console.log(
+          "🚀 Week view: Fetching all availability (multiple teachers detected):",
+          available
+        );
+        await sendAvailabilityToAPI(date, time, null);
+      } else if (teacherid) {
         console.log("🚀 Calling availability API with teacherid:", teacherid);
         await sendAvailabilityToAPI(date, time, teacherid);
       } else if (selectedTeacher && selectedTeacher.uid) {
@@ -3695,6 +3707,8 @@ function App() {
     if (summary.includes("MAKE UP - S")) recordingKeywords.push("MAKE UP - S");
     if (summary.includes("Reserved")) recordingKeywords.push("Reserved");
     if (summary.includes("Migration")) recordingKeywords.push("Migration");
+    if (summary.toLowerCase().includes("gmeet"))
+      recordingKeywords.push("GMEET");
 
     // Extract learner IDs starting with JL from summary
     const jlMatches = summary.match(/\bJL[A-Za-z0-9]+\b/g) || [];
@@ -4540,7 +4554,15 @@ function App() {
         setSelectedClassType(bookingData.class_type || "");
         setSelectedClassCount(bookingData.class_count || "1");
         setAttendees(bookingData.attendees ? bookingData.attendees.trim() : "");
-        setSelectedRecording(bookingData.recording || []);
+        // Check summary case-insensitively for Gmeet and ensure GMEET is in selectedRecording
+        const summaryLower = (bookingData.summary || "").toLowerCase();
+        const recordingFromData = bookingData.recording || [];
+        const hasGmeet = summaryLower.includes("gmeet");
+        const recordingWithGmeet =
+          hasGmeet && !recordingFromData.includes("GMEET")
+            ? [...recordingFromData, "GMEET"]
+            : recordingFromData;
+        setSelectedRecording(recordingWithGmeet);
         setDescription(bookingData.description || "");
         setSummary(bookingData.summary || "");
         // Reset PDF file when popup opens
@@ -6031,6 +6053,7 @@ function App() {
                         "MAKE UP - S",
                         "Reserved",
                         "Migration",
+                        "GMEET",
                       ].map((option) => (
                         <label
                           key={option}
@@ -6375,9 +6398,9 @@ function App() {
                       <div className="p-3">
                         {currentData.length > 0 ? (
                           <div className="space-y-3">
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto overflow-y-auto max-h-[400px]">
                               <table className="w-full min-w-[400px]">
-                                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+                                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200 sticky top-0 z-10">
                                   <tr>
                                     <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                                       Summary
@@ -6538,9 +6561,9 @@ function App() {
                       <div className="p-3">
                         {currentData.length > 0 ? (
                           <div>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto overflow-y-auto max-h-[400px]">
                               <table className="w-full min-w-[400px]">
-                                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+                                <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200 sticky top-0 z-10">
                                   <tr>
                                     <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                                       Summary

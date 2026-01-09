@@ -8896,7 +8896,7 @@ function App() {
                                           </svg>
                                         </div>
                                         <span className="font-medium text-gray-700 text-xs">
-                                          Total Booked events
+                                          Total Paid Events
                                         </span>
                                       </div>
                                       <div className="text-purple-600 font-semibold text-sm">

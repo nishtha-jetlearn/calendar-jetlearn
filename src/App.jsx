@@ -446,6 +446,13 @@ function App() {
   const [studentsLoading, setStudentsLoading] = useState(true);
   const [studentsError, setStudentsError] = useState(null);
 
+  // State for learner calendar stats
+  const [learnerCalendarStats, setLearnerCalendarStats] = useState(null);
+  const [learnerCalendarStatsLoading, setLearnerCalendarStatsLoading] =
+    useState(false);
+  const [learnerCalendarStatsError, setLearnerCalendarStatsError] =
+    useState(null);
+
   // State for teachers from API
   const [teachers, setTeachers] = useState([]);
   const [teachersLoading, setTeachersLoading] = useState(true);
@@ -2359,6 +2366,47 @@ function App() {
     }
   };
 
+  // Function to fetch learner calendar stats
+  const fetchLearnerCalendarStats = async (jetlearnerId) => {
+    if (!jetlearnerId) {
+      setLearnerCalendarStats(null);
+      return;
+    }
+
+    try {
+      setLearnerCalendarStatsLoading(true);
+      setLearnerCalendarStatsError(null);
+      console.log("📊 Fetching learner calendar stats for:", jetlearnerId);
+
+      const response = await fetch(
+        "https://live.jetlearn.com/sync/get-learner-calendar-stats/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            jetlearner_id: jetlearnerId,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setLearnerCalendarStats(data);
+      console.log("✅ Learner calendar stats fetched successfully:", data);
+    } catch (error) {
+      console.error("❌ Error fetching learner calendar stats:", error);
+      setLearnerCalendarStatsError(error.message);
+      setLearnerCalendarStats(null);
+    } finally {
+      setLearnerCalendarStatsLoading(false);
+    }
+  };
+
   const handleStudentSelect = (student) => {
     setSelectedStudent(student);
 
@@ -2389,8 +2437,13 @@ function App() {
       };
 
       immediateAPICall();
+
+      // Fetch learner calendar stats
+      fetchLearnerCalendarStats(student.jetlearner_id);
     } else {
       console.log("❌ No student jetlearner_id available for refresh");
+      // Clear stats when no student is selected
+      setLearnerCalendarStats(null);
     }
   };
 
@@ -2771,6 +2824,7 @@ function App() {
   const clearStudentFilter = () => {
     console.log("🗑️ Clearing student filter...");
     setSelectedStudent(null);
+    setLearnerCalendarStats(null);
 
     // Switch to Week View when no filters are applied
     if (!selectedTeacher) {
@@ -2802,6 +2856,7 @@ function App() {
     console.log("🗑️ Clearing all filters...");
     setSelectedTeacher(null);
     setSelectedStudent(null);
+    setLearnerCalendarStats(null);
 
     // Clear clicked slots when filters are cleared
     setClickedSlots(new Set());
@@ -8718,66 +8773,151 @@ function App() {
                               "N/A"}
                           </div>
                         </div>
-
-                        {/* No-Show Count */}
-                        {/*<div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="p-1.5 bg-red-100 rounded-md">
-                              <svg
-                                className="w-4 h-4 text-red-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-gray-700 text-xs">
-                              No-Shows
-                            </span>
-                          </div>
-                          <div className="text-red-600 font-semibold text-sm">
-                            {selectedStudent.No_show_count || "N/A"}
-                          </div>
-                        </div>
-
-                       
-                          Block comment added here
-                          This section displays student statistics including attendance metrics
-                        */}
-
-                        {/* Current Class Count */}
-                        {/*<div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="p-1.5 bg-indigo-100 rounded-md">
-                              <svg
-                                className="w-4 h-4 text-indigo-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                                />
-                              </svg>
-                            </div>
-                            <span className="font-medium text-gray-700 text-xs">
-                              Current Count
-                            </span>
-                          </div>
-                          <div className="text-indigo-600 font-semibold text-sm">
-                            {selectedStudent.current_class_count || "N/A"}
-                          </div>
-                        </div>*/}
                       </div>
+
+                      {/* Calendar Statistics Section */}
+                      {selectedStudent && (
+                        <div className="mt-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm p-4">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                            <FaCalendarAlt
+                              size={14}
+                              className="text-blue-600"
+                            />
+                            Calendar Statistics
+                          </h4>
+
+                          {learnerCalendarStatsLoading && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                              <span>Loading calendar stats...</span>
+                            </div>
+                          )}
+
+                          {learnerCalendarStatsError && (
+                            <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+                              Error loading stats: {learnerCalendarStatsError}
+                            </div>
+                          )}
+
+                          {!learnerCalendarStatsLoading &&
+                            !learnerCalendarStatsError &&
+                            learnerCalendarStats && (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                {/* Start Date on Calendar */}
+                                {learnerCalendarStats.min_start_time && (
+                                  <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow rounded">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="p-1.5 bg-blue-100 rounded-md">
+                                        <svg
+                                          className="w-4 h-4 text-blue-600"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                          />
+                                        </svg>
+                                      </div>
+                                      <span className="font-medium text-gray-700 text-xs">
+                                        Start Date on Calendar
+                                      </span>
+                                    </div>
+                                    <div className="text-blue-600 font-semibold text-sm">
+                                      {new Date(
+                                        learnerCalendarStats.min_start_time
+                                      ).toLocaleDateString("en-GB", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* End Date on Calendar */}
+                                {learnerCalendarStats.max_start_time && (
+                                  <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow rounded">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="p-1.5 bg-orange-100 rounded-md">
+                                        <svg
+                                          className="w-4 h-4 text-orange-600"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                          />
+                                        </svg>
+                                      </div>
+                                      <span className="font-medium text-gray-700 text-xs">
+                                        End Date on Calendar
+                                      </span>
+                                    </div>
+                                    <div className="text-orange-600 font-semibold text-sm">
+                                      {new Date(
+                                        learnerCalendarStats.max_start_time
+                                      ).toLocaleDateString("en-GB", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Total Booked events */}
+                                {learnerCalendarStats.total_classes_booked !==
+                                  undefined &&
+                                  learnerCalendarStats.total_classes_booked !==
+                                    null && (
+                                    <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow rounded">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <div className="p-1.5 bg-purple-100 rounded-md">
+                                          <svg
+                                            className="w-4 h-4 text-purple-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                            />
+                                          </svg>
+                                        </div>
+                                        <span className="font-medium text-gray-700 text-xs">
+                                          Total Booked events
+                                        </span>
+                                      </div>
+                                      <div className="text-purple-600 font-semibold text-sm">
+                                        {
+                                          learnerCalendarStats.total_classes_booked
+                                        }
+                                      </div>
+                                    </div>
+                                  )}
+                              </div>
+                            )}
+
+                          {!learnerCalendarStatsLoading &&
+                            !learnerCalendarStatsError &&
+                            !learnerCalendarStats && (
+                              <div className="text-xs text-gray-400 py-2">
+                                No calendar statistics available
+                              </div>
+                            )}
+                        </div>
+                      )}
                     </div>
                   )}
                   {!selectedTeacher && !selectedStudent && (

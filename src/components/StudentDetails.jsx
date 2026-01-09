@@ -5,7 +5,6 @@ import {
   FaUserCheck,
   FaBookOpen,
 } from "react-icons/fa";
-import { formatShortDate, getDayName } from "../utils/dateUtils";
 
 const StudentDetails = (props) => {
   const { student, schedule, allTeachers } = props;
@@ -38,9 +37,7 @@ const StudentDetails = (props) => {
               ? allTeachers.find(
                   (t) => t.id.toString() === studentBooking.teacherId.toString()
                 )
-              : TEACHERS.find(
-                  (t) => t.id.toString() === studentBooking.teacherId.toString()
-                );
+              : null;
             const teacherName = teacherData?.full_name || "Unassigned";
             bookings.push({
               date: dateStr,

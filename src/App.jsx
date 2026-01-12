@@ -3495,17 +3495,8 @@ function App() {
             : new Date(toasterData.date);
         const formattedDate = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD format
 
-        // Generate multiple schedule entries based on global repeat occurrence
-        for (let i = 0; i < globalRepeatOccurrence; i++) {
-          // Calculate the date for this occurrence (add i weeks)
-          const occurrenceDate = new Date(dateObj);
-          occurrenceDate.setDate(occurrenceDate.getDate() + i * 7); // Add i weeks
-          const occurrenceFormattedDate = occurrenceDate
-            .toISOString()
-            .split("T")[0];
-
-          schedules.push([occurrenceFormattedDate, toasterData.time]);
-        }
+        // Add only the original date - backend will handle repetition based on count
+        schedules.push([formattedDate, toasterData.time]);
       }
 
       if (schedules.length === 0) {
@@ -3595,9 +3586,12 @@ function App() {
       // setClickedSlots(new Set());
 
       // Show success message
+      const totalSlots = schedules.length * globalRepeatOccurrence;
       setSuccessMessage({
         show: true,
-        message: `Successfully added ${schedules.length} availability slots!`,
+        message: `Successfully added ${totalSlots} availability slot${
+          totalSlots !== 1 ? "s" : ""
+        }!`,
         type: "availability",
       });
 

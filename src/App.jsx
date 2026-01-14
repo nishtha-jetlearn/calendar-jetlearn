@@ -8796,7 +8796,7 @@ function App() {
                           {!learnerCalendarStatsLoading &&
                             !learnerCalendarStatsError &&
                             learnerCalendarStats && (
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                                 {/* Start Date on Calendar */}
                                 {learnerCalendarStats.min_start_time && (
                                   <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow rounded">
@@ -8896,6 +8896,40 @@ function App() {
                                       <div className="text-purple-600 font-semibold text-sm">
                                         {
                                           learnerCalendarStats.total_classes_booked
+                                        }
+                                      </div>
+                                    </div>
+                                  )}
+
+                                {/* Total Classes aligned from Today */}
+                                {learnerCalendarStats.total_classes_from_today !==
+                                  undefined &&
+                                  learnerCalendarStats.total_classes_from_today !==
+                                    null && (
+                                    <div className="bg-white p-3 shadow-sm hover:shadow-md transition-shadow rounded">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <div className="p-1.5 bg-green-100 rounded-md">
+                                          <svg
+                                            className="w-4 h-4 text-green-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            />
+                                          </svg>
+                                        </div>
+                                        <span className="font-medium text-gray-700 text-xs">
+                                          Total Classes Aligned From Today
+                                        </span>
+                                      </div>
+                                      <div className="text-green-600 font-semibold text-sm">
+                                        {
+                                          learnerCalendarStats.total_classes_from_today
                                         }
                                       </div>
                                     </div>

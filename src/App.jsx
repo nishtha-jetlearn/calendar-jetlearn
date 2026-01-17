@@ -4862,7 +4862,15 @@ function App() {
         teacher_uid = selectedTeacher.uid;
       }
 
-      if (!teacher_uid) {
+      // Check if this is a Calibration class (summary contains "Calibration" keyword)
+      // Get summary from form input, state, or existing data
+      const summaryInput = document.getElementById("edit_summary");
+      const summaryText = summaryInput?.value || summary || editReschedulePopup.data?.summary || "";
+      const isCalibrationClass = summaryText.toLowerCase().includes("calibration");
+      const hasTJLId = summaryText.match(/\bTJL[A-Za-z0-9]+\b/g);
+
+      // Allow editing Calibration classes without teacher_uid if summary doesn't have TJL ID
+      if (!teacher_uid && !(isCalibrationClass && !hasTJLId)) {
         alert("Teacher UID not found. Please ensure a teacher is selected.");
         setEditReschedulePopup((prev) => ({ ...prev, isLoading: false }));
         setIsOperationLoading(false);

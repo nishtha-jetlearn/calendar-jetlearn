@@ -117,6 +117,42 @@ const formatDateTimeToUTC = (date, timeRange, selectedTimezone) => {
   }
 };
 
+// API function to reject/delete availability
+const rejectAvailability = async (
+  teacherEmail,
+  teacherId,
+  eventId,
+  updatedBy
+) => {
+  try {
+    const response = await fetch(
+      "https://live.jetlearn.com/api/reject-availability/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          teacher_email: teacherEmail,
+          teacher_id: teacherId,
+          event_id: eventId,
+          updated_by: updatedBy,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error rejecting availability:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 // API function to freeze a slot
 const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
   try {
@@ -301,8 +337,12 @@ const safeErrorLog = (message, error) => {
 
 function App() {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
-  const { canAddBooking, canEditDeleteBooking, canAddTeacherAvailability } =
-    usePermissions();
+  const {
+    canAddBooking,
+    canEditDeleteBooking,
+    canAddTeacherAvailability,
+    canDeleteTeacherAvailability,
+  } = usePermissions();
 
   // Helper function to check if user has access to add leaves (tp, trial, admin, or tech team only)
   const canAddLeaves = () => {
@@ -2287,19 +2327,16 @@ function App() {
     try {
       console.log("🔄 Syncing teacher events for:", teacherEmail);
 
-      const formData = new URLSearchParams();
-      formData.append("calendar_id", teacherEmail);
+      // URL encode the calendar_id (email)
+      const encodedCalendarId = encodeURIComponent(teacherEmail);
+      const url = `https://live.jetlearn.com/sync/sync-december-events/?calendar_id=${encodedCalendarId}`;
 
-      const response = await fetch(
-        "https://live.jetlearn.com/sync/sync-teachers-events/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: formData.toString(),
-        }
-      );
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -9737,6 +9774,142 @@ function App() {
                                                               />
                                                               Manage Booking
                                                             </button>
+                                                            {/* Delete Availability Button */}
+                                                            {canDeleteTeacherAvailability() && (
+                                                              <button
+                                                                onClick={async () => {
+                                                                  try {
+                                                                    // Check if date is a locked holiday
+                                                                    if (
+                                                                      bookingDateForCheck &&
+                                                                      isLockedHoliday(
+                                                                        bookingDateForCheck
+                                                                      )
+                                                                    ) {
+                                                                      alert(
+                                                                        "This date is locked due to holiday. No actions can be performed on this date."
+                                                                      );
+                                                                      setActionMenuOpen(
+                                                                        null
+                                                                      );
+                                                                      return;
+                                                                    }
+
+                                                                    // Get teacher information
+                                                                    const tlMatch =
+                                                                      extractedData.summary?.match(
+                                                                        /\bTJ[A-Za-z0-9]+\b/
+                                                                      );
+                                                                    const teacherUid =
+                                                                      tlMatch
+                                                                        ? tlMatch[0]
+                                                                        : extractedData.teacherid ||
+                                                                          selectedTeacher?.uid;
+
+                                                                    // Find teacher in teachers array
+                                                                    const teacher =
+                                                                      teachers.find(
+                                                                        (t) =>
+                                                                          t.uid ===
+                                                                          teacherUid
+                                                                      ) ||
+                                                                      selectedTeacher;
+
+                                                                    if (
+                                                                      !teacher ||
+                                                                      !teacher.email
+                                                                    ) {
+                                                                      alert(
+                                                                        "Teacher email not found. Cannot delete availability."
+                                                                      );
+                                                                      setActionMenuOpen(
+                                                                        null
+                                                                      );
+                                                                      return;
+                                                                    }
+
+                                                                    if (
+                                                                      !extractedData.event_id
+                                                                    ) {
+                                                                      alert(
+                                                                        "Event ID not found. Cannot delete availability."
+                                                                      );
+                                                                      setActionMenuOpen(
+                                                                        null
+                                                                      );
+                                                                      return;
+                                                                    }
+
+                                                                    // Confirm deletion
+                                                                    const confirmed =
+                                                                      window.confirm(
+                                                                        `Are you sure you want to delete this availability for ${teacher.full_name}?`
+                                                                      );
+
+                                                                    if (!confirmed) {
+                                                                      setActionMenuOpen(
+                                                                        null
+                                                                      );
+                                                                      return;
+                                                                    }
+
+                                                                    // Call reject-availability API
+                                                                    const result =
+                                                                      await rejectAvailability(
+                                                                        teacher.email,
+                                                                        teacherUid,
+                                                                        extractedData.event_id,
+                                                                        user?.email ||
+                                                                          user?.username ||
+                                                                          ""
+                                                                      );
+
+                                                                    if (
+                                                                      result.success
+                                                                    ) {
+                                                                      console.log(
+                                                                        "✅ Availability rejected successfully:",
+                                                                        result.data
+                                                                      );
+                                                                      // Show success message
+                                                                      setSuccessMessage(
+                                                                        {
+                                                                          show: true,
+                                                                          message:
+                                                                            "Availability deleted successfully!",
+                                                                          type: "availability",
+                                                                        }
+                                                                      );
+                                                                      // Refresh booking details
+                                                                      await fetchListViewBookingDetails();
+                                                                    } else {
+                                                                      alert(
+                                                                        `Failed to delete availability: ${result.error}`
+                                                                      );
+                                                                    }
+                                                                  } catch (error) {
+                                                                    console.error(
+                                                                      "Error deleting availability:",
+                                                                      error
+                                                                    );
+                                                                    alert(
+                                                                      "Failed to delete availability. Please try again."
+                                                                    );
+                                                                  } finally {
+                                                                    setActionMenuOpen(
+                                                                      null
+                                                                    );
+                                                                  }
+                                                                }}
+                                                                className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 flex items-center gap-2 text-red-600"
+                                                              >
+                                                                <FaTrash
+                                                                  size={10}
+                                                                />
+                                                                Delete
+                                                                Availability
+                                                              </button>
+                                                            )}
                                                           </div>
                                                         </div>
                                                       )}

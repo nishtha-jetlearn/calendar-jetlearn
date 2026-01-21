@@ -125,6 +125,15 @@ const rejectAvailability = async (
   updatedBy
 ) => {
   try {
+    const requestBody = {
+      teacher_email: teacherEmail,
+      teacher_id: teacherId,
+      event_id: eventId,
+      updated_by: updatedBy,
+    };
+    
+    console.log("🗑️ Rejecting availability with payload:", requestBody);
+    
     const response = await fetch(
       "https://live.jetlearn.com/api/reject-availability/",
       {
@@ -132,12 +141,7 @@ const rejectAvailability = async (
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          teacher_email: teacherEmail,
-          teacher_id: teacherId,
-          event_id: eventId,
-          updated_by: updatedBy,
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 
@@ -5581,7 +5585,11 @@ function App() {
                           setSelectedScheduleDate(selectedDate);
                           setSelectedScheduleTime("");
                         }}
-                        min={new Date().toISOString().split("T")[0]}
+                        min={(() => {
+                          const lastWeekDate = new Date();
+                          lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+                          return lastWeekDate.toISOString().split("T")[0];
+                        })()}
                         className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-orange-500 focus:border-transparent"
                       />
                     </div>
@@ -7799,7 +7807,11 @@ function App() {
                             // Reset time selection when date changes
                             setSelectedScheduleTime("");
                           }}
-                          min={new Date().toISOString().split("T")[0]}
+                          min={(() => {
+                            const lastWeekDate = new Date();
+                            lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+                            return lastWeekDate.toISOString().split("T")[0];
+                          })()}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
@@ -9854,14 +9866,17 @@ function App() {
                                                                     }
 
                                                                     // Call reject-availability API
+                                                                    const updatedBy =
+                                                                      user?.email ||
+                                                                      user?.fullUser?.email ||
+                                                                      user?.username ||
+                                                                      "";
                                                                     const result =
                                                                       await rejectAvailability(
                                                                         teacher.email,
                                                                         teacherUid,
                                                                         extractedData.event_id,
-                                                                        user?.email ||
-                                                                          user?.username ||
-                                                                          ""
+                                                                        updatedBy
                                                                       );
 
                                                                     if (

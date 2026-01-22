@@ -50,6 +50,7 @@ import LoginPage from "./pages/LoginPage";
 import { useAuth } from "./contexts/AuthContext";
 import { usePermissions } from "./hooks/usePermissions";
 import PermissionDisplay from "./components/PermissionDisplay";
+import DatePickerCalendar from "./components/DatePickerCalendar";
 import {
   getWeekDates,
   formatDate,
@@ -5568,29 +5569,43 @@ function App() {
                       <label className="block text-xs font-medium text-gray-700 mb-0.5">
                         Date
                       </label>
-                      <input
-                        type="date"
-                        value={selectedScheduleDate}
-                        onChange={(e) => {
-                          const selectedDate = e.target.value;
-                          if (selectedDate) {
-                            const dateObj = new Date(selectedDate);
-                            if (isLockedHoliday(dateObj)) {
-                              alert(
-                                "This date is locked due to holiday. Please select another date."
-                              );
-                              return;
-                            }
-                          }
-                          setSelectedScheduleDate(selectedDate);
+                      <DatePickerCalendar
+                        selectedDate={selectedScheduleDate}
+                        onDateSelect={(dateStr) => {
+                          setSelectedScheduleDate(dateStr);
                           setSelectedScheduleTime("");
                         }}
-                        min={(() => {
-                          const lastWeekDate = new Date();
-                          lastWeekDate.setDate(lastWeekDate.getDate() - 7);
-                          return lastWeekDate.toISOString().split("T")[0];
+                        teacherUid={
+                          (() => {
+                            const currentNewTeacher =
+                              newSelectedTeacherRef.current || newSelectedTeacher;
+                            return (
+                              currentNewTeacher?.uid ||
+                              (() => {
+                                const tlMatch =
+                                  editReschedulePopup.data?.summary?.match(
+                                    /\bTJ[A-Za-z0-9]+\b/
+                                  );
+                                return tlMatch
+                                  ? tlMatch[0]
+                                  : selectedTeacher?.uid;
+                              })()
+                            );
+                          })()
+                        }
+                        getSlotCounts={getSlotCounts}
+                        getNewTeacherSlotCounts={getNewTeacherSlotCounts}
+                        currentNewTeacher={
+                          newSelectedTeacherRef.current || newSelectedTeacher
+                        }
+                        weeklyApiData={weeklyApiData}
+                        newTeacherAvailabilityData={newTeacherAvailabilityData}
+                        minDate={(() => {
+                          const yesterday = new Date();
+                          yesterday.setDate(yesterday.getDate() - 1);
+                          yesterday.setHours(0, 0, 0, 0);
+                          return yesterday;
                         })()}
-                        className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-orange-500 focus:border-transparent"
                       />
                     </div>
                     <div>
@@ -5630,6 +5645,41 @@ function App() {
                           const isPastDate =
                             selectedDate && selectedDate < today;
 
+                          // Check if selected date is yesterday or today
+                          const now = new Date();
+                          const yesterday = new Date();
+                          yesterday.setDate(yesterday.getDate() - 1);
+                          yesterday.setHours(0, 0, 0, 0);
+                          const selectedDateNormalized = selectedDate
+                            ? new Date(selectedDate)
+                            : null;
+                          if (selectedDateNormalized) {
+                            selectedDateNormalized.setHours(0, 0, 0, 0);
+                          }
+                          const isYesterday =
+                            selectedDateNormalized &&
+                            selectedDateNormalized.getTime() === yesterday.getTime();
+                          const isToday =
+                            selectedDateNormalized &&
+                            selectedDateNormalized.getTime() === today.getTime();
+                          
+                          // Get current time in HH:MM format for filtering
+                          // Round up to next 30-minute slot (e.g., 14:35 -> 15:00, 14:15 -> 14:30)
+                          const currentHour = now.getHours();
+                          const currentMinute = now.getMinutes();
+                          let roundedHour = currentHour;
+                          let roundedMinute = 0;
+                          if (currentMinute === 0) {
+                            roundedMinute = 0;
+                          } else if (currentMinute <= 30) {
+                            roundedMinute = 30;
+                          } else {
+                            // Round to next hour
+                            roundedHour = (currentHour + 1) % 24;
+                            roundedMinute = 0;
+                          }
+                          const currentTimeString = `${String(roundedHour).padStart(2, "0")}:${String(roundedMinute).padStart(2, "0")}`;
+
                           // Generate all time slots
                           const allTimeSlots = Array.from(
                             { length: 48 },
@@ -5642,36 +5692,68 @@ function App() {
                             }
                           );
 
-                          // If no date selected or no teacher, show all slots (except past dates)
+                          // If no date selected or no teacher, show all slots (except past dates and past times)
                           if (!selectedScheduleDate || !teacherUid) {
-                            return allTimeSlots.map((timeString) => (
-                              <option
-                                key={timeString}
-                                value={timeString}
-                                disabled={isPastDate}
-                                style={{
-                                  color: isPastDate ? "#999" : "inherit",
-                                }}
-                              >
-                                {timeString}
-                              </option>
-                            ));
+                            return allTimeSlots
+                              .filter((timeString) => {
+                                // If yesterday is selected: show all time slots (no time filtering)
+                                if (isYesterday) {
+                                  return true;
+                                }
+                                // If today is selected: only show slots from current time onwards
+                                if (isToday) {
+                                  return timeString >= currentTimeString;
+                                }
+                                // For previous dates (before today but still selectable): show all slots
+                                if (isPastDate) {
+                                  return true;
+                                }
+                                // For future dates, show all slots
+                                return true;
+                              })
+                              .map((timeString) => (
+                                <option
+                                  key={timeString}
+                                  value={timeString}
+                                  // Don't disable slots for previous dates that are still selectable (like yesterday)
+                                  disabled={false}
+                                  style={{
+                                    color: "inherit",
+                                  }}
+                                >
+                                  {timeString}
+                                </option>
+                              ));
                           }
 
                           // Use same approach as ScheduleManagementPopup - filter available slots
                           // Check new teacher's data first if teacher was changed
-                          const dateStr = formatDate(
-                            new Date(selectedScheduleDate)
-                          );
+                          const dateObj = new Date(selectedScheduleDate);
+                          const dateStr = formatDate(dateObj);
+                          
+                          // Check if date is in the future (beyond today)
+                          const isFutureDate = dateObj > today;
+                          
+                          // Check if there's any availability data for this date
+                          // Note: currentNewTeacher is already declared above at line 5622
+                          const hasNewTeacherData = currentNewTeacher?.uid && 
+                            newTeacherAvailabilityData[dateStr] && 
+                            Object.keys(newTeacherAvailabilityData[dateStr]).length > 0;
+                          const hasAvailabilityData = weeklyApiData[dateStr] && 
+                            Object.keys(weeklyApiData[dateStr]).length > 0;
 
                           const availableSlots = allTimeSlots.filter(
                             (timeString) => {
-                              const dateObj = new Date(selectedScheduleDate);
+                              // If today is selected: only show slots from current time onwards
+                              if (isToday) {
+                                // Compare time strings (HH:MM format) - filter out past slots for today only
+                                if (timeString < currentTimeString) {
+                                  return false; // Skip past time slots for today
+                                }
+                              }
+                              // For other dates, don't filter by time when teacher is selected
 
                               // If new teacher is selected, ONLY use new teacher's availability data
-                              const currentNewTeacher =
-                                newSelectedTeacherRef.current ||
-                                newSelectedTeacher;
                               let slotCounts = null;
                               if (currentNewTeacher?.uid) {
                                 // Use new teacher's data exclusively
@@ -7796,6 +7878,18 @@ function App() {
                             const selectedDate = e.target.value;
                             if (selectedDate) {
                               const dateObj = new Date(selectedDate);
+                              // Ensure date is only active from previous date onwards
+                              const minDate = new Date();
+                              minDate.setDate(minDate.getDate() - 1);
+                              minDate.setHours(0, 0, 0, 0);
+                              dateObj.setHours(0, 0, 0, 0);
+                              
+                              if (dateObj < minDate) {
+                                alert(
+                                  "Please select a date from yesterday onwards. Dates before yesterday are not allowed."
+                                );
+                                return;
+                              }
                               if (isLockedHoliday(dateObj)) {
                                 alert(
                                   "This date is locked due to holiday. Please select another date."
@@ -7809,7 +7903,7 @@ function App() {
                           }}
                           min={(() => {
                             const lastWeekDate = new Date();
-                            lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+                            lastWeekDate.setDate(lastWeekDate.getDate() - 1);
                             return lastWeekDate.toISOString().split("T")[0];
                           })()}
                           className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-blue-500 focus:border-transparent"
@@ -7850,7 +7944,23 @@ function App() {
                               }
                             );
 
-                            // If no date selected or no teacher, show all slots (except past dates)
+                            // Check if date is yesterday or in the future
+                            const dateObj = new Date(selectedScheduleDate);
+                            const yesterday = new Date();
+                            yesterday.setDate(yesterday.getDate() - 1);
+                            yesterday.setHours(0, 0, 0, 0);
+                            const selectedDateNormalized = selectedDate
+                              ? new Date(selectedDate)
+                              : null;
+                            if (selectedDateNormalized) {
+                              selectedDateNormalized.setHours(0, 0, 0, 0);
+                            }
+                            const isYesterday =
+                              selectedDateNormalized &&
+                              selectedDateNormalized.getTime() === yesterday.getTime();
+                            const isFutureDate = dateObj > today;
+                            
+                            // If no date selected or no teacher, show all slots enabled
                             if (
                               !selectedScheduleDate ||
                               !scheduleManagementPopup.teacherUid
@@ -7859,9 +7969,9 @@ function App() {
                                 <option
                                   key={timeString}
                                   value={timeString}
-                                  disabled={isPastDate}
+                                  disabled={false}
                                   style={{
-                                    color: isPastDate ? "#999" : "inherit",
+                                    color: "inherit",
                                   }}
                                 >
                                   {timeString}
@@ -7869,18 +7979,30 @@ function App() {
                               ));
                             }
 
+                            // Check if there's any availability data for this date
+                            const dateStr = formatDate(dateObj);
+                            const hasAvailabilityData = weeklyApiData[dateStr] && Object.keys(weeklyApiData[dateStr]).length > 0;
+
                             // Filter to only show available slots
+                            // When teacher UID exists, only show slots available for that teacher
+                            // BUT: For previous dates (before today), show all slots enabled
                             const availableSlots = allTimeSlots.filter(
                               (timeString) => {
-                                const dateObj = new Date(selectedScheduleDate);
+                                // For previous dates (before today but still selectable, like yesterday): show all slots
+                                if (isPastDate) {
+                                  return true;
+                                }
+                                
                                 const slotCounts = getSlotCounts(
                                   dateObj,
                                   timeString
                                 );
                                 const teacherUid =
                                   scheduleManagementPopup.teacherUid;
+                                
+                                // Filter by availability - only show slots where availability > bookings
                                 return (
-                                  slotCounts.available > 0 &&
+                                  slotCounts.available > slotCounts.booked &&
                                   (slotCounts.teacherid === teacherUid ||
                                     slotCounts.uid === teacherUid)
                                 );

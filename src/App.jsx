@@ -60,6 +60,12 @@ import {
   formatDisplayDate,
   isLockedHoliday,
 } from "./utils/dateUtils";
+import { rejectAvailability, freezeSlot } from "./utils/apiUtils";
+import {
+  isTeacherOnLeave,
+  isTeacherWeekOff,
+  getTeacherEmailFromEvent,
+} from "./utils/teacherUtils";
 
 // Helper function to format datetime to UTC format for API
 const formatDateTimeToUTC = (date, timeRange, selectedTimezone) => {
@@ -118,172 +124,7 @@ const formatDateTimeToUTC = (date, timeRange, selectedTimezone) => {
   }
 };
 
-// API function to reject/delete availability
-const rejectAvailability = async (
-  teacherEmail,
-  teacherId,
-  eventId,
-  updatedBy
-) => {
-  try {
-    const requestBody = {
-      teacher_email: teacherEmail,
-      teacher_id: teacherId,
-      event_id: eventId,
-      updated_by: updatedBy,
-    };
-    
-    console.log("🗑️ Rejecting availability with payload:", requestBody);
-    
-    const response = await fetch(
-      "https://live.jetlearn.com/api/reject-availability/",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      }
-    );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error rejecting availability:", error);
-    return { success: false, error: error.message };
-  }
-};
-
-// API function to freeze a slot
-const freezeSlot = async (teacherUid, slotDateTime, userId, sessionId) => {
-  try {
-    const response = await fetch("https://live.jetlearn.com/api/freeze-slot/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        teacher_uid: teacherUid,
-        slot_datetime: slotDateTime,
-        user_id: userId,
-      }),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Check if the slot is held by another user
-    if (
-      data.status === "held" &&
-      data.message !== "Slot successfully frozen" &&
-      data.message !== "Slot already held by you"
-    ) {
-      return {
-        success: false,
-        held: true,
-        message: data.message || "This slot is currently held by another user",
-      };
-    }
-
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error freezing slot:", error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Helper function to check if a teacher is on leave for a specific date
-const isTeacherOnLeave = (teacherEmail, date, teacherLeaves) => {
-  if (!teacherLeaves?.success || !teacherLeaves?.leaves) {
-    return false;
-  }
-
-  const dateStr = formatDate(date);
-  const leaves = teacherLeaves.leaves[dateStr];
-
-  // Check if leaves object exists (it's an object, not an array)
-  const hasLeaves = leaves && typeof leaves === "object" && leaves.id;
-
-  // Debug logging (can be removed in production)
-
-  return hasLeaves;
-};
-
-// Helper function to check if a teacher has week off for a specific date
-const isTeacherWeekOff = (teacherEmail, date, availabilitySummary) => {
-  // Check if availabilitySummary exists and is an object (direct API response)
-  if (!availabilitySummary || typeof availabilitySummary !== "object") {
-    return false;
-  }
-
-  const dateStr = formatDate(date);
-  const dateData = availabilitySummary[dateStr];
-
-  // Check if any time slot has week_off = 1 for this date
-  let hasWeekOff = false;
-  if (dateData && typeof dateData === "object") {
-    // Check all time slots for this date
-    hasWeekOff = Object.values(dateData).some((timeSlot) => {
-      const isWeekOff =
-        timeSlot && typeof timeSlot === "object" && timeSlot.week_off === 1;
-      return isWeekOff;
-    });
-  }
-
-  return hasWeekOff;
-};
-
-// Helper function to get teacher email from event data
-const getTeacherEmailFromEvent = (eventData, selectedTeacher, teachers) => {
-  // First try to get teacher email from the event data
-  if (eventData.teacher_email) {
-    console.log(
-      "🔍 Found teacher_email in event data:",
-      eventData.teacher_email
-    );
-    return eventData.teacher_email;
-  }
-
-  // Try to get teacher email from attendees array (most reliable)
-  if (eventData.attendees && Array.isArray(eventData.attendees)) {
-    // Look for teacher email in attendees (usually contains .jetlearn@gmail.com)
-    const teacherEmail = eventData.attendees.find(
-      (email) =>
-        email.includes("@jetlearn.com") || email.includes("@jet-learn.com")
-    );
-    if (teacherEmail) {
-      return teacherEmail;
-    }
-  }
-
-  // Try to extract teacher UID from summary and find the teacher
-  const tlMatch = eventData.summary?.match(/\bTJ[A-Za-z0-9]+\b/);
-  if (tlMatch) {
-    const teacherUid = tlMatch[0];
-    const teacher = teachers.find((t) => t.uid === teacherUid);
-    if (teacher && teacher.email) {
-      return teacher.email;
-    }
-  }
-
-  // Try teacher_id field
-  if (eventData.teacher_id) {
-    const teacher = teachers.find((t) => t.uid === eventData.teacher_id);
-    if (teacher && teacher.email) {
-      return teacher.email;
-    }
-  }
-
-  // Fallback to selected teacher
-  const fallbackEmail = selectedTeacher?.email || null;
-  return fallbackEmail;
-};
 
 const TIME_SLOTS = Array.from(
   { length: 24 },
@@ -3741,6 +3582,7 @@ function App() {
     // Handle the new nested API response format: { "2025-07-23": { "17:00": { "events": [...] } } }
     const dates = Object.keys(data);
 
+    // Collect ALL matching events from ALL dates, don't break early
     for (const date of dates) {
       const dateData = data[date];
       console.log(`📅 Checking date ${date}:`, dateData);
@@ -3748,32 +3590,53 @@ function App() {
       if (dateData && dateData[targetTime] && dateData[targetTime].events) {
         console.log("✅ Found exact time match:", targetTime, "in date:", date);
         console.log("📋 Events found:", dateData[targetTime].events);
-        filteredData = dateData[targetTime].events;
-        break;
+        // Append events instead of replacing, to collect all matches
+        if (Array.isArray(dateData[targetTime].events)) {
+          filteredData = [...filteredData, ...dateData[targetTime].events];
+        } else {
+          filteredData = [...filteredData, dateData[targetTime].events];
+        }
       }
     }
 
     // Fallback: Handle the old format where time was directly accessible
-    if (
-      filteredData.length === 0 &&
-      data[targetTime] &&
-      data[targetTime].events
-    ) {
+    if (data[targetTime] && data[targetTime].events) {
       console.log("✅ Found exact time match (old format):", targetTime);
       console.log("📋 Events found:", data[targetTime].events);
-      filteredData = data[targetTime].events;
+      if (Array.isArray(data[targetTime].events)) {
+        filteredData = [...filteredData, ...data[targetTime].events];
+      } else {
+        filteredData = [...filteredData, data[targetTime].events];
+      }
     }
 
-    // Handle array format (fallback)
-    if (filteredData.length === 0 && Array.isArray(data)) {
-      console.log("📋 Processing as array format");
-      filteredData = data.filter((record) => {
-        if (!record.start_time) return false;
-        const startTime = record.start_time;
-        const timeMatch = startTime.includes(`T${targetTime}:`);
-        return timeMatch;
-      });
+    // Handle array format (fallback) - check if data is a flat array of events
+    if (Array.isArray(data) && data.length > 0) {
+      // Check if it's an array of events (has start_time) or array of date objects
+      const firstItem = data[0];
+      if (firstItem && firstItem.start_time) {
+        console.log("📋 Processing as array format");
+        const arrayMatches = data.filter((record) => {
+          if (!record.start_time) return false;
+          const startTime = record.start_time;
+          const timeMatch = startTime.includes(`T${targetTime}:`);
+          return timeMatch;
+        });
+        filteredData = [...filteredData, ...arrayMatches];
+      }
     }
+
+    // Remove duplicates based on event_id or summary+creator combination
+    const uniqueData = [];
+    const seen = new Set();
+    filteredData.forEach((item) => {
+      const key = item.event_id || `${item.summary || ""}_${item.creator || ""}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueData.push(item);
+      }
+    });
+    filteredData = uniqueData;
 
     // Apply count limit if specified
     if (maxCount !== null && filteredData.length > maxCount) {
@@ -4430,6 +4293,11 @@ function App() {
 
     // Form initialization state
     const [isFormInitialized, setIsFormInitialized] = useState(false);
+    
+    // State for availability hours for selected date
+    const [availabilityHours, setAvailabilityHours] = useState([]);
+    const [isLoadingAvailabilityHours, setIsLoadingAvailabilityHours] = useState(false);
+    const [availabilityHoursError, setAvailabilityHoursError] = useState(null);
 
     // Handle teacher search
     const handleTeacherSearch = (searchTerm) => {
@@ -4727,6 +4595,152 @@ function App() {
       }
     }, [editReschedulePopup.data]);
 
+    // Fetch availability hours for selected date when it's a future date
+    React.useEffect(() => {
+      const fetchAvailabilityHoursForDate = async () => {
+        if (!selectedScheduleDate) {
+          setAvailabilityHours([]);
+          setAvailabilityHoursError(null);
+          return;
+        }
+
+        const dateObj = new Date(selectedScheduleDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Only fetch for future dates
+        if (dateObj <= today) {
+          setAvailabilityHours([]);
+          setAvailabilityHoursError(null);
+          return;
+        }
+
+        // Get teacher UID
+        const currentNewTeacher =
+          newSelectedTeacherRef.current || newSelectedTeacher;
+        const teacherUid =
+          currentNewTeacher?.uid ||
+          (() => {
+            const tlMatch =
+              editReschedulePopup.data?.summary?.match(/\bTJ[A-Za-z0-9]+\b/);
+            return tlMatch ? tlMatch[0] : selectedTeacher?.uid;
+          })();
+
+        if (!teacherUid) {
+          setAvailabilityHours([]);
+          setAvailabilityHoursError(null);
+          return;
+        }
+
+        setIsLoadingAvailabilityHours(true);
+        setAvailabilityHoursError(null);
+
+        try {
+          const formattedTimezone = formatTimezoneForAPI(selectedTimezone);
+          const dateStr = formatDate(dateObj);
+          
+          // Fetch booking details for this specific date
+          const formData = new URLSearchParams();
+          formData.append("start_date", dateStr);
+          formData.append("end_date", dateStr);
+          formData.append("timezone", formattedTimezone);
+          
+          // Find teacher - check multiple sources to ensure we have both uid and email
+          const teacher = currentNewTeacher || 
+                         teachers.find(t => t.uid === teacherUid) || 
+                         selectedTeacher;
+          
+          // Only add teacherid if we also have email (API requires both together)
+          if (teacher && teacher.uid && teacher.email) {
+            formData.append("teacherid", teacher.uid);
+            formData.append("email", teacher.email);
+          } else if (teacherUid) {
+            console.warn("⚠️ Teacher email not found for teacherid:", teacherUid, "- Skipping teacher filter");
+          }
+
+          const response = await fetch(
+            "https://live.jetlearn.com/events/get-bookings-details/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: formData.toString(),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const result = await response.json();
+          
+          // Parse booking details
+          const bookings = parseBookingDetails(result);
+          
+          // Filter for entries with summary containing both "availability" and "hour"/"hours" keywords
+          const availabilityBookings = bookings.filter((booking) => {
+            const summary = (booking.summary || "").toLowerCase();
+            const hasAvailability = summary.includes("availability");
+            const hasHour = summary.includes("hour") || summary.includes("hours");
+            return hasAvailability && hasHour;
+          });
+
+          // Extract times from availability bookings
+          const times = [];
+          availabilityBookings.forEach((booking) => {
+            // Prefer using the time field from parseBookingDetails (e.g., "16:00")
+            if (booking.time) {
+              const timeStr = booking.time.split(" - ")[0]; // Get start time if range
+              if (timeStr && !times.includes(timeStr)) {
+                times.push(timeStr);
+              }
+            } else if (booking.start_time) {
+              // Fallback: Extract time from start_time (ISO format like "2026-01-26T16:00:00+01:00")
+              // Parse the ISO string to extract hour and minute directly from the string
+              const isoMatch = booking.start_time.match(/T(\d{2}):(\d{2})/);
+              if (isoMatch) {
+                const hours = isoMatch[1];
+                const minutes = isoMatch[2];
+                const timeStr = `${hours}:${minutes}`;
+                if (!times.includes(timeStr)) {
+                  times.push(timeStr);
+                }
+              } else {
+                // Last resort: use Date object (may have timezone issues)
+                const dateTime = new Date(booking.start_time);
+                const hours = String(dateTime.getHours()).padStart(2, "0");
+                const minutes = String(dateTime.getMinutes()).padStart(2, "0");
+                const timeStr = `${hours}:${minutes}`;
+                if (!times.includes(timeStr)) {
+                  times.push(timeStr);
+                }
+              }
+            }
+          });
+
+          // Sort times
+          times.sort();
+
+          if (times.length === 0) {
+            setAvailabilityHoursError("No availability found for this date");
+            setAvailabilityHours([]);
+          } else {
+            setAvailabilityHours(times);
+            setAvailabilityHoursError(null);
+          }
+        } catch (error) {
+          console.error("❌ Error fetching availability hours:", error);
+          setAvailabilityHoursError("Failed to fetch availability for this date");
+          setAvailabilityHours([]);
+        } finally {
+          setIsLoadingAvailabilityHours(false);
+        }
+      };
+
+      fetchAvailabilityHoursForDate();
+    }, [selectedScheduleDate, newSelectedTeacher, selectedTeacher, teachers, selectedTimezone]);
+
     // Additional useEffect to ensure teacher persists when availability data is set
     React.useEffect(() => {
       console.log(
@@ -4950,21 +4964,30 @@ function App() {
           // Extract only start time if it's a range (e.g., "16:00 - 17:00" -> "16:00")
           const startTime = time.includes(" - ") ? time.split(" - ")[0] : time;
 
-          // Parse the local date and time
-          const [hours, minutes] = startTime.split(":").map(Number);
-          const localDateTime = new Date(date + "T" + startTime + ":00");
+          // Convert date and time to UTC (same logic as add-booking)
+          // Parse YYYY-MM-DD format
+          const [year, month, day] = date.split("-").map(Number);
+          const [hour, minute] = startTime.split(":").map(Number);
 
-          // Apply timezone offset to convert to UTC
-          const utcDateTime = new Date(
-            localDateTime.getTime() -
-              (offsetHours * 60 + offsetMinutes) * 60 * 1000
+          // Create a date as if it were in the given offset
+          const localDate = new Date(
+            Date.UTC(
+              year,
+              month - 1,
+              day,
+              hour - offsetHours,
+              minute - offsetMinutes
+            )
           );
 
-          // Format as YYYY-MM-DD and HH:MM for API
-          const utcDate = utcDateTime.toISOString().split("T")[0];
-          const utcTime = utcDateTime.toTimeString().slice(0, 5);
+          // Convert to UTC string
+          const utcYear = localDate.getUTCFullYear();
+          const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, "0");
+          const utcDay = String(localDate.getUTCDate()).padStart(2, "0");
+          const utcHour = String(localDate.getUTCHours()).padStart(2, "0");
+          const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
 
-          return [utcDate, utcTime];
+          return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
         }),
         class_type: selectedClassType || hiddenClassType || "1:1",
         booking_type: (() => {
@@ -5606,6 +5629,7 @@ function App() {
                           yesterday.setHours(0, 0, 0, 0);
                           return yesterday;
                         })()}
+                        allowAllDates={true}
                       />
                     </div>
                     <div>
@@ -5636,7 +5660,7 @@ function App() {
                                 : selectedTeacher?.uid;
                             })();
 
-                          // Check if date is in the past
+                          // Check if date is in the past or future
                           const today = new Date();
                           today.setHours(0, 0, 0, 0);
                           const selectedDate = selectedScheduleDate
@@ -5644,6 +5668,7 @@ function App() {
                             : null;
                           const isPastDate =
                             selectedDate && selectedDate < today;
+                          const isFutureDate = selectedDate && selectedDate > today;
 
                           // Check if selected date is yesterday or today
                           const now = new Date();
@@ -5726,21 +5751,48 @@ function App() {
                               ));
                           }
 
-                          // Use same approach as ScheduleManagementPopup - filter available slots
-                          // Check new teacher's data first if teacher was changed
+                          // For future dates, use availability hours from booking details API
+                          if (isFutureDate && teacherUid) {
+                            // Show loading state
+                            if (isLoadingAvailabilityHours) {
+                              return (
+                                <option value="" disabled>
+                                  Loading availability...
+                                </option>
+                              );
+                            }
+
+                            // Show error message if no availability found
+                            if (availabilityHoursError) {
+                              return (
+                                <>
+                                  <option value="" disabled>
+                                    {availabilityHoursError}
+                                  </option>
+                                </>
+                              );
+                            }
+
+                            // Show availability hours if found
+                            if (availabilityHours.length > 0) {
+                              return availabilityHours.map((timeString) => (
+                                <option key={timeString} value={timeString}>
+                                  {timeString}
+                                </option>
+                              ));
+                            }
+
+                            // If no availability hours yet, show loading or empty
+                            return (
+                              <option value="" disabled>
+                                No availability found for this date
+                              </option>
+                            );
+                          }
+
+                          // For past dates and today, use regular availability filtering
                           const dateObj = new Date(selectedScheduleDate);
                           const dateStr = formatDate(dateObj);
-                          
-                          // Check if date is in the future (beyond today)
-                          const isFutureDate = dateObj > today;
-                          
-                          // Check if there's any availability data for this date
-                          // Note: currentNewTeacher is already declared above at line 5622
-                          const hasNewTeacherData = currentNewTeacher?.uid && 
-                            newTeacherAvailabilityData[dateStr] && 
-                            Object.keys(newTeacherAvailabilityData[dateStr]).length > 0;
-                          const hasAvailabilityData = weeklyApiData[dateStr] && 
-                            Object.keys(weeklyApiData[dateStr]).length > 0;
 
                           const availableSlots = allTimeSlots.filter(
                             (timeString) => {
@@ -5803,6 +5855,53 @@ function App() {
                           ));
                         })()}
                       </select>
+                      {/* Show error message or loading state for future dates */}
+                      {(() => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const selectedDate = selectedScheduleDate
+                          ? new Date(selectedScheduleDate)
+                          : null;
+                        const isFutureDate = selectedDate && selectedDate > today;
+                        const currentNewTeacher =
+                          newSelectedTeacherRef.current || newSelectedTeacher;
+                        const teacherUid =
+                          currentNewTeacher?.uid ||
+                          (() => {
+                            const tlMatch =
+                              editReschedulePopup.data?.summary?.match(
+                                /\bTJ[A-Za-z0-9]+\b/
+                              );
+                            return tlMatch
+                              ? tlMatch[0]
+                              : selectedTeacher?.uid;
+                          })();
+
+                        if (isFutureDate && teacherUid) {
+                          if (isLoadingAvailabilityHours) {
+                            return (
+                              <div className="mt-1 text-[10px] text-blue-600">
+                                Loading availability hours...
+                              </div>
+                            );
+                          }
+                          if (availabilityHoursError) {
+                            return (
+                              <div className="mt-1 text-[10px] text-red-600">
+                                {availabilityHoursError}
+                              </div>
+                            );
+                          }
+                          if (availabilityHours.length > 0) {
+                            return (
+                              <div className="mt-1 text-[10px] text-green-600">
+                                {availabilityHours.length} availability hour(s) found
+                              </div>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 
@@ -6422,12 +6521,12 @@ function App() {
     const { available: gridAvailableCount, booked: gridBookedCount } =
       getSlotCounts(detailsPopup.date, detailsPopup.time);
 
-    // Filter data by the specific time slot, respecting grid counts
+    // Filter data by the specific time slot - show ALL availability records, not limited to grid count
     const filteredAvailabilityData = availabilityAPI.response
       ? filterDataByTime(
           availabilityAPI.response,
           detailsPopup.time,
-          gridAvailableCount
+          null // Don't limit results - show all availability records
         )
       : [];
 
@@ -6573,9 +6672,6 @@ function App() {
                             {filteredAvailabilityData.length}
                           </span>{" "}
                           Available Teachers
-                          {filteredAvailabilityData.length !==
-                            gridAvailableCount &&
-                            ` (limited to match grid count)`}
                         </p>
                       </div>
 

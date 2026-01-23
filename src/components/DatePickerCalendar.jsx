@@ -2,6 +2,15 @@ import React, { useState } from "react";
 import { FaCalendarAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { getDayName, isLockedHoliday } from "../utils/dateUtils";
 
+// Helper function to format date as YYYY-MM-DD using local date components
+// This avoids timezone issues that occur with toISOString()
+const formatDateLocal = (date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const day = date.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const DatePickerCalendar = ({
   selectedDate,
   onDateSelect,
@@ -11,12 +20,35 @@ const DatePickerCalendar = ({
   getSlotCounts = null,
   getNewTeacherSlotCounts = null,
   currentNewTeacher = null,
+  allowAllDates = false, // If true, allow selecting any date from minDate onwards without availability check
 }) => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   // Generate available dates based on teacher availability if not provided
   const generateAvailableDates = () => {
+    // If allowAllDates is true, return all dates from minDate onwards
+    if (allowAllDates) {
+      const dates = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      const effectiveMinDate = minDate || yesterday;
+      
+      // Generate dates for next 365 days (1 year)
+      for (let i = -1; i < 365; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() + i);
+        date.setHours(0, 0, 0, 0);
+        if (date >= effectiveMinDate && !isLockedHoliday(date)) {
+          dates.push(formatDateLocal(date));
+        }
+      }
+      return dates;
+    }
+
     if (availableDates.length > 0) {
       return availableDates;
     }
@@ -36,7 +68,7 @@ const DatePickerCalendar = ({
         date.setDate(date.getDate() + i);
         date.setHours(0, 0, 0, 0);
         if (date >= effectiveMinDate && !isLockedHoliday(date)) {
-          dates.push(date.toISOString().split("T")[0]);
+          dates.push(formatDateLocal(date));
         }
       }
       return dates;
@@ -84,7 +116,7 @@ const DatePickerCalendar = ({
 
       if (date >= effectiveMinDate && !isLockedHoliday(date)) {
         if (checkDateAvailability(date)) {
-          dates.push(date.toISOString().split("T")[0]);
+          dates.push(formatDateLocal(date));
         }
       }
     }
@@ -109,6 +141,13 @@ const DatePickerCalendar = ({
         <span className="text-gray-700">
           {selectedDate
             ? (() => {
+                // Parse date string directly to avoid timezone issues
+                // If it's already in YYYY-MM-DD format, parse it directly
+                if (typeof selectedDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+                  const [year, month, day] = selectedDate.split("-");
+                  return `${day}-${month}-${year} (${getDayName(selectedDate)})`;
+                }
+                // Fallback for Date objects or other formats
                 const dateObj = new Date(selectedDate);
                 const day = dateObj.getDate().toString().padStart(2, "0");
                 const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
@@ -200,26 +239,32 @@ const DatePickerCalendar = ({
                 const isSelected =
                   selectedDate &&
                   date.toDateString() === new Date(selectedDate).toDateString();
-                const dateStr = date.toISOString().split("T")[0];
+                const dateStr = formatDateLocal(date);
                 const isAvailable = availableDatesList.includes(dateStr);
                 const isLocked = isLockedHoliday(date);
                 const isPastDate = date < effectiveMinDate;
+                
+                // If allowAllDates is true, all dates from minDate onwards are selectable
+                const isSelectable = allowAllDates 
+                  ? (date >= effectiveMinDate && !isLocked)
+                  : ((isAvailable || isPastDate) && !isLocked);
 
                 days.push(
                   <button
                     key={i}
                     onClick={() => {
-                      if ((isAvailable || isPastDate) && !isLocked) {
+                      if (isSelectable) {
                         handleDateSelect(dateStr);
                       }
                     }}
-                    disabled={(!isAvailable && !isPastDate) || isLocked}
+                    disabled={!isSelectable}
                     className={`
                       w-8 h-8 text-xs rounded flex items-center justify-center transition-all duration-200
                       ${!isCurrentMonth ? "text-gray-300" : ""}
                       ${isToday ? "bg-blue-100 text-blue-700 font-semibold" : ""}
                       ${isSelected ? "bg-blue-600 text-white font-semibold" : ""}
                       ${
+                        !allowAllDates &&
                         isAvailable &&
                         !isLocked &&
                         isCurrentMonth &&
@@ -229,11 +274,22 @@ const DatePickerCalendar = ({
                           : ""
                       }
                       ${
+                        allowAllDates &&
+                        !isLocked &&
+                        isCurrentMonth &&
+                        !isToday &&
+                        !isSelected &&
+                        date >= effectiveMinDate
+                          ? "hover:bg-blue-50 text-gray-700"
+                          : ""
+                      }
+                      ${
                         isLocked && isCurrentMonth
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
                           : ""
                       }
                       ${
+                        !allowAllDates &&
                         !isAvailable &&
                         !isLocked &&
                         !isPastDate &&
@@ -256,20 +312,22 @@ const DatePickerCalendar = ({
             })()}
           </div>
 
-          <div className="mt-3 pt-2 border-t border-gray-200">
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span>
-                Available dates for{" "}
-                {teacherUid ? `Teacher ${teacherUid}` : "selected teacher"}
-              </span>
-            </div>
-            {availableDatesList.length === 0 && teacherUid && (
-              <div className="text-xs text-red-500 mt-1">
-                No available dates for this teacher
+          {!allowAllDates && (
+            <div className="mt-3 pt-2 border-t border-gray-200">
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>
+                  Available dates for{" "}
+                  {teacherUid ? `Teacher ${teacherUid}` : "selected teacher"}
+                </span>
               </div>
-            )}
-          </div>
+              {availableDatesList.length === 0 && teacherUid && (
+                <div className="text-xs text-red-500 mt-1">
+                  No available dates for this teacher
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

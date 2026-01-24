@@ -38,6 +38,7 @@ import {
   FaSave,
   FaFile,
   FaPaperclip,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 import { MdManageAccounts } from "react-icons/md";
 import UnifiedModal from "./components/UnifiedModal";
@@ -3867,6 +3868,7 @@ function App() {
         attendees: event.attendees || [], // Preserve attendees array from original event
         updated_by: event.updated_by || "", // Add updated_by field
         jet_guide: event.jet_guide || "", // Add jet_guide field
+        attachments: event.attachments || [], // Preserve attachments from get-bookings-details
       };
     }
 
@@ -5511,6 +5513,40 @@ function App() {
                       </div>
                     )}
                   </div>
+                  {editReschedulePopup.data?.attachments &&
+                    Array.isArray(editReschedulePopup.data.attachments) &&
+                    editReschedulePopup.data.attachments.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-gray-600 mb-1">
+                          Attached documents
+                        </p>
+                        <ul className="space-y-1">
+                          {editReschedulePopup.data.attachments.map(
+                            (att, idx) => (
+                              <li key={idx}>
+                                <a
+                                  href={
+                                    att.file_url || att.fileUrl || att.url || "#"
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded-md border border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                  <FaFile size={12} className="flex-shrink-0" />
+                                  <span className="truncate flex-1">
+                                    {att.title || att.name || "Document"}
+                                  </span>
+                                  <FaExternalLinkAlt
+                                    size={10}
+                                    className="flex-shrink-0 opacity-70"
+                                  />
+                                </a>
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
                 </div>
               </div>
 

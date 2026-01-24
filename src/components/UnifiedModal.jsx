@@ -252,11 +252,26 @@ const UnifiedModalComponent = function UnifiedModal({
     };
   }, [calendarOpen]);
 
+  // Helper: get yesterday as YYYY-MM-DD (local date, no timezone shift)
+  const getYesterdayString = () => {
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    y.setHours(0, 0, 0, 0);
+    const yr = y.getFullYear();
+    const mo = String(y.getMonth() + 1).padStart(2, "0");
+    const da = String(y.getDate()).padStart(2, "0");
+    return `${yr}-${mo}-${da}`;
+  };
+
   // Generate available dates based on teacher availability
   const generateAvailableDates = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const yesterdayStr = getYesterdayString();
+
     // Priority 1: Use listViewBookingDetails data (green dots from list view)
     if (listViewBookingDetails && listViewBookingDetails.data) {
-      const availableDates = [];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -264,6 +279,9 @@ const UnifiedModalComponent = function UnifiedModal({
 
       // Get unique dates that have green dots
       const greenDotDates = new Set();
+      if (!isLockedHoliday(yesterday)) {
+        greenDotDates.add(yesterdayStr); // Always include yesterday
+      }
 
       parsedBookings.forEach((booking) => {
         const bookingDate =
@@ -274,9 +292,10 @@ const UnifiedModalComponent = function UnifiedModal({
 
         if (bookingDate) {
           const dateObj = new Date(bookingDate);
+          dateObj.setHours(0, 0, 0, 0);
 
-          // Only include future dates
-          if (dateObj >= today) {
+          // Include yesterday and future dates
+          if (dateObj >= yesterday) {
             // Check if this booking has a green dot (availability or hours)
             if (isGreenDotBooking(booking)) {
               greenDotDates.add(bookingDate);
@@ -292,9 +311,10 @@ const UnifiedModalComponent = function UnifiedModal({
 
     // Priority 2: Use teacherAvailability data
     if (teacherAvailability && selectedTeacherId) {
-      const availableDates = [];
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const availableDatesSet = new Set();
+      if (!isLockedHoliday(yesterday)) {
+        availableDatesSet.add(yesterdayStr); // Always include yesterday
+      }
 
       // Process teacher availability data to get available dates
       if (Array.isArray(teacherAvailability)) {
@@ -306,9 +326,13 @@ const UnifiedModalComponent = function UnifiedModal({
               parseInt(month) - 1,
               parseInt(day)
             );
+            availabilityDate.setHours(0, 0, 0, 0);
 
-            if (availabilityDate >= today) {
-              availableDates.push(availabilityDate.toISOString().split("T")[0]);
+            if (availabilityDate >= yesterday) {
+              const yyyy = availabilityDate.getFullYear();
+              const mm = String(availabilityDate.getMonth() + 1).padStart(2, "0");
+              const dd = String(availabilityDate.getDate()).padStart(2, "0");
+              availableDatesSet.add(`${yyyy}-${mm}-${dd}`);
             }
           }
         });
@@ -345,26 +369,36 @@ const UnifiedModalComponent = function UnifiedModal({
               parseInt(month) - 1,
               parseInt(day)
             );
+            availabilityDate.setHours(0, 0, 0, 0);
 
-            if (availabilityDate >= today) {
-              availableDates.push(availabilityDate.toISOString().split("T")[0]);
+            if (availabilityDate >= yesterday) {
+              const yyyy = availabilityDate.getFullYear();
+              const mm = String(availabilityDate.getMonth() + 1).padStart(2, "0");
+              const dd = String(availabilityDate.getDate()).padStart(2, "0");
+              availableDatesSet.add(`${yyyy}-${mm}-${dd}`);
             }
           }
         });
       }
 
-      if (availableDates.length > 0) {
-        return availableDates.sort();
+      if (availableDatesSet.size > 0) {
+        return Array.from(availableDatesSet).sort();
       }
     }
 
-    // Fallback to next 30 days if no availability data
+    // Fallback: yesterday + next 29 days if no availability data
     const dates = [];
     const today = new Date();
-    for (let i = 0; i < 30; i++) {
+    today.setHours(0, 0, 0, 0);
+    for (let i = -1; i < 30; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      dates.push(date.toISOString().split("T")[0]);
+      date.setHours(0, 0, 0, 0);
+      if (isLockedHoliday(date)) continue;
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      dates.push(`${y}-${m}-${d}`);
     }
     return dates;
   };
@@ -463,6 +497,24 @@ const UnifiedModalComponent = function UnifiedModal({
       if (availableTimes.length > 0) {
         return availableTimes.sort();
       }
+    }
+
+    // Fallback for yesterday (or when no availability): show all slots 08:00–20:30
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const selectedDateObj = new Date(selectedDate);
+    selectedDateObj.setHours(0, 0, 0, 0);
+    if (selectedDateObj.getTime() === yesterday.getTime()) {
+      const fallbackSlots = [];
+      for (let hour = 8; hour <= 20; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          fallbackSlots.push(
+            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+          );
+        }
+      }
+      return fallbackSlots;
     }
 
     // Return empty array if no available times found
@@ -762,14 +814,17 @@ const UnifiedModalComponent = function UnifiedModal({
       return;
     }
 
-    // Validate past date
+    // Validate past date - allow yesterday and today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
     const [year, month, day] = selectedScheduleDate.split("-");
     const scheduleDate = new Date(year, month - 1, day);
+    scheduleDate.setHours(0, 0, 0, 0);
 
-    if (scheduleDate < today) {
-      alert("Cannot schedule for past dates. Please select a future date.");
+    if (scheduleDate < yesterday) {
+      alert("Cannot schedule for dates before yesterday. Please select yesterday or a future date.");
       return;
     }
 

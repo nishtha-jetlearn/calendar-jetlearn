@@ -4606,12 +4606,26 @@ function App() {
           return;
         }
 
-        const dateObj = new Date(selectedScheduleDate);
+        // Parse date string directly to avoid timezone issues
+        // selectedScheduleDate is in YYYY-MM-DD format from DatePickerCalendar
+        let dateStr = selectedScheduleDate;
+        if (typeof selectedScheduleDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(selectedScheduleDate)) {
+          dateStr = selectedScheduleDate; // Use directly, already in correct format
+        } else {
+          // Fallback: parse as Date and format
+          const dateObj = new Date(selectedScheduleDate);
+          dateStr = formatDate(dateObj);
+        }
+        
+        // Check if date is in the future using local date components
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const [year, month, day] = dateStr.split("-").map(Number);
+        const selectedDateLocal = new Date(year, month - 1, day);
+        selectedDateLocal.setHours(0, 0, 0, 0);
         
         // Only fetch for future dates
-        if (dateObj <= today) {
+        if (selectedDateLocal <= today) {
           setAvailabilityHours([]);
           setAvailabilityHoursError(null);
           return;
@@ -4639,13 +4653,26 @@ function App() {
 
         try {
           const formattedTimezone = formatTimezoneForAPI(selectedTimezone);
-          const dateStr = formatDate(dateObj);
           
-          // Fetch booking details for this specific date
+          // Calculate start_date as one day before the selected date
+          const [year, month, day] = dateStr.split("-").map(Number);
+          const selectedDateObj = new Date(year, month - 1, day);
+          const previousDateObj = new Date(selectedDateObj);
+          previousDateObj.setDate(previousDateObj.getDate() - 1);
+          
+          // Format previous date as YYYY-MM-DD using local components
+          const prevYear = previousDateObj.getFullYear();
+          const prevMonth = String(previousDateObj.getMonth() + 1).padStart(2, "0");
+          const prevDay = String(previousDateObj.getDate()).padStart(2, "0");
+          const startDateStr = `${prevYear}-${prevMonth}-${prevDay}`;
+          
+          // Fetch booking details: start_date = one day before, end_date = selected date
           const formData = new URLSearchParams();
-          formData.append("start_date", dateStr);
+          formData.append("start_date", startDateStr);
           formData.append("end_date", dateStr);
           formData.append("timezone", formattedTimezone);
+          
+          console.log("🔍 [Availability Fetch] Date range:", { start_date: startDateStr, end_date: dateStr });
           
           // Find teacher - check multiple sources to ensure we have both uid and email
           const teacher = currentNewTeacher || 
@@ -4677,8 +4704,62 @@ function App() {
 
           const result = await response.json();
           
-          // Parse booking details
+          console.log("🔍 [Availability Fetch] API Response for date:", dateStr, result);
+          
+          // Extract times from API response - handle both object format and parsed bookings
+          const times = new Set();
+          
+          // First, check newTeacherAvailabilityData (from get-bookings-availability-summary API)
+          // This has availability slots with availability > 0
+          if (newTeacherAvailabilityData && typeof newTeacherAvailabilityData === "object") {
+            if (newTeacherAvailabilityData[dateStr] && typeof newTeacherAvailabilityData[dateStr] === "object") {
+              Object.keys(newTeacherAvailabilityData[dateStr]).forEach((timeKey) => {
+                const slotData = newTeacherAvailabilityData[dateStr][timeKey];
+                // Check if slot has availability > 0 and belongs to the correct teacher
+                if (slotData && (slotData.availability > 0 || slotData.available > 0)) {
+                  const slotTeacherId = slotData.teacherid || slotData.uid;
+                  if (slotTeacherId === teacherUid) {
+                    times.add(timeKey);
+                    console.log("🔍 [Availability Fetch] Added time from newTeacherAvailabilityData:", timeKey, "availability:", slotData.availability || slotData.available);
+                  }
+                }
+              });
+            }
+          }
+          
+          // Also check get-bookings-details response for availability events
+          // First, check if result is in object format with date keys
+          if (result && typeof result === "object" && !Array.isArray(result)) {
+            // Check if the requested date exists in the response
+            if (result[dateStr] && typeof result[dateStr] === "object") {
+              // Iterate through time slots for this date
+              Object.keys(result[dateStr]).forEach((timeKey) => {
+                const slotData = result[dateStr][timeKey];
+                if (slotData && slotData.events && Array.isArray(slotData.events)) {
+                  // Check if any event in this slot is an availability event
+                  const hasAvailabilityEvent = slotData.events.some((event) => {
+                    const summary = (event.summary || "").toLowerCase();
+                    const hasAvailability = summary.includes("availability");
+                    const hasHour = summary.includes("hour") || summary.includes("hours");
+                    return hasAvailability && hasHour;
+                  });
+                  
+                  if (hasAvailabilityEvent) {
+                    // Use the time key directly (e.g., "00:00", "01:00")
+                    times.add(timeKey);
+                    console.log("🔍 [Availability Fetch] Added time from object format:", timeKey, "for date", dateStr);
+                  }
+                }
+              });
+            } else {
+              // Date not found in response - log all available dates for debugging
+              console.log("🔍 [Availability Fetch] Date", dateStr, "not found in response. Available dates:", Object.keys(result));
+            }
+          }
+          
+          // Also parse bookings and check for availability events (fallback/alternative format)
           const bookings = parseBookingDetails(result);
+          console.log("🔍 [Availability Fetch] Parsed bookings:", bookings);
           
           // Filter for entries with summary containing both "availability" and "hour"/"hours" keywords
           const availabilityBookings = bookings.filter((booking) => {
@@ -4687,48 +4768,49 @@ function App() {
             const hasHour = summary.includes("hour") || summary.includes("hours");
             return hasAvailability && hasHour;
           });
+          
+          console.log("🔍 [Availability Fetch] Availability bookings:", availabilityBookings);
 
           // Extract times from availability bookings
-          const times = [];
           availabilityBookings.forEach((booking) => {
             // Prefer using the time field from parseBookingDetails (e.g., "16:00")
             if (booking.time) {
               const timeStr = booking.time.split(" - ")[0]; // Get start time if range
-              if (timeStr && !times.includes(timeStr)) {
-                times.push(timeStr);
+              if (timeStr) {
+                times.add(timeStr);
+                console.log("🔍 [Availability Fetch] Added time from booking.time:", timeStr);
               }
             } else if (booking.start_time) {
-              // Fallback: Extract time from start_time (ISO format like "2026-01-26T16:00:00+01:00")
+              // Fallback: Extract time from start_time (ISO format like "2026-01-27T00:00:00+01:00")
               // Parse the ISO string to extract hour and minute directly from the string
               const isoMatch = booking.start_time.match(/T(\d{2}):(\d{2})/);
               if (isoMatch) {
                 const hours = isoMatch[1];
                 const minutes = isoMatch[2];
                 const timeStr = `${hours}:${minutes}`;
-                if (!times.includes(timeStr)) {
-                  times.push(timeStr);
-                }
+                times.add(timeStr);
+                console.log("🔍 [Availability Fetch] Added time from start_time (regex):", timeStr, "from", booking.start_time);
               } else {
                 // Last resort: use Date object (may have timezone issues)
                 const dateTime = new Date(booking.start_time);
                 const hours = String(dateTime.getHours()).padStart(2, "0");
                 const minutes = String(dateTime.getMinutes()).padStart(2, "0");
                 const timeStr = `${hours}:${minutes}`;
-                if (!times.includes(timeStr)) {
-                  times.push(timeStr);
-                }
+                times.add(timeStr);
+                console.log("🔍 [Availability Fetch] Added time from start_time (Date):", timeStr, "from", booking.start_time);
               }
             }
           });
+          
+          // Convert Set to sorted array
+          const sortedTimes = Array.from(times).sort();
+          console.log("🔍 [Availability Fetch] Final extracted times:", sortedTimes);
 
-          // Sort times
-          times.sort();
-
-          if (times.length === 0) {
+          if (sortedTimes.length === 0) {
             setAvailabilityHoursError("No availability found for this date");
             setAvailabilityHours([]);
           } else {
-            setAvailabilityHours(times);
+            setAvailabilityHours(sortedTimes);
             setAvailabilityHoursError(null);
           }
         } catch (error) {
@@ -4741,7 +4823,7 @@ function App() {
       };
 
       fetchAvailabilityHoursForDate();
-    }, [selectedScheduleDate, newSelectedTeacher, selectedTeacher, teachers, selectedTimezone]);
+    }, [selectedScheduleDate, newSelectedTeacher, selectedTeacher, teachers, selectedTimezone, newTeacherAvailabilityData]);
 
     // Additional useEffect to ensure teacher persists when availability data is set
     React.useEffect(() => {
@@ -4972,6 +5054,8 @@ function App() {
           const [hour, minute] = startTime.split(":").map(Number);
 
           // Create a date as if it were in the given offset
+          // For GMT+01:00, if hour is 00:00, we do hour - offsetHours = 0 - 1 = -1
+          // This creates the previous day at 23:00 UTC, which is correct
           const localDate = new Date(
             Date.UTC(
               year,
@@ -4988,6 +5072,12 @@ function App() {
           const utcDay = String(localDate.getUTCDate()).padStart(2, "0");
           const utcHour = String(localDate.getUTCHours()).padStart(2, "0");
           const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
+
+          console.log("🕐 [Update Booking] Date conversion:", {
+            input: { date, time: startTime, timezone: selectedTimezone, offsetHours, offsetMinutes },
+            output: [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`],
+            localDate: localDate.toISOString()
+          });
 
           return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
         }),
@@ -5987,43 +6077,17 @@ function App() {
                           ? startTime
                           : `${startTime.slice(0, 2)}:${startTime.slice(2, 4)}`;
 
-                        // Check if start time is in early morning hours (00:00 to 05:59)
-                        const [hours, minutes] = formattedTime
-                          .split(":")
+                        // Format date for display - use the actual selected date
+                        const [year, month, day] = date
+                          .split("-")
                           .map(Number);
-                        const isEarlyMorning = hours >= 0 && hours <= 5;
+                        const formattedDay = day.toString().padStart(2, "0");
+                        const formattedMonth = month
+                          .toString()
+                          .padStart(2, "0");
 
-                        let displayDate, displayDayName;
-                        if (isEarlyMorning) {
-                          const [year, month, day] = date
-                            .split("-")
-                            .map(Number);
-                          const nextDay = new Date(year, month - 1, day + 1);
-                          const nextYear = nextDay.getFullYear();
-                          const nextMonth = (nextDay.getMonth() + 1)
-                            .toString()
-                            .padStart(2, "0");
-                          const nextDayNum = nextDay
-                            .getDate()
-                            .toString()
-                            .padStart(2, "0");
-
-                          displayDate = `${nextDayNum}-${nextMonth}-${nextYear}`;
-                          displayDayName = nextDay.toLocaleDateString("en-US", {
-                            weekday: "long",
-                          });
-                        } else {
-                          const [year, month, day] = date
-                            .split("-")
-                            .map(Number);
-                          const formattedDay = day.toString().padStart(2, "0");
-                          const formattedMonth = month
-                            .toString()
-                            .padStart(2, "0");
-
-                          displayDate = `${formattedDay}-${formattedMonth}-${year}`;
-                          displayDayName = getDayName(date);
-                        }
+                        const displayDate = `${formattedDay}-${formattedMonth}-${year}`;
+                        const displayDayName = getDayName(date);
 
                         // Check teacher availability
                         let availabilityStatus = null;

@@ -4556,9 +4556,32 @@ function App() {
           }
         }
 
-        // Set schedule from pre-processed data - convert to {id, date, time} format like ScheduleManagementPopup
-        if (bookingData.schedule && Array.isArray(bookingData.schedule)) {
-          // Convert schedule format from [date, time] to {id, date, time}
+        // Set schedule from pre-processed data - use start_time directly if available
+        if (bookingData.start_time) {
+          // Extract date and time directly from start_time string (e.g., "2026-01-27T00:00:00+01:00")
+          // Parse directly from the string to avoid timezone conversion
+          const startTimeStr = bookingData.start_time;
+          
+          // Match pattern: YYYY-MM-DDTHH:MM:SS+TZ or YYYY-MM-DDTHH:MM:SS-TZ
+          const match = startTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+          
+          if (match) {
+            const [, year, month, day, hour, minute] = match;
+            const date = `${year}-${month}-${day}`;
+            const time = `${hour}:${minute}`;
+            
+            const formattedSchedule = [{
+              id: Date.now(),
+              date: date,
+              time: time,
+            }];
+            
+            setScheduleEntries(formattedSchedule);
+            setSelectedScheduleDate(date);
+            setSelectedScheduleTime(time);
+          }
+        } else if (bookingData.schedule && Array.isArray(bookingData.schedule)) {
+          // Fallback: use schedule array if start_time is not available
           const formattedSchedule = bookingData.schedule.map((entry, index) => {
             const [date, time] = Array.isArray(entry)
               ? entry
@@ -6077,17 +6100,25 @@ function App() {
                           ? startTime
                           : `${startTime.slice(0, 2)}:${startTime.slice(2, 4)}`;
 
-                        // Format date for display - use the actual selected date
-                        const [year, month, day] = date
-                          .split("-")
-                          .map(Number);
-                        const formattedDay = day.toString().padStart(2, "0");
-                        const formattedMonth = month
-                          .toString()
-                          .padStart(2, "0");
-
-                        const displayDate = `${formattedDay}-${formattedMonth}-${year}`;
-                        const displayDayName = getDayName(date);
+                        // Format date for display - use the actual selected date string directly
+                        // Parse YYYY-MM-DD format to avoid any timezone conversion issues
+                        let displayDate, displayDayName;
+                        if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                          // Date is in YYYY-MM-DD format - parse directly using local components
+                          const [year, month, day] = date.split("-").map(Number);
+                          const formattedDay = day.toString().padStart(2, "0");
+                          const formattedMonth = month.toString().padStart(2, "0");
+                          displayDate = `${formattedDay}-${formattedMonth}-${year}`;
+                          displayDayName = getDayName(date);
+                        } else {
+                          // Fallback for other formats
+                          const dateObj = date instanceof Date ? date : new Date(date);
+                          const day = dateObj.getDate().toString().padStart(2, "0");
+                          const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+                          const year = dateObj.getFullYear();
+                          displayDate = `${day}-${month}-${year}`;
+                          displayDayName = getDayName(dateObj);
+                        }
 
                         // Check teacher availability
                         let availabilityStatus = null;

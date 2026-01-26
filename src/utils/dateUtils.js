@@ -64,15 +64,17 @@ export const formatShortDate = (date) => {
 };
 
 export const getDayName = (date) => {
-  // If it's a string in YYYY-MM-DD format (without time), add time to ensure correct date parsing
+  // If it's a string in YYYY-MM-DD format (without time), parse it using local date components
   if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    const dateObj = new Date(date + "T12:00:00");
+    const [year, month, day] = date.split("-").map(Number);
+    // Create date using local timezone to avoid shifts
+    const dateObj = new Date(year, month - 1, day);
     return dateObj.toLocaleDateString("en-US", { weekday: "long" });
   }
 
   // Ensure date is a Date object (handles both Date objects and datetime strings)
   const dateObj = date instanceof Date ? date : new Date(date);
-  // Use UTC to get the day name to match the timezone-converted date
+  // Use local date methods to get the day name
   return dateObj.toLocaleDateString("en-US", {
     weekday: "long",
   });

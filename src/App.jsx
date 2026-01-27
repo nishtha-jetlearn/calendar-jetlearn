@@ -949,12 +949,74 @@ function App() {
       console.log("✅ Teacher leaves fetched successfully:", result);
 
       if (result.success) {
+        // Process leaves according to rules:
+        // 1. If start_time and end_time are on the same date, show only that day
+        // 2. If they span multiple days:
+        //    - If end_time hours > 00:00, include that day
+        //    - If end_time hours = 00:00, exclude that day (consider one day less)
+        let processedLeaves = {};
+        
+        // Check if we have top-level start_time and end_time
+        if (result.start_time && result.end_time) {
+          // Parse top-level start_time and end_time
+          const startMatch = result.start_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+          const endMatch = result.end_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+          
+          if (startMatch && endMatch) {
+            const [, startYear, startMonth, startDay] = startMatch;
+            const [, endYear, endMonth, endDay, endHour, endMinute] = endMatch;
+            
+            const startDateStr = `${startYear}-${startMonth}-${startDay}`;
+            const endDateStr = `${endYear}-${endMonth}-${endDay}`;
+            
+            // Check if same date
+            if (startDateStr === endDateStr) {
+              // Same date - show only that day
+              if (result.leaves && result.leaves[startDateStr]) {
+                processedLeaves[startDateStr] = result.leaves[startDateStr];
+              }
+            } else {
+              // Different dates - filter the leaves object
+              // Check if end_time hours = 00:00
+              const endHourNum = parseInt(endHour);
+              const endMinuteNum = parseInt(endMinute);
+              const includeEndDate = endHourNum > 0 || endMinuteNum > 0;
+              
+              // Copy all leaves except the end date if end_time is 00:00
+              if (result.leaves && typeof result.leaves === "object") {
+                Object.keys(result.leaves).forEach((dateStr) => {
+                  // If this is the end date and end_time is 00:00, skip it
+                  if (dateStr === endDateStr && !includeEndDate) {
+                    return; // Skip this date
+                  }
+                  
+                  // Include dates from start_date to end_date (or end_date - 1 if end_time is 00:00)
+                  if (dateStr >= startDateStr && dateStr <= endDateStr) {
+                    if (dateStr === endDateStr && !includeEndDate) {
+                      // Skip end date if end_time is 00:00
+                      return;
+                    }
+                    processedLeaves[dateStr] = result.leaves[dateStr];
+                  }
+                });
+              }
+            }
+          }
+        } else if (result.leaves && typeof result.leaves === "object") {
+          // Fallback: if no top-level start_time/end_time, use leaves as is
+          processedLeaves = { ...result.leaves };
+        }
+        
+        console.log("🍃 Processed leaves (filtered):", processedLeaves);
+        console.log("🍃 Original leaves count:", result.leaves ? Object.keys(result.leaves).length : 0);
+        console.log("🍃 Processed leaves count:", Object.keys(processedLeaves).length);
+        
         setTeacherLeaves({
           isLoading: false,
           success: true,
           error: null,
           data: result,
-          leaves: result.leaves || {},
+          leaves: processedLeaves,
         });
         return result;
       } else {

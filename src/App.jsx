@@ -731,15 +731,49 @@ function App() {
     });
   }, []); // Empty dependency array ensures this runs once on mount
 
-  // Fetch students from the API
+  // Fetch students from the API (search-learner) – deferred, cached, cancellable
   useEffect(() => {
-    const fetchStudents = async () => {
+    const LEARNERS_CACHE_KEY = "jetlearn_learners";
+    const LEARNERS_CACHE_TS_KEY = "jetlearn_learners_ts";
+    const LEARNERS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
+
+    const getCachedLearners = () => {
       try {
-        setStudentsLoading(true);
-        setStudentsError(null);
+        const raw = sessionStorage.getItem(LEARNERS_CACHE_KEY);
+        const ts = sessionStorage.getItem(LEARNERS_CACHE_TS_KEY);
+        if (!raw || !ts) return null;
+        const age = Date.now() - parseInt(ts, 10);
+        if (age > LEARNERS_CACHE_TTL_MS) return null;
+        const data = JSON.parse(raw);
+        return Array.isArray(data) ? data : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const setCachedLearners = (data) => {
+      try {
+        if (Array.isArray(data)) {
+          sessionStorage.setItem(LEARNERS_CACHE_KEY, JSON.stringify(data));
+          sessionStorage.setItem(LEARNERS_CACHE_TS_KEY, String(Date.now()));
+        }
+      } catch {
+        /* ignore storage errors */
+      }
+    };
+
+    const ac = new AbortController();
+
+    const fetchStudents = async (isBackgroundRefresh = false) => {
+      try {
+        if (!isBackgroundRefresh) {
+          setStudentsLoading(true);
+          setStudentsError(null);
+        }
 
         const response = await fetch(
-          "https://live.jetlearn.com/hs/search-learner/"
+          "https://live.jetlearn.com/hs/search-learner/",
+          { signal: ac.signal }
         );
 
         if (!response.ok) {
@@ -748,28 +782,67 @@ function App() {
 
         const data = await response.json();
 
-        // The API returns an array of student objects directly
         if (Array.isArray(data)) {
           setStudents(data);
+          setCachedLearners(data);
         } else {
           console.warn("API response is not an array:", data);
+          if (!isBackgroundRefresh) setStudents([]);
+        }
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+        console.error("❌ Failed to fetch students:", err);
+        if (!isBackgroundRefresh) {
+          setStudentsError(err.message);
           setStudents([]);
         }
-      } catch (error) {
-        console.error("❌ Failed to fetch students:", error);
-        setStudentsError(error.message);
-        // Fallback to empty array on error
-        setStudents([]);
       } finally {
-        setStudentsLoading(false);
+        if (!isBackgroundRefresh) setStudentsLoading(false);
       }
     };
 
-    // Use setTimeout to prevent unhandled promise rejection
-    fetchStudents().catch((err) => {
-      console.error("❌ Unhandled error in fetchStudents:", err);
-    });
-  }, []); // Empty dependency array ensures this runs once on mount
+    const cached = getCachedLearners();
+    if (cached && cached.length > 0) {
+      setStudents(cached);
+      setStudentsLoading(false);
+      setStudentsError(null);
+      // Defer background refresh to avoid competing with teachers/week-data fetches
+      const defer = (fn) => {
+        if (typeof requestIdleCallback !== "undefined") {
+          requestIdleCallback(fn, { timeout: 3000 });
+        } else {
+          setTimeout(fn, 500);
+        }
+      };
+      defer(() =>
+        fetchStudents(true).catch((e) => {
+          if (e?.name !== "AbortError") console.error("❌ Background learners refresh:", e);
+        })
+      );
+    } else {
+      const scheduleFetch = () => {
+        if (typeof requestIdleCallback !== "undefined") {
+          requestIdleCallback(
+            () =>
+              fetchStudents(false).catch((e) => {
+                if (e?.name !== "AbortError") console.error("❌ Unhandled error in fetchStudents:", e);
+              }),
+            { timeout: 2000 }
+          );
+        } else {
+          setTimeout(() =>
+            fetchStudents(false).catch((e) => {
+              if (e?.name !== "AbortError") console.error("❌ Unhandled error in fetchStudents:", e);
+            }),
+            0
+          );
+        }
+      };
+      scheduleFetch();
+    }
+
+    return () => ac.abort();
+  }, []);
 
   // Enhanced function to get teacher details by teacherid
   const getTeacherByTeacherId = (teacherId) => {
@@ -8987,13 +9060,6 @@ function App() {
               >
                 <span className="hidden sm:inline">Next</span>
                 <FaChevronRight size={10} />
-              </button>
-
-              <button
-                onClick={goToCurrentWeek}
-                className="px-1 sm:px-2 py-0.5 sm:py-1 bg-blue-500 hover:bg-blue-400 text-white rounded text-xs transition-all duration-200"
-              >
-                Today
               </button>
             </div>
           </div>

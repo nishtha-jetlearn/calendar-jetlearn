@@ -35,6 +35,18 @@ export const formatDate = (date) => {
   return `${year}-${month}-${day}`; // YYYY-MM-DD format
 };
 
+/** Format date using local timezone - use for calendar/leave display matching API YYYY-MM-DD keys */
+export const formatDateLocal = (date) => {
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date;
+  }
+  const dateObj = date instanceof Date ? date : new Date(date);
+  const year = dateObj.getFullYear();
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+  const day = dateObj.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const formatDisplayDate = (date) => {
   // If it's a string in YYYY-MM-DD format (without time), parse it directly to avoid timezone issues
   if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {

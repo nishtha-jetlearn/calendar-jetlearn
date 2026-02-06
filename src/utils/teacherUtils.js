@@ -1,5 +1,5 @@
 // Teacher utility functions
-import { formatDate } from "./dateUtils";
+import { formatDateLocal } from "./dateUtils";
 
 // Helper function to check if a teacher is on leave for a specific date
 export const isTeacherOnLeave = (teacherEmail, date, teacherLeaves) => {
@@ -7,7 +7,8 @@ export const isTeacherOnLeave = (teacherEmail, date, teacherLeaves) => {
     return false;
   }
 
-  const dateStr = formatDate(date);
+  // Use local date to match leaves keys (YYYY-MM-DD from API)
+  const dateStr = formatDateLocal(date);
   const leaves = teacherLeaves.leaves[dateStr];
 
   // Check if leaves object exists (it's an object, not an array)
@@ -23,7 +24,8 @@ export const isTeacherWeekOff = (teacherEmail, date, availabilitySummary) => {
     return false;
   }
 
-  const dateStr = formatDate(date);
+  // Use local date (same as leave display) so week off for 5th shows only on 5th, not 5th+6th
+  const dateStr = formatDateLocal(date);
   const dateData = availabilitySummary[dateStr];
 
   // Check if any time slot has week_off = 1 for this date

@@ -42,6 +42,7 @@ import {
 } from "react-icons/fa";
 import { MdManageAccounts } from "react-icons/md";
 import UnifiedModal from "./components/UnifiedModal";
+import ApplyLeavePopup from "./components/ApplyLeavePopup";
 import TeacherDetails from "./components/TeacherDetails";
 import StudentDetails from "./components/StudentDetails";
 import EnhancedTeacherSearch from "./components/EnhancedTeacherSearch";
@@ -55,6 +56,7 @@ import DatePickerCalendar from "./components/DatePickerCalendar";
 import {
   getWeekDates,
   formatDate,
+  formatDateLocal,
   formatShortDate,
   getDayName,
   getCurrentWeekStart,
@@ -67,120 +69,12 @@ import {
   isTeacherWeekOff,
   getTeacherEmailFromEvent,
 } from "./utils/teacherUtils";
-
-// Helper function to format datetime to UTC format for API
-const formatDateTimeToUTC = (date, timeRange, selectedTimezone) => {
-  try {
-    // Extract start time from timeRange (e.g., "10:00 - 11:00" -> "10:00")
-    const startTime = timeRange.split(" - ")[0];
-
-    // Extract timezone offset from selectedTimezone (e.g., "(GMT+02:00) CET" -> +02:00)
-    const match = selectedTimezone.match(/GMT([+-]\d{2}):(\d{2})/);
-    if (!match) {
-      console.error("Invalid timezone format:", selectedTimezone);
-      return null;
-    }
-
-    const offsetHours = parseInt(match[1], 10); // +02 or -05
-    const offsetMinutes = parseInt(match[2], 10); // 00 or 30
-
-    // Parse the start time
-    const [startHour, startMinute] = startTime.split(":").map(Number);
-
-    // Create date components
-    const year = date.getFullYear();
-    const month = date.getMonth(); // 0-based
-    const day = date.getDate();
-
-    // Create UTC date directly to avoid timezone interpretation issues
-    // This creates a date in UTC with the given date and time
-    const utcBaseDate = new Date(
-      Date.UTC(year, month, day, startHour, startMinute, 0, 0)
-    );
-
-    // Now we need to adjust for the timezone offset
-    // If the selected timezone is GMT+02:00 and the time is 16:00,
-    // that means it's actually 14:00 UTC (16:00 - 2 hours)
-    // So we subtract the offset to get the correct UTC time
-    const totalOffsetMinutes = offsetHours * 60 + offsetMinutes;
-    const utcDateTime = new Date(
-      utcBaseDate.getTime() - totalOffsetMinutes * 60000
-    );
-
-    // Format to UTC string in the required format: "YYYY-MM-DD HH:MM"
-    const utcYear = utcDateTime.getUTCFullYear();
-    const utcMonth = String(utcDateTime.getUTCMonth() + 1).padStart(2, "0");
-    const utcDay = String(utcDateTime.getUTCDate()).padStart(2, "0");
-    const utcHours = String(utcDateTime.getUTCHours()).padStart(2, "0");
-    const utcMinutes = String(utcDateTime.getUTCMinutes()).padStart(2, "0");
-
-    const result = `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}`;
-
-    console.log("🌍 Final UTC result:", result);
-
-    return result;
-  } catch (error) {
-    console.error("Error formatting datetime to UTC:", error);
-    return null;
-  }
-};
-
-
-
-const TIME_SLOTS = Array.from(
-  { length: 24 },
-  (_, i) => `${String(i).padStart(2, "0")}:00`
-);
-
-// Utility function to safely log errors and filter extension errors
-const safeErrorLog = (message, error) => {
-  // Filter out extension-related errors
-  const extensionKeywords = [
-    "writing",
-    "template",
-    "permission error",
-    "chrome-extension",
-    "extension",
-    "content.js",
-    "content_script",
-    "background.js",
-    "popup.js",
-    "httpError: false",
-    "httpStatus: 200",
-    "code: 403",
-  ];
-
-  const errorMessage = error?.message || error?.toString() || "";
-  const errorCode = error?.code;
-  const httpStatus = error?.httpStatus;
-
-  // Check for specific extension error patterns
-  const isExtensionError =
-    extensionKeywords.some((keyword) =>
-      errorMessage.toLowerCase().includes(keyword.toLowerCase())
-    ) ||
-    // Check for the specific error pattern: code: 403 with httpStatus: 200
-    (errorCode === 403 && httpStatus === 200) ||
-    // Check if error has extension-like properties
-    (error?.httpError === false && error?.code === 403) ||
-    // Check stack trace for extension files
-    (error?.stack && error.stack.includes("content.js")) ||
-    (error?.stack && error.stack.includes("extension")) ||
-    // Check for permission error name pattern
-    (error?.name === "i" && error?.code === 403);
-
-  if (!isExtensionError) {
-    console.error(`❌ ${message}:`, error);
-    return true; // Error was logged
-  } else {
-    // Silently ignore extension errors
-    console.log("🔇 Extension error filtered:", {
-      code: error?.code,
-      name: error?.name,
-    });
-    return false; // Error was filtered out
-  }
-};
+import { TIME_SLOTS } from "./constants";
+import { safeErrorLog } from "./utils/safeErrorLog";
+import {
+  formatDateTimeToUTC,
+  formatTimezoneForAPI,
+} from "./utils/formatUtils";
 
 function App() {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
@@ -320,13 +214,6 @@ function App() {
   // State for timezones
   const [timezones, setTimezones] = useState([]);
   const [selectedTimezone, setSelectedTimezone] = useState("(GMT+02:00) CET");
-
-  // Utility function to format timezone for API calls (replace spaces with underscores)
-  const formatTimezoneForAPI = (timezone) => {
-    return timezone.replace(/(.*\)) (.+)/, (match, prefix, tz) => {
-      return `${prefix} ${tz.replace(/ /g, "_")}`;
-    });
-  };
 
   // State for students from API
   const [students, setStudents] = useState([]);
@@ -1029,54 +916,39 @@ function App() {
         //    - If end_time hours = 00:00, exclude that day (consider one day less)
         let processedLeaves = {};
         
-        // Check if we have top-level start_time and end_time
-        if (result.start_time && result.end_time) {
-          // Parse top-level start_time and end_time
-          const startMatch = result.start_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-          const endMatch = result.end_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-          
-          if (startMatch && endMatch) {
-            const [, startYear, startMonth, startDay] = startMatch;
-            const [, endYear, endMonth, endDay, endHour, endMinute] = endMatch;
-            
-            const startDateStr = `${startYear}-${startMonth}-${startDay}`;
-            const endDateStr = `${endYear}-${endMonth}-${endDay}`;
-            
-            // Check if same date
-            if (startDateStr === endDateStr) {
-              // Same date - show only that day
-              if (result.leaves && result.leaves[startDateStr]) {
-                processedLeaves[startDateStr] = result.leaves[startDateStr];
-              }
-            } else {
-              // Different dates - filter the leaves object
-              // Check if end_time hours = 00:00
-              const endHourNum = parseInt(endHour);
-              const endMinuteNum = parseInt(endMinute);
-              const includeEndDate = endHourNum > 0 || endMinuteNum > 0;
-              
-              // Copy all leaves except the end date if end_time is 00:00
-              if (result.leaves && typeof result.leaves === "object") {
-                Object.keys(result.leaves).forEach((dateStr) => {
-                  // If this is the end date and end_time is 00:00, skip it
-                  if (dateStr === endDateStr && !includeEndDate) {
-                    return; // Skip this date
-                  }
-                  
-                  // Include dates from start_date to end_date (or end_date - 1 if end_time is 00:00)
-                  if (dateStr >= startDateStr && dateStr <= endDateStr) {
-                    if (dateStr === endDateStr && !includeEndDate) {
-                      // Skip end date if end_time is 00:00
-                      return;
-                    }
-                    processedLeaves[dateStr] = result.leaves[dateStr];
-                  }
-                });
-              }
+        // Check if we have top-level start_time and end_time (ISO with time: "2026-01-30T00:00:00")
+        const startMatchFull = result.start_time && result.start_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+        const endMatchFull = result.end_time && result.end_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+
+        if (startMatchFull && endMatchFull) {
+          // Parse ISO datetime format
+          const [, startYear, startMonth, startDay] = startMatchFull;
+          const [, endYear, endMonth, endDay, endHour, endMinute] = endMatchFull;
+
+          const startDateStr = `${startYear}-${startMonth}-${startDay}`;
+          const endDateStr = `${endYear}-${endMonth}-${endDay}`;
+
+          if (startDateStr === endDateStr) {
+            if (result.leaves && result.leaves[startDateStr]) {
+              processedLeaves[startDateStr] = result.leaves[startDateStr];
+            }
+          } else {
+            const endHourNum = parseInt(endHour);
+            const endMinuteNum = parseInt(endMinute);
+            const includeEndDate = endHourNum > 0 || endMinuteNum > 0;
+
+            if (result.leaves && typeof result.leaves === "object") {
+              Object.keys(result.leaves).forEach((dateStr) => {
+                if (dateStr === endDateStr && !includeEndDate) return;
+                if (dateStr >= startDateStr && dateStr <= endDateStr) {
+                  if (dateStr === endDateStr && !includeEndDate) return;
+                  processedLeaves[dateStr] = result.leaves[dateStr];
+                }
+              });
             }
           }
         } else if (result.leaves && typeof result.leaves === "object") {
-          // Fallback: if no top-level start_time/end_time, use leaves as is
+          // Use leaves as-is for date-only format ("2026-02-09") or when no start/end
           processedLeaves = { ...result.leaves };
         }
         
@@ -7465,479 +7337,6 @@ function App() {
     );
   };
 
-  // Apply Leave Popup Component
-  const ApplyLeavePopup = () => {
-    if (!applyLeavePopup.isOpen) return null;
-
-    const today = formatDate(new Date());
-    // Local state for reason to allow smooth typing
-    const [reasonText, setReasonText] = useState("");
-
-    // Reset reason text when popup opens
-    React.useEffect(() => {
-      if (applyLeavePopup.isOpen) {
-        setReasonText(applyLeavePopup.reason || "");
-      }
-    }, [applyLeavePopup.isOpen]);
-
-    const handleSubmit = async () => {
-      // Reset errors
-      setApplyLeavePopup((prev) => ({
-        ...prev,
-        errors: { startDate: "", endDate: "", reason: "" },
-      }));
-
-      // Validation
-      let hasErrors = false;
-      const newErrors = { startDate: "", endDate: "", reason: "" };
-
-      if (!applyLeavePopup.startDate) {
-        newErrors.startDate = "Start date is required";
-        hasErrors = true;
-      } else {
-        const startDateStr = applyLeavePopup.startDate;
-        const startTimeStr = applyLeavePopup.startTime || "00:00";
-        const startDateTime = new Date(`${startDateStr}T${startTimeStr}`);
-        const todayObj = new Date(today);
-        todayObj.setHours(0, 0, 0, 0);
-
-        if (startDateTime < todayObj) {
-          newErrors.startDate = "Start date must be from today onwards";
-          hasErrors = true;
-        }
-      }
-
-      if (!applyLeavePopup.endDate) {
-        newErrors.endDate = "End date is required";
-        hasErrors = true;
-      } else if (applyLeavePopup.startDate) {
-        const startDateStr = applyLeavePopup.startDate;
-        const startTimeStr = applyLeavePopup.startTime || "00:00";
-        const endDateStr = applyLeavePopup.endDate;
-        const endTimeStr = applyLeavePopup.endTime || "23:00";
-
-        const startDateTime = new Date(`${startDateStr}T${startTimeStr}`);
-        const endDateTime = new Date(`${endDateStr}T${endTimeStr}`);
-
-        if (endDateTime < startDateTime) {
-          newErrors.endDate =
-            "End date/time must be greater than or equal to start date/time";
-          hasErrors = true;
-        }
-      }
-
-      if (!reasonText || reasonText.trim() === "") {
-        newErrors.reason = "Reason is required";
-        hasErrors = true;
-      }
-
-      if (hasErrors) {
-        setApplyLeavePopup((prev) => ({ ...prev, errors: newErrors }));
-        return;
-      }
-
-      try {
-        setApplyLeavePopup((prev) => ({ ...prev, isLoading: true }));
-
-        // Format dates as ["YYYY-MM-DD", "HH:MM"]
-        const startDateFormatted = [
-          applyLeavePopup.startDate,
-          applyLeavePopup.startTime || "00:00",
-        ];
-        const endDateFormatted = [
-          applyLeavePopup.endDate,
-          applyLeavePopup.endTime || "23:00",
-        ];
-
-        await applyTeacherLeave(
-          selectedTeacher.email,
-          startDateFormatted,
-          endDateFormatted,
-          reasonText,
-          selectedTeacher.uid || null
-        );
-
-        // Close popup immediately
-        setApplyLeavePopup({
-          isOpen: false,
-          startDate: "",
-          startTime: "00:00",
-          endDate: "",
-          endTime: "23:00",
-          reason: "",
-          isLoading: false,
-          errors: { startDate: "", endDate: "", reason: "" },
-        });
-        setReasonText("");
-
-        // Show success message as toaster (auto-hides after 3 seconds)
-        setSuccessMessage({
-          show: true,
-          message: "Leave added successfully!",
-          type: "leave",
-        });
-      } catch (error) {
-        console.error("Error applying leave:", error);
-        alert(`Failed to apply leave: ${error.message}`);
-        setApplyLeavePopup((prev) => ({ ...prev, isLoading: false }));
-      }
-    };
-
-    const handleClose = () => {
-      setApplyLeavePopup({
-        isOpen: false,
-        startDate: "",
-        startTime: "00:00",
-        endDate: "",
-        endTime: "23:00",
-        reason: "",
-        isLoading: false,
-        errors: { startDate: "", endDate: "", reason: "" },
-      });
-      setReasonText("");
-    };
-
-    const handleStartDateChange = (e) => {
-      const newStartDate = e.target.value;
-      setApplyLeavePopup((prev) => ({ ...prev, startDate: newStartDate }));
-
-      // If end date is before new start date, clear it
-      if (applyLeavePopup.endDate && newStartDate) {
-        const startTimeStr = applyLeavePopup.startTime || "00:00";
-        const endTimeStr = applyLeavePopup.endTime || "23:00";
-        const startDateTime = new Date(`${newStartDate}T${startTimeStr}`);
-        const endDateTime = new Date(
-          `${applyLeavePopup.endDate}T${endTimeStr}`
-        );
-
-        if (endDateTime < startDateTime) {
-          setApplyLeavePopup((prev) => ({ ...prev, endDate: "" }));
-        }
-      }
-
-      // Clear error
-      if (applyLeavePopup.errors.startDate) {
-        setApplyLeavePopup((prev) => ({
-          ...prev,
-          errors: { ...prev.errors, startDate: "" },
-        }));
-      }
-    };
-
-    const handleStartTimeChange = (e) => {
-      const newStartTime = e.target.value;
-      setApplyLeavePopup((prev) => ({ ...prev, startTime: newStartTime }));
-
-      // Validate end date/time if both dates are set
-      if (applyLeavePopup.startDate && applyLeavePopup.endDate) {
-        const startTimeStr = newStartTime || "00:00";
-        const endTimeStr = applyLeavePopup.endTime || "23:00";
-        const startDateTime = new Date(
-          `${applyLeavePopup.startDate}T${startTimeStr}`
-        );
-        const endDateTime = new Date(
-          `${applyLeavePopup.endDate}T${endTimeStr}`
-        );
-
-        if (
-          endDateTime < startDateTime &&
-          applyLeavePopup.errors.endDate === ""
-        ) {
-          setApplyLeavePopup((prev) => ({
-            ...prev,
-            errors: {
-              ...prev.errors,
-              endDate:
-                "End date/time must be greater than or equal to start date/time",
-            },
-          }));
-        } else if (
-          endDateTime >= startDateTime &&
-          applyLeavePopup.errors.endDate
-        ) {
-          setApplyLeavePopup((prev) => ({
-            ...prev,
-            errors: { ...prev.errors, endDate: "" },
-          }));
-        }
-      }
-
-      // Clear error
-      if (applyLeavePopup.errors.startDate) {
-        setApplyLeavePopup((prev) => ({
-          ...prev,
-          errors: { ...prev.errors, startDate: "" },
-        }));
-      }
-    };
-
-    const handleEndDateChange = (e) => {
-      const newEndDate = e.target.value;
-      setApplyLeavePopup((prev) => ({ ...prev, endDate: newEndDate }));
-
-      // Validate end date/time if both dates are set
-      if (applyLeavePopup.startDate && newEndDate) {
-        const startTimeStr = applyLeavePopup.startTime || "00:00";
-        const endTimeStr = applyLeavePopup.endTime || "23:00";
-        const startDateTime = new Date(
-          `${applyLeavePopup.startDate}T${startTimeStr}`
-        );
-        const endDateTime = new Date(`${newEndDate}T${endTimeStr}`);
-
-        if (endDateTime < startDateTime) {
-          setApplyLeavePopup((prev) => ({
-            ...prev,
-            errors: {
-              ...prev.errors,
-              endDate:
-                "End date/time must be greater than or equal to start date/time",
-            },
-          }));
-        } else {
-          setApplyLeavePopup((prev) => ({
-            ...prev,
-            errors: { ...prev.errors, endDate: "" },
-          }));
-        }
-      } else if (applyLeavePopup.errors.endDate) {
-        setApplyLeavePopup((prev) => ({
-          ...prev,
-          errors: { ...prev.errors, endDate: "" },
-        }));
-      }
-    };
-
-    const handleEndTimeChange = (e) => {
-      const newEndTime = e.target.value;
-      setApplyLeavePopup((prev) => ({ ...prev, endTime: newEndTime }));
-
-      // Validate end date/time if both dates are set
-      if (applyLeavePopup.startDate && applyLeavePopup.endDate) {
-        const startTimeStr = applyLeavePopup.startTime || "00:00";
-        const endTimeStr = newEndTime || "23:00";
-        const startDateTime = new Date(
-          `${applyLeavePopup.startDate}T${startTimeStr}`
-        );
-        const endDateTime = new Date(
-          `${applyLeavePopup.endDate}T${endTimeStr}`
-        );
-
-        if (endDateTime < startDateTime) {
-          setApplyLeavePopup((prev) => ({
-            ...prev,
-            errors: {
-              ...prev.errors,
-              endDate:
-                "End date/time must be greater than or equal to start date/time",
-            },
-          }));
-        } else {
-          setApplyLeavePopup((prev) => ({
-            ...prev,
-            errors: { ...prev.errors, endDate: "" },
-          }));
-        }
-      }
-
-      // Clear error
-      if (applyLeavePopup.errors.endDate) {
-        setApplyLeavePopup((prev) => ({
-          ...prev,
-          errors: { ...prev.errors, endDate: "" },
-        }));
-      }
-    };
-
-    // Calculate min end date (should be >= start date)
-    const minEndDate = applyLeavePopup.startDate || today;
-
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 animate-in fade-in duration-200">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-xs sm:max-w-sm md:max-w-md overflow-hidden border border-gray-100 backdrop-blur-lg animate-in slide-in-from-bottom-4 duration-300">
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-gray-200">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm sm:text-base font-bold text-orange-800 flex items-center gap-2">
-                <FaCalendarAlt size={14} className="flex-shrink-0" />
-                <span className="truncate">Add Leaves</span>
-              </h2>
-            </div>
-            <button
-              onClick={handleClose}
-              disabled={applyLeavePopup.isLoading}
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 ml-2 flex-shrink-0 p-1 rounded-full hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FaTimes size={14} />
-            </button>
-          </div>
-
-          <div className="p-4">
-            {/* Teacher Info */}
-            {selectedTeacher && (
-              <div className="mb-4 p-2 bg-blue-50 rounded border border-blue-200">
-                <p className="text-xs text-blue-800">
-                  <span className="font-semibold">Teacher:</span>{" "}
-                  {selectedTeacher.full_name}
-                </p>
-              </div>
-            )}
-
-            {/* Start Date */}
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Start Date <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={applyLeavePopup.startDate}
-                  onChange={handleStartDateChange}
-                  min={today}
-                  disabled={applyLeavePopup.isLoading}
-                  className={`flex-1 px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                    applyLeavePopup.errors.startDate
-                      ? "border-red-500"
-                      : "border-gray-300"
-                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                />
-                <select
-                  value={applyLeavePopup.startTime}
-                  onChange={handleStartTimeChange}
-                  disabled={applyLeavePopup.isLoading}
-                  className={`px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                    applyLeavePopup.errors.startDate
-                      ? "border-red-500"
-                      : "border-gray-300"
-                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                >
-                  {Array.from({ length: 24 }, (_, i) => {
-                    const hour = String(i).padStart(2, "0");
-                    return (
-                      <option key={hour} value={`${hour}:00`}>
-                        {hour}:00
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              {applyLeavePopup.errors.startDate && (
-                <p className="text-xs text-red-500 mt-1">
-                  {applyLeavePopup.errors.startDate}
-                </p>
-              )}
-            </div>
-
-            {/* End Date */}
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                End Date <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={applyLeavePopup.endDate}
-                  onChange={handleEndDateChange}
-                  min={minEndDate}
-                  disabled={
-                    applyLeavePopup.isLoading || !applyLeavePopup.startDate
-                  }
-                  className={`flex-1 px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                    applyLeavePopup.errors.endDate
-                      ? "border-red-500"
-                      : "border-gray-300"
-                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                />
-                <select
-                  value={applyLeavePopup.endTime}
-                  onChange={handleEndTimeChange}
-                  disabled={
-                    applyLeavePopup.isLoading || !applyLeavePopup.startDate
-                  }
-                  className={`px-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 ${
-                    applyLeavePopup.errors.endDate
-                      ? "border-red-500"
-                      : "border-gray-300"
-                  } disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                >
-                  {Array.from({ length: 24 }, (_, i) => {
-                    const hour = String(i).padStart(2, "0");
-                    return (
-                      <option key={hour} value={`${hour}:00`}>
-                        {hour}:00
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-              {applyLeavePopup.errors.endDate && (
-                <p className="text-xs text-red-500 mt-1">
-                  {applyLeavePopup.errors.endDate}
-                </p>
-              )}
-            </div>
-
-            {/* Reason */}
-            <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Reason <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={reasonText}
-                onChange={(e) => {
-                  setReasonText(e.target.value);
-                  if (applyLeavePopup.errors.reason) {
-                    setApplyLeavePopup((prev) => ({
-                      ...prev,
-                      errors: { ...prev.errors, reason: "" },
-                    }));
-                  }
-                }}
-                disabled={applyLeavePopup.isLoading}
-                rows={4}
-                placeholder="Enter reason for leave..."
-                className={`w-full p-2 text-xs border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none hover:border-orange-400 transition-colors duration-200 ${
-                  applyLeavePopup.errors.reason
-                    ? "border-red-500"
-                    : "border-gray-300"
-                } disabled:bg-gray-100 disabled:cursor-not-allowed`}
-              />
-              {applyLeavePopup.errors.reason && (
-                <p className="text-xs text-red-500 mt-1">
-                  {applyLeavePopup.errors.reason}
-                </p>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={handleClose}
-                disabled={applyLeavePopup.isLoading}
-                className="px-4 py-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={applyLeavePopup.isLoading}
-                className="px-4 py-2 text-xs font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {applyLeavePopup.isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
-                    Adding...
-                  </>
-                ) : (
-                  "Add Leaves"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // Schedule Management Popup Component
   const ScheduleManagementPopup = () => {
     if (!scheduleManagementPopup.isOpen) return null;
@@ -11208,7 +10607,7 @@ function App() {
                     Time
                   </div>
                   {filteredWeekDates.map((date) => {
-                    const dateStr = formatDate(date);
+                    const dateStr = formatDateLocal(date);
                     const isOnLeave =
                       teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
 
@@ -11226,9 +10625,11 @@ function App() {
                       <div
                         key={dateStr}
                         className={`bg-gray-100 p-1 sm:p-2 lg:p-4 font-semibold text-gray-700 text-center border-b border-r border-gray-300 relative ${
-                          isOnLeave ? "bg-orange-100 border-orange-300" : ""
-                        } ${
-                          isWeekOff ? "bg-yellow-100 border-yellow-300" : ""
+                          isWeekOff
+                            ? "bg-yellow-100 border-yellow-300"
+                            : isOnLeave
+                              ? "bg-orange-100 border-orange-300"
+                              : ""
                         } ${
                           isLockedHolidayDate
                             ? "bg-gray-200 border-gray-400"
@@ -11252,8 +10653,8 @@ function App() {
                           </div>
                         )}
 
-                        {/* Leave indicator */}
-                        {isOnLeave && (
+                        {/* Leave indicator - only when not week off (week off takes precedence) */}
+                        {isOnLeave && !isWeekOff && (
                           <div
                             className="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full border border-white"
                             title="Teacher on Leave"
@@ -11284,7 +10685,7 @@ function App() {
                         const slot = dateSchedule[time];
                         const { available, booked, teacherid, apiData } =
                           getSlotCounts(date, time);
-                        const dateStr = formatDate(date);
+                        const dateStr = formatDateLocal(date);
                         const isOnLeave =
                           teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
 
@@ -11310,19 +10711,19 @@ function App() {
                         ) {
                           cellColor = "bg-gray-200 hover:bg-gray-300";
                         } else if (
-                          isOnLeave &&
-                          selectedTeacher &&
-                          available === 0 &&
-                          booked === 0
-                        ) {
-                          cellColor = "bg-orange-100 hover:bg-orange-200";
-                        } else if (
                           isWeekOff &&
                           selectedTeacher &&
                           available === 0 &&
                           booked === 0
                         ) {
                           cellColor = "bg-yellow-100 hover:bg-yellow-200";
+                        } else if (
+                          isOnLeave &&
+                          selectedTeacher &&
+                          available === 0 &&
+                          booked === 0
+                        ) {
+                          cellColor = "bg-orange-100 hover:bg-orange-200";
                         }
 
                         return (
@@ -11378,18 +10779,18 @@ function App() {
                                   handleAddAvailability(date, time)
                                 }
                                 className={`absolute top-1 right-1 w-5 h-5 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-sm z-10 ${
-                                  isOnLeave
-                                    ? "bg-orange-500 hover:bg-orange-600"
-                                    : isWeekOff
+                                  isWeekOff
                                     ? "bg-yellow-500 hover:bg-yellow-600"
-                                    : "bg-blue-500 hover:bg-blue-600"
+                                    : isOnLeave
+                                      ? "bg-orange-500 hover:bg-orange-600"
+                                      : "bg-blue-500 hover:bg-blue-600"
                                 }`}
                                 title={`Add availability for this time slot${
-                                  isOnLeave
-                                    ? " (Teacher on Leave)"
-                                    : isWeekOff
+                                  isWeekOff
                                     ? " (Teacher Week Off)"
-                                    : ""
+                                    : isOnLeave
+                                      ? " (Teacher on Leave)"
+                                      : ""
                                 }`}
                               >
                                 <FaPlus size={8} />
@@ -11453,8 +10854,24 @@ function App() {
                               {booked}
                             </div>
 
-                            {/* Teacher Leave Indicator - only show when no availability or bookings */}
+                            {/* Teacher Week Off Indicator - week off takes precedence over leave */}
+                            {isWeekOff &&
+                              selectedTeacher &&
+                              available === 0 &&
+                              booked === 0 && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-yellow-200 bg-opacity-75 pointer-events-none">
+                                  <div className="text-yellow-700 font-bold text-xs flex flex-col items-center">
+                                    <span className="hidden sm:block">
+                                      Week Off
+                                    </span>
+                                    <span className="sm:hidden">WO</span>
+                                  </div>
+                                </div>
+                              )}
+
+                            {/* Teacher Leave Indicator - only when not week off */}
                             {isOnLeave &&
+                              !isWeekOff &&
                               selectedTeacher &&
                               available === 0 &&
                               booked === 0 && (
@@ -11464,22 +10881,6 @@ function App() {
                                       On Leave
                                     </span>
                                     <span className="sm:hidden">Leave</span>
-                                  </div>
-                                </div>
-                              )}
-
-                            {/* Teacher Week Off Indicator - only show when no availability or bookings */}
-                            {isWeekOff &&
-                              selectedTeacher &&
-                              !isOnLeave &&
-                              available === 0 &&
-                              booked === 0 && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-yellow-200 bg-opacity-75 pointer-events-none">
-                                  <div className="text-yellow-700 font-bold text-xs flex flex-col items-center">
-                                    <span className="hidden sm:block">
-                                      Week Off
-                                    </span>
-                                    <span className="sm:hidden">WO</span>
                                   </div>
                                 </div>
                               )}
@@ -11539,7 +10940,13 @@ function App() {
       <EditReschedulePopup />
       <ConfirmationPopup />
       <ScheduleManagementPopup />
-      <ApplyLeavePopup />
+      <ApplyLeavePopup
+        applyLeavePopup={applyLeavePopup}
+        setApplyLeavePopup={setApplyLeavePopup}
+        selectedTeacher={selectedTeacher}
+        onApplyLeave={applyTeacherLeave}
+        setSuccessMessage={setSuccessMessage}
+      />
       <SuccessMessage />
 
       {/* Global Loading Overlay */}

@@ -5873,17 +5873,22 @@ function App() {
                             }
                           );
 
-                          // If no date selected or no teacher, show all slots (except past dates and past times)
-                          if (!selectedScheduleDate || !teacherUid) {
+                          // If no date selected, no teacher, or teacher UID is 102: show all time slots (no current-time filter)
+                          const showAllSlotsForTimeDropdown =
+                            !selectedScheduleDate ||
+                            !teacherUid ||
+                            teacherUid === "102" ||
+                            teacherUid === 102;
+                          if (showAllSlotsForTimeDropdown) {
                             return allTimeSlots
                               .filter((timeString) => {
                                 // If yesterday is selected: show all time slots (no time filtering)
                                 if (isYesterday) {
                                   return true;
                                 }
-                                // If today is selected: only show slots from current time onwards
+                                // If today: show all slots (no current-time filter when no teacher or teacher 102)
                                 if (isToday) {
-                                  return timeString >= currentTimeString;
+                                  return true;
                                 }
                                 // For previous dates (before today but still selectable): show all slots
                                 if (isPastDate) {

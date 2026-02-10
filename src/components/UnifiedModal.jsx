@@ -966,38 +966,40 @@ const UnifiedModalComponent = function UnifiedModal({
     // Prepare schedule data from entries
     const schedule = scheduleEntries.map((entry) => [entry.date, entry.time]);
 
-    // Book each selected student
+    // All learners for this booking (one event, one API call)
     const studentsToBook =
       selectedStudents.length > 0
         ? selectedStudents
         : [{ id: Date.now().toString(), name: studentName.trim() }];
 
     try {
-      studentsToBook.forEach((student) => {
-        // Prepare API payload
-        const bookingData = {
-          bookingType,
-          platformCredentials,
-          attendees: attendeesList.map((item) => item.email).join(", "),
-          schedule,
-          ...(pdfBase64 && { pdf_attached: pdfBase64 }),
-          ...(bookingType === "paid" && {
-            subject: selectedSubject,
-            classType: selectedClassType,
-            classCount: selectedClassCount,
-            recording: selectedRecording.join(", "),
-            ...(selectedClassType === "batch" && {
-              batchNumber: batchNumber.trim(),
-            }),
+      // Single API call for the whole booking (all learners on one event)
+      const bookingData = {
+        bookingType,
+        platformCredentials,
+        attendees: attendeesList.map((item) => item.email).join(", "),
+        schedule,
+        ...(pdfBase64 && { pdf_attached: pdfBase64 }),
+        ...(bookingType === "paid" && {
+          subject: selectedSubject,
+          classType: selectedClassType,
+          classCount: selectedClassCount,
+          recording: selectedRecording.join(", "),
+          ...(selectedClassType === "batch" && {
+            batchNumber: batchNumber.trim(),
           }),
-          ...(bookingType === "trial" && {
-            classType: "1:1",
-            classCount: 1,
-          }),
-        };
+        }),
+        ...(bookingType === "trial" && {
+          classType: "1:1",
+          classCount: 1,
+        }),
+      };
 
-        onBookStudent(student.name, selectedStudents, bookingData);
-      });
+      const displayName =
+        studentsToBook.length === 1
+          ? studentsToBook[0].name
+          : studentsToBook.map((s) => s.name).join(", ");
+      onBookStudent(displayName, studentsToBook, bookingData);
 
       // Reset form
       setStudentName("");

@@ -2848,6 +2848,13 @@ function App() {
 
   const goToCurrentWeek = () => {
     setCurrentWeekStart(getCurrentWeekStart());
+    const todayStr = formatDateLocal(new Date());
+    setDateRangeFilter({
+      startDate: todayStr,
+      endDate: todayStr,
+      isActive: true,
+    });
+    fetchFilteredData(todayStr, todayStr);
   };
 
   // Handle availability click
@@ -4223,6 +4230,7 @@ function App() {
                   <button
                     onClick={() => {
                       // Open Edit/Reschedule popup with current booking data
+                      editRescheduleTeacherRemovedRef.current = false;
                       setEditReschedulePopup({
                         isOpen: true,
                         data: bookingDetailsPopup.data,
@@ -4255,6 +4263,8 @@ function App() {
   // CRITICAL: Store ref outside component to persist across component remounts
   // This ensures the teacher selection persists even if the component is recreated
   const editReschedulePopupTeacherRef = React.useRef(null);
+  // Ref for "user removed teacher" - lives in parent so no child effect can reset it
+  const editRescheduleTeacherRemovedRef = React.useRef(false);
 
   // Edit/Reschedule Popup Component with Schedule Management functionality
   const EditReschedulePopup = () => {
@@ -4263,6 +4273,8 @@ function App() {
     // Teacher change functionality - must be declared before use
     const [showTeacherChange, setShowTeacherChange] = useState(false);
     const [newSelectedTeacher, setNewSelectedTeacher] = useState(null);
+    const [teacherRemovedByUser, setTeacherRemovedByUser] = useState(false);
+    const teacherRemovedByUserRef = editRescheduleTeacherRemovedRef;
     const [teacherSearchTerm, setTeacherSearchTerm] = useState("");
     const [teacherSearchResults, setTeacherSearchResults] = useState([]);
     // Use the external ref to persist newSelectedTeacher across component remounts
@@ -4338,6 +4350,8 @@ function App() {
 
       // Then set state (asynchronous)
       setNewSelectedTeacher(teacher);
+      teacherRemovedByUserRef.current = false;
+      setTeacherRemovedByUser(false);
 
       // Safety check: ensure ref persists after state update
       setTimeout(() => {
@@ -4451,6 +4465,8 @@ function App() {
               if (newSelectedTeacherRef.current?.uid !== teacher.uid) {
                 newSelectedTeacherRef.current = teacher;
                 setNewSelectedTeacher(teacher);
+                teacherRemovedByUserRef.current = false;
+                setTeacherRemovedByUser(false);
               }
             }, 100);
           } else {
@@ -4501,6 +4517,8 @@ function App() {
       if (editReschedulePopup.data) {
         const bookingData = editReschedulePopup.data;
 
+        // Do not reset teacherRemovedByUserRef here - it is reset only when opening popup (in parent)
+
         // CRITICAL: ALWAYS preserve newSelectedTeacher from ref if it was already set
         // This maintains the intermediate state when teacher is changed, even when popup data refreshes
         // If ref is null but state has a teacher, restore ref from state
@@ -4541,8 +4559,11 @@ function App() {
         // CRITICAL: Always restore newSelectedTeacher from ref if it was set
         // This ensures teacher change persists even when popup data refreshes
         // Priority: ref > current state (ref is source of truth for teacher change)
-
-        if (newSelectedTeacherRef.current) {
+        // When user has explicitly removed teacher, keep both blank - do not restore from data
+        if (teacherRemovedByUser) {
+          setNewSelectedTeacher(null);
+          newSelectedTeacherRef.current = null;
+        } else if (newSelectedTeacherRef.current) {
           // Ref has the teacher - always use it (this is the source of truth)
           // Use functional update to ensure we set the correct value
           setNewSelectedTeacher(() => {
@@ -4629,6 +4650,13 @@ function App() {
 
     // Fetch availability hours for selected date when it's a future date
     React.useEffect(() => {
+      // When user has removed teacher, do not fetch - use ref so we skip even if state not yet updated
+      if (teacherRemovedByUserRef.current || teacherRemovedByUser) {
+        setAvailabilityHours([]);
+        setAvailabilityHoursError(null);
+        return;
+      }
+
       const fetchAvailabilityHoursForDate = async () => {
         if (!selectedScheduleDate) {
           setAvailabilityHours([]);
@@ -4716,6 +4744,9 @@ function App() {
           } else if (teacherUid) {
             console.warn("⚠️ Teacher email not found for teacherid:", teacherUid, "- Skipping teacher filter");
           }
+
+          // Skip fetch if user removed teacher (avoid race where effect already started)
+          if (teacherRemovedByUserRef.current) return;
 
           const response = await fetch(
             "https://live.jetlearn.com/events/get-bookings-details/",
@@ -4853,10 +4884,13 @@ function App() {
       };
 
       fetchAvailabilityHoursForDate();
-    }, [selectedScheduleDate, newSelectedTeacher, selectedTeacher, teachers, selectedTimezone, newTeacherAvailabilityData]);
+    }, [selectedScheduleDate, newSelectedTeacher, selectedTeacher, teachers, selectedTimezone, newTeacherAvailabilityData, teacherRemovedByUser]);
 
     // Additional useEffect to ensure teacher persists when availability data is set
     React.useEffect(() => {
+      // When user has explicitly removed teacher, do not restore from ref
+      if (teacherRemovedByUser) return;
+
       console.log(
         "🔵 [DEBUG] useEffect [newTeacherAvailabilityData] TRIGGERED:",
         {
@@ -4884,7 +4918,7 @@ function App() {
           });
         }
       }
-    }, [newTeacherAvailabilityData, newSelectedTeacher]);
+    }, [newTeacherAvailabilityData, newSelectedTeacher, teacherRemovedByUser]);
 
     // Handle student search
     const handleStudentSearch = (searchTerm) => {
@@ -5015,8 +5049,12 @@ function App() {
       // Extract teacher UID from the booking data or selected teacher
       let teacher_uid = null;
 
+      // If user explicitly removed teacher, pass empty string (check ref first - it is set synchronously)
+      if (teacherRemovedByUserRef.current || teacherRemovedByUser) {
+        teacher_uid = "";
+      }
       // Use newSelectedTeacher if available (teacher change functionality)
-      if (newSelectedTeacher?.uid) {
+      else if (newSelectedTeacher?.uid) {
         teacher_uid = newSelectedTeacher.uid;
       }
       // Extract from summary if no new teacher selected
@@ -5039,8 +5077,8 @@ function App() {
       const isCalibrationClass = summaryText.toLowerCase().includes("calibration");
       const hasTJLId = summaryText.match(/\bTJL[A-Za-z0-9]+\b/g);
 
-      // Allow editing Calibration classes without teacher_uid if summary doesn't have TJL ID
-      if (!teacher_uid && !(isCalibrationClass && !hasTJLId)) {
+      // Allow editing when user removed teacher (teacher_uid "") or Calibration without TJL ID
+      if (!teacher_uid && !teacherRemovedByUserRef.current && !teacherRemovedByUser && !(isCalibrationClass && !hasTJLId)) {
         alert("Teacher UID not found. Please ensure a teacher is selected.");
         setEditReschedulePopup((prev) => ({ ...prev, isLoading: false }));
         setIsOperationLoading(false);
@@ -5064,10 +5102,11 @@ function App() {
       const offsetMinutes = parseInt(match[2], 10); // 00
 
       // Prepare the API payload according to the curl example
+      // When user removed teacher, pass teacher_uid as "" to update-class API (use ref so it is never stale)
       const apiPayload = {
         event_id: editReschedulePopup.data?.event_id || hiddenEventId || "",
         jl_uid: jl_uid,
-        teacher_uid: teacher_uid || "",
+        teacher_uid: (teacherRemovedByUserRef.current || teacherRemovedByUser) ? "" : (teacher_uid || ""),
         platform_credentials: description || "",
         summary: summary || "",
         schedule: scheduleEntries.map((entry) => {
@@ -5384,6 +5423,11 @@ function App() {
                     <div className="flex items-center gap-2">
                       <strong>Teacher:</strong>{" "}
                       {(() => {
+                        // When user has removed teacher, show blank (ref + state so it updates reliably)
+                        if (teacherRemovedByUserRef.current || teacherRemovedByUser) {
+                          return "—";
+                        }
+
                         // Use newSelectedTeacher (from state or ref) if available, otherwise extract from data
                         const currentNewTeacher =
                           newSelectedTeacherRef.current || newSelectedTeacher;
@@ -5420,6 +5464,27 @@ function App() {
                       >
                         <FaEdit size={10} />
                         Change
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Are you sure you want to remove the teacher?"
+                            )
+                          ) {
+                            teacherRemovedByUserRef.current = true;
+                            setNewSelectedTeacher(null);
+                            newSelectedTeacherRef.current = null;
+                            setTeacherRemovedByUser(true);
+                            setShowTeacherChange(false);
+                            setNewTeacherAvailabilityData({});
+                          }
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-gray-600 transition-colors duration-200"
+                        title="Remove Teacher"
+                      >
+                        <FaTimes size={10} />
+                        Remove Teacher
                       </button>
                     </div>
                   </div>
@@ -8465,6 +8530,14 @@ function App() {
                 <span className="hidden sm:inline">Next</span>
                 <FaChevronRight size={10} />
               </button>
+              <button
+                onClick={goToCurrentWeek}
+                className="flex items-center gap-1 px-1 sm:px-2 py-0.5 sm:py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs transition-all duration-200 font-medium"
+                title="Go to today's week"
+              >
+                <span className="hidden sm:inline">Today</span>
+                <FaCalendarAlt size={10} />
+              </button>
             </div>
           </div>
         </div>
@@ -10026,6 +10099,7 @@ function App() {
                                                             );
 
                                                             // Open Edit/Reschedule popup with processed data
+                                                            editRescheduleTeacherRemovedRef.current = false;
                                                             setEditReschedulePopup(
                                                               {
                                                                 isOpen: true,
@@ -10364,6 +10438,7 @@ function App() {
                                                             );
 
                                                             // Open Edit/Reschedule popup with processed data
+                                                            editRescheduleTeacherRemovedRef.current = false;
                                                             setEditReschedulePopup(
                                                               {
                                                                 isOpen: true,

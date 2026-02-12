@@ -241,6 +241,9 @@ function App() {
     time: null,
   });
 
+  // Teacher Calendar View: event details popup
+  const [teacherCalendarEventDetails, setTeacherCalendarEventDetails] = useState({ isOpen: false, event: null });
+
   // New state for cancel popup
   const [cancelPopup, setCancelPopup] = useState({
     isOpen: false,
@@ -1101,13 +1104,23 @@ function App() {
     loadWeekData();
   }, [currentWeekStart, teachers.length]); // Only week change and teachers loading
 
-  // Fetch booking details for list view when filters change
+  // Fetch booking details for list view and teacher calendar view when filters change
   useEffect(() => {
-    if (currentView === "list" && (selectedTeacher || selectedStudent)) {
-      console.log("🔄 Fetching booking details for list view...");
+    if (
+      (currentView === "list" || currentView === "teacherCalendar") &&
+      (selectedTeacher || selectedStudent)
+    ) {
+      console.log("🔄 Fetching booking details for list/teacher calendar view...");
       fetchListViewBookingDetails().catch((error) => {
         console.error("❌ Failed to fetch booking details:", error);
       });
+      if (currentView === "teacherCalendar" && selectedTeacher?.email) {
+        fetchWeeklyAvailabilityData(currentWeekStart, selectedTeacher?.uid, selectedStudent?.jetlearner_id, selectedTimezone)
+          .then((data) => { if (data) setWeeklyApiData(data); })
+          .catch((err) => console.error("❌ Weekly availability for teacher calendar:", err));
+        const weekDates = getWeekDates(currentWeekStart);
+        fetchTeacherLeaves(selectedTeacher.email, formatDate(weekDates[0]), formatDate(weekDates[6])).catch((err) => console.error("❌ Teacher leaves for teacher calendar:", err));
+      }
     }
   }, [
     currentView,
@@ -7163,6 +7176,124 @@ function App() {
     );
   };
 
+  // Teacher Calendar View: event details popup (date, time, slot, summary, description, class type, etc.)
+  const TeacherCalendarEventDetailsPopup = () => {
+    if (!teacherCalendarEventDetails.isOpen || !teacherCalendarEventDetails.event) return null;
+    const ev = teacherCalendarEventDetails.event;
+    const dateStr = ev.date || (ev.start_time ? ev.start_time.slice(0, 10) : null);
+    const tzLabel = selectedTimezone.replace(/^.*\)\s*/, "").trim() || "UTC";
+    const pad = (n) => String(n).padStart(2, "0");
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+    const formatInIST = (isoStr) => {
+      if (!isoStr) return "—";
+      const d = new Date(new Date(isoStr).getTime() + IST_OFFSET_MS);
+      return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} IST`;
+    };
+    const formatInSelectedTzTimeOnly = (isoStr) => {
+      if (!isoStr) return null;
+      const match = selectedTimezone.match(/GMT([+-])(\d{2}):(\d{2})/);
+      if (!match) return pad(new Date(isoStr).getUTCHours()) + ":" + pad(new Date(isoStr).getUTCMinutes());
+      const sign = match[1] === "+" ? 1 : -1;
+      const offsetMs = sign * (parseInt(match[2], 10) * 60 + parseInt(match[3], 10)) * 60 * 1000;
+      const d = new Date(new Date(isoStr).getTime() + offsetMs);
+      return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    };
+    const startTimeOnly = ev.start_time ? formatInSelectedTzTimeOnly(ev.start_time) : null;
+    const endTimeOnly = ev.end_time ? formatInSelectedTzTimeOnly(ev.end_time) : null;
+    const timeStr = (startTimeOnly && endTimeOnly) ? `${startTimeOnly} - ${endTimeOnly} ${tzLabel}` : (startTimeOnly ? `${startTimeOnly} ${tzLabel}` : (ev.time ? `${ev.time} ${tzLabel}` : "—"));
+    const startStr = ev.start_time ? formatInIST(ev.start_time) : "—";
+    const endStr = ev.end_time ? formatInIST(ev.end_time) : "—";
+    const displayDateFormatted = dateStr ? formatDateDDMMMYYYY(new Date(dateStr + "T12:00:00")) : "—";
+    const classType = ev.class_type ?? ev.classType ?? "—";
+    const teacherId = ev.teacher_id ?? ev.teacherId ?? "—";
+    const vertical = ev.vertical ?? "—";
+    const jetGuide = ev.jet_guide ?? ev.jetGuide ?? "—";
+    const attendees = Array.isArray(ev.attendees) ? ev.attendees : (ev.attendees ? [ev.attendees] : []);
+    const attachments = Array.isArray(ev.attachments) ? ev.attachments : (ev.attachments ? [ev.attachments] : []);
+
+    const DetailRow = ({ label, value, fullWidth }) => (
+      <div className={fullWidth ? "space-y-1" : "flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-3 py-2 border-b border-gray-100 last:border-0"}>
+        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 shrink-0 sm:w-28">{label}</dt>
+        <dd className={`text-sm text-gray-900 break-words ${fullWidth ? "whitespace-pre-wrap" : ""}`}>{value}</dd>
+      </div>
+    );
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setTeacherCalendarEventDetails({ isOpen: false, event: null })}>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 border-b border-indigo-500">
+            <h2 className="text-lg font-bold text-white">Event Details</h2>
+            <button
+              onClick={() => setTeacherCalendarEventDetails({ isOpen: false, event: null })}
+              className="p-2 rounded-full hover:bg-white/20 text-white transition-colors"
+            >
+              <FaTimes size={20} />
+            </button>
+          </div>
+          <div className="p-5 overflow-y-auto max-h-[calc(90vh-65px)] space-y-5">
+            <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
+              <dl className="space-y-0 text-sm">
+                <DetailRow label="Date" value={displayDateFormatted} />
+                <DetailRow label="Time / Slot" value={timeStr} />
+                <DetailRow label="Start" value={startStr} />
+                <DetailRow label="End" value={endStr} />
+              </dl>
+            </section>
+
+            <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Summary</h3>
+              <p className="text-sm text-gray-900 leading-relaxed">{ev.summary || "—"}</p>
+            </section>
+
+            {ev.description && (
+              <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Description</h3>
+                <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">{ev.description}</p>
+              </section>
+            )}
+
+            <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Details</h3>
+              <dl className="space-y-0 text-sm">
+                <DetailRow label="Class type" value={classType} />
+                <DetailRow label="Teacher id" value={teacherId} />
+                <DetailRow label="Vertical" value={vertical} />
+                <DetailRow label="Jet guide" value={jetGuide} />
+              </dl>
+            </section>
+
+            <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Attendees</h3>
+              {attendees.length > 0 ? (
+                <ul className="text-sm text-gray-900 space-y-1 list-disc list-inside break-all">
+                  {attendees.map((email, i) => (
+                    <li key={i}>{typeof email === "string" ? email : String(email)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">—</p>
+              )}
+            </section>
+
+            <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Attachments</h3>
+              {attachments.length > 0 ? (
+                <ul className="text-sm text-gray-900 space-y-1 list-disc list-inside break-all">
+                  {attachments.map((item, i) => (
+                    <li key={i}>{typeof item === "object" && item != null ? JSON.stringify(item) : String(item)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">None</p>
+              )}
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Cancel Popup Component
   const CancelPopup = () => {
     // console.log(
@@ -8403,6 +8534,33 @@ function App() {
                 <FaCalendarWeek size={10} />
                 <span className="hidden sm:inline">Week View</span>
                 <span className="sm:hidden">Week</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedTeacher) setCurrentView("teacherCalendar");
+                  if (currentView === "teacherCalendar" && selectedTeacher) {
+                    fetchListViewBookingDetails().catch((e) =>
+                      console.error(e)
+                    );
+                  }
+                }}
+                disabled={!selectedTeacher}
+                className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 ${
+                  !selectedTeacher
+                    ? "opacity-50 cursor-not-allowed text-gray-400"
+                    : currentView === "teacherCalendar"
+                      ? "bg-blue-500 text-white shadow-sm"
+                      : "text-blue-100 hover:text-white"
+                }`}
+                title={
+                  !selectedTeacher
+                    ? "Select a Teacher to enable Teacher Calendar View"
+                    : "Google Calendar-style view with overlapping events"
+                }
+              >
+                <FaCalendarAlt size={10} />
+                <span className="hidden sm:inline">Teacher Calendar View</span>
+                <span className="sm:hidden">Teacher Cal</span>
               </button>
             </div>
 
@@ -10621,6 +10779,161 @@ function App() {
                 </button>
               </div>
             </div>
+          ) : currentView === "teacherCalendar" && !selectedTeacher ? (
+            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
+              <div className="text-center py-8 text-gray-500">
+                <FaCalendarAlt size={32} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-sm sm:text-base mb-4">Teacher Calendar View requires a Teacher selection</p>
+                <p className="text-xs text-gray-400 mb-4">Please select a Teacher from the filters above to see their calendar.</p>
+                <button onClick={() => setCurrentView("week")} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                  Switch to Week View
+                </button>
+              </div>
+            </div>
+          ) : currentView === "teacherCalendar" && selectedTeacher ? (
+            (() => {
+              const weekDatesForCal = getWeekDates(currentWeekStart);
+              const parsedBookings = listViewBookingDetails?.data ? parseBookingDetails(listViewBookingDetails.data) : [];
+              const weekStartStr = formatDate(weekDatesForCal[0]);
+              const weekEndStr = formatDate(weekDatesForCal[6]);
+              const eventsInWeek = parsedBookings.filter((ev) => {
+                const dateStr = ev.date || (ev.start_time ? ev.start_time.slice(0, 10) : null);
+                return dateStr && dateStr >= weekStartStr && dateStr <= weekEndStr;
+              });
+              const SLOTS_PER_HOUR = 2;
+              const TOTAL_SLOTS = 24 * SLOTS_PER_HOUR;
+              const ROW_HEIGHT_PX = 20;
+              const GRID_HEIGHT_PX = TOTAL_SLOTS * ROW_HEIGHT_PX;
+              const getEventType = (ev) => {
+                const s = (ev.summary || "").toLowerCase();
+                if (/availability|hours/.test(s)) return "availability";
+                if (/\b(cbp|cbt|b&r|b and r)\b/i.test(ev.summary || "")) return "cbp_cbt_br";
+                if (/week off|leave|jloh/.test(s)) return "weekoff_leave_jloh";
+                if (/lesson|class|jetlearn|:\s*\(?jl\d+/i.test(ev.summary || "") || (ev.summary && ev.summary.includes(":"))) return "booked";
+                return "other";
+              };
+              const getEventStyle = (type) => {
+                switch (type) {
+                  case "availability": return "bg-green-100 border-green-400 hover:bg-green-200 text-gray-900";
+                  case "booked": return "bg-blue-100 border-blue-400 hover:bg-blue-200 text-gray-900";
+                  case "cbp_cbt_br": return "bg-red-100 border-red-400 hover:bg-red-200 text-gray-900";
+                  case "weekoff_leave_jloh": return "bg-orange-100 border-orange-400 hover:bg-orange-200 text-gray-900";
+                  default: return "bg-yellow-100 border-yellow-400 hover:bg-yellow-200 text-gray-900";
+                }
+              };
+              const getEventLayout = (ev) => {
+                const start = ev.start_time ? new Date(ev.start_time) : (ev.date && ev.time ? new Date(`${ev.date}T${(ev.time || "00:00").split(" - ")[0].trim()}:00`) : null);
+                const end = ev.end_time ? new Date(ev.end_time) : (start ? new Date(start.getTime() + 60 * 60 * 1000) : null);
+                if (!start) return null;
+                const dateStr = ev.date || start.toISOString().slice(0, 10);
+                const dayIndex = weekDatesForCal.findIndex((d) => formatDate(d) === dateStr);
+                if (dayIndex < 0) return null;
+                const startM = start.getHours() * 60 + start.getMinutes();
+                const endM = end ? end.getHours() * 60 + end.getMinutes() : startM + 60;
+                const topPct = (startM / (24 * 60)) * 100;
+                const heightPct = Math.max(((endM - startM) / (24 * 60)) * 100, 3);
+                return { dayIndex, topPct, heightPct, summary: ev.summary || "Event", time: ev.time };
+              };
+              const eventsWithPos = eventsInWeek.map((ev) => ({ ev, pos: getEventLayout(ev), eventType: getEventType(ev) })).filter((x) => x.pos !== null);
+              const byCell = {};
+              eventsWithPos.forEach(({ ev, pos }) => {
+                const slotIdx = Math.floor((pos.topPct / 100) * TOTAL_SLOTS);
+                const key = `${pos.dayIndex}-${slotIdx}`;
+                if (!byCell[key]) byCell[key] = [];
+                byCell[key].push({ ev, pos, eventType: getEventType(ev) });
+              });
+              const dayColMinWidth = 130;
+              const minTotalWidth = 72 + weekDatesForCal.length * dayColMinWidth;
+              return (
+                <div className="bg-gray-100 rounded-lg shadow-lg overflow-hidden min-h-screen relative">
+                  <div className="p-2 sm:p-3 border-b border-gray-300 bg-gray-100 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h2 className="text-sm sm:text-base font-bold text-gray-800">Teacher Calendar View — {selectedTeacher.full_name || selectedTeacher.uid}</h2>
+                      <span className="text-xs text-gray-500">{formatDisplayDate(weekDatesForCal[0])} – {formatDisplayDate(weekDatesForCal[6])}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] sm:text-xs">
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-green-100 border border-green-400" /> Availability</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-100 border border-blue-400" /> Booked</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-100 border border-red-400" /> CBP/CBT/B&amp;R</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-orange-100 border border-orange-400" /> Week off/Leave/JLOH</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-yellow-100 border border-yellow-400" /> Other</span>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto p-2 bg-gray-100">
+                    <div className="flex border-b border-gray-300 mb-0 rounded-t-lg bg-gray-200" style={{ minWidth: minTotalWidth }}>
+                      <div className="w-14 flex-shrink-0 py-2 text-xs font-semibold text-gray-600" />
+                      {weekDatesForCal.map((date, i) => (
+                        <div key={i} className="flex-1 border-r border-gray-300 last:border-r-0 py-2 text-center text-xs font-semibold text-gray-700" style={{ minWidth: dayColMinWidth }}>
+                          {getDayName(date)} {date.getDate()}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex border border-gray-300 border-t-0 rounded-b-lg bg-gray-100" style={{ height: GRID_HEIGHT_PX, minWidth: minTotalWidth }}>
+                      <div className="w-14 flex-shrink-0 border-r border-gray-300 bg-gray-200 py-0.5 text-xs text-gray-600" style={{ height: GRID_HEIGHT_PX }}>
+                        {Array.from({ length: TOTAL_SLOTS }).map((_, i) => {
+                          const hour = Math.floor(i / SLOTS_PER_HOUR);
+                          const min = (i % SLOTS_PER_HOUR) * 30;
+                          return (
+                            <div key={i} className="text-right pr-1" style={{ height: ROW_HEIGHT_PX }}>{String(hour).padStart(2, "0")}:{String(min).padStart(2, "0")}</div>
+                          );
+                        })}
+                      </div>
+                      {weekDatesForCal.map((date, dayIndex) => {
+                        const isWeekOff = selectedTeacher?.email && isTeacherWeekOff(selectedTeacher.email, date, weeklyApiData);
+                        const isOnLeave = selectedTeacher?.email && isTeacherOnLeave(selectedTeacher.email, date, teacherLeaves);
+                        const showFullDayBlock = isWeekOff || isOnLeave;
+                        const fullDayLabel = [isWeekOff && "Week off", isOnLeave && "Leave"].filter(Boolean).join(" / ");
+                        return (
+                        <div key={dayIndex} className="flex-1 border-r border-gray-200 last:border-r-0 relative bg-gray-100" style={{ height: GRID_HEIGHT_PX, minWidth: dayColMinWidth }}>
+                          {Array.from({ length: TOTAL_SLOTS }).map((_, i) => (
+                            <div key={i} className="border-b border-gray-200" style={{ height: ROW_HEIGHT_PX }} />
+                          ))}
+                          {showFullDayBlock && (
+                            <div
+                              className="absolute left-[2%] w-[96%] top-0 rounded border-2 border-orange-400 bg-orange-100 opacity-90 pointer-events-none flex items-center justify-center text-orange-800 font-semibold text-xs"
+                              style={{ height: "100%", zIndex: 0 }}
+                            >
+                              {fullDayLabel}
+                            </div>
+                          )}
+                          {eventsWithPos.filter((x) => x.pos.dayIndex === dayIndex).map(({ ev, pos, eventType }, idx) => {
+                            const slotIdx = Math.floor((pos.topPct / 100) * TOTAL_SLOTS);
+                            const key = `${pos.dayIndex}-${slotIdx}`;
+                            const group = byCell[key] || [{ ev, pos, eventType }];
+                            const gi = group.findIndex((g) => g.ev === ev);
+                            const n = group.length;
+                            const gap = 2;
+                            const w = (100 - gap * 2) / n;
+                            const left = gap + gi * w;
+                            return (
+                              <div
+                                key={ev.event_id || `${ev.summary}-${idx}`}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setTeacherCalendarEventDetails({ isOpen: true, event: ev })}
+                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTeacherCalendarEventDetails({ isOpen: true, event: ev }); } }}
+                                className={`absolute rounded border shadow-sm overflow-hidden cursor-pointer ${getEventStyle(eventType)}`}
+                                style={{ left: `${left}%`, width: `${w}%`, top: `${pos.topPct}%`, height: `${pos.heightPct}%`, minHeight: "18px", fontSize: "10px", zIndex: 1 }}
+                                title="Click for more details"
+                              >
+                                <div className="p-0.5 truncate font-medium">{(ev.summary || "Event").slice(0, 28)}{(ev.summary || "").length > 28 ? "…" : ""}</div>
+                                {pos.heightPct > 8 && pos.time && <div className="p-0.5 text-gray-600 truncate text-[9px]">{pos.time}</div>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {listViewBookingDetails?.isLoading && (
+                    <div className="absolute inset-0 bg-gray-100/80 flex items-center justify-center z-10">
+                      <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-500 border-t-transparent" />
+                    </div>
+                  )}
+                </div>
+              );
+            })()
           ) : (
             /* Week View Content */
 
@@ -11015,6 +11328,7 @@ function App() {
       </Suspense>
 
       <DetailsPopup />
+      <TeacherCalendarEventDetailsPopup />
       <CancelPopup />
       <BookingDetailsPopup />
       <EditReschedulePopup />

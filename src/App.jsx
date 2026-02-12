@@ -4810,19 +4810,24 @@ function App() {
               Object.keys(result[dateStr]).forEach((timeKey) => {
                 const slotData = result[dateStr][timeKey];
                 if (slotData && slotData.events && Array.isArray(slotData.events)) {
-                  // Check if any event in this slot is an availability event
-                  const hasAvailabilityEvent = slotData.events.some((event) => {
+                  slotData.events.forEach((event) => {
                     const summary = (event.summary || "").toLowerCase();
                     const hasAvailability = summary.includes("availability");
                     const hasHour = summary.includes("hour") || summary.includes("hours");
-                    return hasAvailability && hasHour;
+                    if (!(hasAvailability && hasHour)) return;
+                    const startTimeStr = (() => {
+                      if (event.start_time) {
+                        const isoMatch = event.start_time.match(/T(\d{2}):(\d{2})/);
+                        if (isoMatch) return `${isoMatch[1]}:${isoMatch[2]}`;
+                        const dt = new Date(event.start_time);
+                        return `${String(dt.getUTCHours()).padStart(2, "0")}:${String(dt.getUTCMinutes()).padStart(2, "0")}`;
+                      }
+                      if (event.time) return event.time.split(" - ")[0].trim();
+                      return timeKey;
+                    })();
+                    times.add(startTimeStr);
+                    console.log("🔍 [Availability Fetch] Added time from object format (event start):", startTimeStr, "for date", dateStr);
                   });
-                  
-                  if (hasAvailabilityEvent) {
-                    // Use the time key directly (e.g., "00:00", "01:00")
-                    times.add(timeKey);
-                    console.log("🔍 [Availability Fetch] Added time from object format:", timeKey, "for date", dateStr);
-                  }
                 }
               });
             } else {
@@ -4845,35 +4850,24 @@ function App() {
           
           console.log("🔍 [Availability Fetch] Availability bookings:", availabilityBookings);
 
-          // Extract times from availability bookings
+          // Extract times from availability bookings - prefer actual start_time (e.g. 9:30) over slot key (e.g. 9:00)
           availabilityBookings.forEach((booking) => {
-            // Prefer using the time field from parseBookingDetails (e.g., "16:00")
-            if (booking.time) {
-              const timeStr = booking.time.split(" - ")[0]; // Get start time if range
-              if (timeStr) {
-                times.add(timeStr);
-                console.log("🔍 [Availability Fetch] Added time from booking.time:", timeStr);
-              }
-            } else if (booking.start_time) {
-              // Fallback: Extract time from start_time (ISO format like "2026-01-27T00:00:00+01:00")
-              // Parse the ISO string to extract hour and minute directly from the string
+            let timeStr = null;
+            if (booking.start_time) {
               const isoMatch = booking.start_time.match(/T(\d{2}):(\d{2})/);
               if (isoMatch) {
-                const hours = isoMatch[1];
-                const minutes = isoMatch[2];
-                const timeStr = `${hours}:${minutes}`;
-                times.add(timeStr);
+                timeStr = `${isoMatch[1]}:${isoMatch[2]}`;
                 console.log("🔍 [Availability Fetch] Added time from start_time (regex):", timeStr, "from", booking.start_time);
               } else {
-                // Last resort: use Date object (may have timezone issues)
                 const dateTime = new Date(booking.start_time);
-                const hours = String(dateTime.getHours()).padStart(2, "0");
-                const minutes = String(dateTime.getMinutes()).padStart(2, "0");
-                const timeStr = `${hours}:${minutes}`;
-                times.add(timeStr);
+                timeStr = `${String(dateTime.getUTCHours()).padStart(2, "0")}:${String(dateTime.getUTCMinutes()).padStart(2, "0")}`;
                 console.log("🔍 [Availability Fetch] Added time from start_time (Date):", timeStr, "from", booking.start_time);
               }
+            } else if (booking.time) {
+              timeStr = booking.time.split(" - ")[0].trim();
+              if (timeStr) console.log("🔍 [Availability Fetch] Added time from booking.time:", timeStr);
             }
+            if (timeStr) times.add(timeStr);
           });
           
           // Convert Set to sorted array

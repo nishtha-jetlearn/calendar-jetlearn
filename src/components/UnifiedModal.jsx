@@ -22,14 +22,15 @@ import { useDebounce } from "../hooks/useDebounce";
 const SUBJECTS = [
   { value: "maths", label: "Maths" },
   { value: "coding", label: "Coding" },
-  // { value: "gcse", label: "GCSE" },
-  // { value: "dutch", label: "Dutch" },
+  { value: "gcse", label: "GCSE" },
 ];
 
 const CLASS_TYPES = [
   { value: "1:1", label: "1:1" },
   { value: "1:2", label: "1:2" },
-  { value: "batch", label: "Batch" },
+  { value: "eng_batch", label: "Eng Batch" },
+  { value: "dutch_batch", label: "Dutch Batch" },
+  { value: "skylarks", label: "Skylarks" },
 ];
 
 const CLASS_COUNTS = [
@@ -324,13 +325,16 @@ const UnifiedModalComponent = function UnifiedModal({
             const availabilityDate = new Date(
               parseInt(year),
               parseInt(month) - 1,
-              parseInt(day)
+              parseInt(day),
             );
             availabilityDate.setHours(0, 0, 0, 0);
 
             if (availabilityDate >= yesterday) {
               const yyyy = availabilityDate.getFullYear();
-              const mm = String(availabilityDate.getMonth() + 1).padStart(2, "0");
+              const mm = String(availabilityDate.getMonth() + 1).padStart(
+                2,
+                "0",
+              );
               const dd = String(availabilityDate.getDate()).padStart(2, "0");
               availableDatesSet.add(`${yyyy}-${mm}-${dd}`);
             }
@@ -367,13 +371,16 @@ const UnifiedModalComponent = function UnifiedModal({
             const availabilityDate = new Date(
               parseInt(year),
               parseInt(month) - 1,
-              parseInt(day)
+              parseInt(day),
             );
             availabilityDate.setHours(0, 0, 0, 0);
 
             if (availabilityDate >= yesterday) {
               const yyyy = availabilityDate.getFullYear();
-              const mm = String(availabilityDate.getMonth() + 1).padStart(2, "0");
+              const mm = String(availabilityDate.getMonth() + 1).padStart(
+                2,
+                "0",
+              );
               const dd = String(availabilityDate.getDate()).padStart(2, "0");
               availableDatesSet.add(`${yyyy}-${mm}-${dd}`);
             }
@@ -458,7 +465,7 @@ const UnifiedModalComponent = function UnifiedModal({
       // Process teacher availability data to get available times for the selected date
       if (Array.isArray(teacherAvailability)) {
         const dateAvailability = teacherAvailability.find(
-          (av) => av.date === formattedDate
+          (av) => av.date === formattedDate,
         );
         if (dateAvailability && dateAvailability.time_slots) {
           dateAvailability.time_slots.forEach((slot) => {
@@ -510,7 +517,7 @@ const UnifiedModalComponent = function UnifiedModal({
       for (let hour = 8; hour <= 20; hour++) {
         for (let minute = 0; minute < 60; minute += 30) {
           fallbackSlots.push(
-            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
           );
         }
       }
@@ -585,7 +592,7 @@ const UnifiedModalComponent = function UnifiedModal({
   const availableDates = useMemo(() => {
     console.log(
       "🔄 Regenerating available dates for teacher:",
-      selectedTeacherId
+      selectedTeacherId,
     );
     const dates = generateAvailableDates();
     console.log("📅 Available dates:", dates);
@@ -699,7 +706,7 @@ const UnifiedModalComponent = function UnifiedModal({
     if (!localPart || !domain) return [];
 
     const suggestions = COMMON_EMAIL_DOMAINS.filter((commonDomain) =>
-      commonDomain.startsWith(domain.toLowerCase())
+      commonDomain.startsWith(domain.toLowerCase()),
     );
 
     return suggestions.slice(0, 3); // Limit to 3 suggestions
@@ -737,7 +744,7 @@ const UnifiedModalComponent = function UnifiedModal({
     }
     // Show domain suggestions if user is typing after @
     setShowDomainSuggestions(
-      lowercaseValue.includes("@") && lowercaseValue.split("@")[1]?.length > 0
+      lowercaseValue.includes("@") && lowercaseValue.split("@")[1]?.length > 0,
     );
   };
 
@@ -755,7 +762,7 @@ const UnifiedModalComponent = function UnifiedModal({
     // Check if email already exists in the list
     if (
       attendeesList.some(
-        (item) => item.email.toLowerCase() === email.toLowerCase()
+        (item) => item.email.toLowerCase() === email.toLowerCase(),
       )
     ) {
       setAttendeesError("Email already exists in the list");
@@ -824,7 +831,9 @@ const UnifiedModalComponent = function UnifiedModal({
     scheduleDate.setHours(0, 0, 0, 0);
 
     if (scheduleDate < yesterday) {
-      alert("Cannot schedule for dates before yesterday. Please select yesterday or a future date.");
+      alert(
+        "Cannot schedule for dates before yesterday. Please select yesterday or a future date.",
+      );
       return;
     }
 
@@ -912,7 +921,7 @@ const UnifiedModalComponent = function UnifiedModal({
 
     if (bookingDate < today) {
       alert(
-        "Booking cannot be done for past dates. Only Cancellation or Reschedule is Allowed."
+        "Booking cannot be done for past dates. Only Cancellation or Reschedule is Allowed.",
       );
       return false;
     }
@@ -956,9 +965,18 @@ const UnifiedModalComponent = function UnifiedModal({
         return;
       }
 
-      // Validate batch number for batch class type
-      if (selectedClassType === "batch" && !batchNumber.trim()) {
-        alert("Please enter a batch Name for batch class type.");
+      // Validate batch name / topic when class type is Batch, Eng Batch, Dutch Batch or Skylarks
+      const requiresBatchOrTopic =
+        selectedClassType === "batch" ||
+        selectedClassType === "eng_batch" ||
+        selectedClassType === "dutch_batch" ||
+        selectedClassType === "skylarks";
+      if (requiresBatchOrTopic && !batchNumber.trim()) {
+        alert(
+          selectedClassType === "skylarks"
+            ? "Skylark Topic is required."
+            : "Batch Name is required.",
+        );
         return;
       }
     }
@@ -985,7 +1003,10 @@ const UnifiedModalComponent = function UnifiedModal({
           classType: selectedClassType,
           classCount: selectedClassCount,
           recording: selectedRecording.join(", "),
-          ...(selectedClassType === "batch" && {
+          ...((selectedClassType === "batch" ||
+            selectedClassType === "eng_batch" ||
+            selectedClassType === "dutch_batch" ||
+            selectedClassType === "skylarks") && {
             batchNumber: batchNumber.trim(),
           }),
         }),
@@ -1200,7 +1221,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                 setPdfFileName("");
                                 setPdfBase64("");
                                 document.getElementById(
-                                  "pdf-upload-unified-modal"
+                                  "pdf-upload-unified-modal",
                                 ).value = "";
                               }}
                               className="text-red-500 hover:text-red-700"
@@ -1232,9 +1253,9 @@ const UnifiedModalComponent = function UnifiedModal({
                               attendeesError
                                 ? "border-red-300"
                                 : hasCommonDomain(attendees) &&
-                                  attendees.includes("@")
-                                ? "border-green-300"
-                                : "border-gray-300"
+                                    attendees.includes("@")
+                                  ? "border-green-300"
+                                  : "border-gray-300"
                             }`}
                             style={{
                               borderBottom:
@@ -1278,7 +1299,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                     </span>
                                   </div>
                                 </div>
-                              )
+                              ),
                             )}
                             {getDomainSuggestions(attendees).length === 0 && (
                               <div className="p-2 text-gray-500">
@@ -1379,7 +1400,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                   selectedStudents.length > 1
                                 ) {
                                   alert(
-                                    "Cannot switch to 1:1 class type. Please remove some learners first (maximum 1 allowed for 1:1)."
+                                    "Cannot switch to 1:1 class type. Please remove some learners first (maximum 1 allowed for 1:1).",
                                   );
                                   return;
                                 }
@@ -1389,7 +1410,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                   selectedStudents.length > 2
                                 ) {
                                   alert(
-                                    "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2)."
+                                    "Cannot switch to 1:2 class type. Please remove some learners first (maximum 2 allowed for 1:2).",
                                   );
                                   return;
                                 }
@@ -1431,6 +1452,31 @@ const UnifiedModalComponent = function UnifiedModal({
                             />
                           </div>
 
+                          {/* Batch Name / Skylark Topic - next to Classes; show when class type is Batch, Eng Batch, Dutch Batch or Skylarks */}
+                          {(selectedClassType === "batch" ||
+                            selectedClassType === "eng_batch" ||
+                            selectedClassType === "dutch_batch" ||
+                            selectedClassType === "skylarks") && (
+                            <div>
+                              <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                                {selectedClassType === "skylarks"
+                                  ? "Skylark Topic"
+                                  : "Batch Name"}
+                              </label>
+                              <input
+                                type="text"
+                                value={batchNumber}
+                                onChange={(e) => setBatchNumber(e.target.value)}
+                                placeholder={
+                                  selectedClassType === "skylarks"
+                                    ? "Enter Topic"
+                                    : "Enter Batch Name"
+                                }
+                                className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent"
+                              />
+                            </div>
+                          )}
+
                           <div className="col-span-2">
                             <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
                               Add More Details
@@ -1444,7 +1490,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                   <input
                                     type="checkbox"
                                     checked={selectedRecording.includes(
-                                      option.value
+                                      option.value,
                                     )}
                                     onChange={() =>
                                       handleRecordingOptionChange(option.value)
@@ -1458,22 +1504,6 @@ const UnifiedModalComponent = function UnifiedModal({
                               ))}
                             </div>
                           </div>
-
-                          {/* Batch Number Input - Only show when class type is Batch */}
-                          {selectedClassType === "batch" && (
-                            <div className="col-span-2">
-                              <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
-                                Batch Name
-                              </label>
-                              <input
-                                type="text"
-                                value={batchNumber}
-                                onChange={(e) => setBatchNumber(e.target.value)}
-                                placeholder="Enter Batch Name"
-                                className="w-full p-2 border border-gray-300 rounded text-xs text-black focus:ring-1 focus:ring-green-500 focus:border-transparent"
-                              />
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
@@ -1550,7 +1580,7 @@ const UnifiedModalComponent = function UnifiedModal({
                               {selectedScheduleDate
                                 ? (() => {
                                     const dateObj = new Date(
-                                      selectedScheduleDate
+                                      selectedScheduleDate,
                                     );
                                     const day = dateObj
                                       .getDate()
@@ -1562,7 +1592,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                     const year = dateObj.getFullYear();
                                     const formattedDate = `${day}-${month}-${year}`;
                                     return `${formattedDate} (${getDayName(
-                                      formattedDate
+                                      formattedDate,
                                     )})`;
                                   })()
                                 : "Select date..."}
@@ -1580,7 +1610,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                   onClick={() => {
                                     const currentDate = new Date(calendarDate);
                                     currentDate.setMonth(
-                                      currentDate.getMonth() - 1
+                                      currentDate.getMonth() - 1,
                                     );
                                     setCalendarDate(currentDate);
                                   }}
@@ -1613,7 +1643,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                   onClick={() => {
                                     const currentDate = new Date(calendarDate);
                                     currentDate.setMonth(
-                                      currentDate.getMonth() + 1
+                                      currentDate.getMonth() + 1,
                                     );
                                     setCalendarDate(currentDate);
                                   }}
@@ -1654,7 +1684,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                   const lastDay = new Date(year, month + 1, 0);
                                   const startDate = new Date(firstDay);
                                   startDate.setDate(
-                                    startDate.getDate() - firstDay.getDay()
+                                    startDate.getDate() - firstDay.getDay(),
                                   );
 
                                   const days = [];
@@ -1671,22 +1701,23 @@ const UnifiedModalComponent = function UnifiedModal({
                                       selectedScheduleDate &&
                                       date.toDateString() ===
                                         new Date(
-                                          selectedScheduleDate
+                                          selectedScheduleDate,
                                         ).toDateString();
                                     const isAvailable = availableDates.some(
                                       (availableDate) =>
                                         new Date(
-                                          availableDate
-                                        ).toDateString() === date.toDateString()
+                                          availableDate,
+                                        ).toDateString() ===
+                                        date.toDateString(),
                                     );
 
                                     // Check if date is a locked holiday
                                     const isLocked = isLockedHoliday(date);
 
                                     const dayString = `${date.getFullYear()}-${String(
-                                      date.getMonth() + 1
+                                      date.getMonth() + 1,
                                     ).padStart(2, "0")}-${String(
-                                      date.getDate()
+                                      date.getDate(),
                                     ).padStart(2, "0")}`;
 
                                     days.push(
@@ -1740,7 +1771,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                         `}
                                       >
                                         {date.getDate()}
-                                      </button>
+                                      </button>,
                                     );
                                   }
                                   return days;
@@ -1791,7 +1822,7 @@ const UnifiedModalComponent = function UnifiedModal({
                                 "Type:",
                                 typeof slot,
                                 "Length:",
-                                slot?.length
+                                slot?.length,
                               );
                               return (
                                 <option key={slot} value={slot}>
@@ -1804,8 +1835,8 @@ const UnifiedModalComponent = function UnifiedModal({
                               {listViewBookingDetails
                                 ? "No green dots for selected date in list view"
                                 : selectedTeacherId
-                                ? `No available times for Teacher ${selectedTeacherId} on selected date`
-                                : "No available times for selected date"}
+                                  ? `No available times for Teacher ${selectedTeacherId} on selected date`
+                                  : "No available times for selected date"}
                             </option>
                           )}
                         </select>
@@ -1875,8 +1906,8 @@ const UnifiedModalComponent = function UnifiedModal({
                       {selectedClassType === "1:1"
                         ? "1"
                         : selectedClassType === "1:2"
-                        ? "2"
-                        : "10"}
+                          ? "2"
+                          : "10"}
                     </span>
                   </h3>
 

@@ -71,10 +71,7 @@ import {
 } from "./utils/teacherUtils";
 import { TIME_SLOTS } from "./constants";
 import { safeErrorLog } from "./utils/safeErrorLog";
-import {
-  formatDateTimeToUTC,
-  formatTimezoneForAPI,
-} from "./utils/formatUtils";
+import { formatDateTimeToUTC, formatTimezoneForAPI } from "./utils/formatUtils";
 
 function App() {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
@@ -149,7 +146,7 @@ function App() {
       // Use the safe error logging utility for other errors
       const wasLogged = safeErrorLog(
         "Unhandled Promise Rejection",
-        event.reason
+        event.reason,
       );
 
       // Prevent the error from appearing in console for extension-related errors
@@ -190,14 +187,14 @@ function App() {
     return () => {
       window.removeEventListener(
         "unhandledrejection",
-        handleUnhandledRejection
+        handleUnhandledRejection,
       );
       window.removeEventListener("error", handleError);
     };
   }, []);
 
   const [currentWeekStart, setCurrentWeekStart] = useState(
-    getCurrentWeekStart()
+    getCurrentWeekStart(),
   );
 
   const [schedule, setSchedule] = useState(() => {
@@ -242,7 +239,8 @@ function App() {
   });
 
   // Teacher Calendar View: event details popup
-  const [teacherCalendarEventDetails, setTeacherCalendarEventDetails] = useState({ isOpen: false, event: null });
+  const [teacherCalendarEventDetails, setTeacherCalendarEventDetails] =
+    useState({ isOpen: false, event: null });
 
   // New state for cancel popup
   const [cancelPopup, setCancelPopup] = useState({
@@ -319,7 +317,7 @@ function App() {
 
   // State for storing new teacher's availability data separately (when teacher is changed in edit popup)
   const [newTeacherAvailabilityData, setNewTeacherAvailabilityData] = useState(
-    {}
+    {},
   );
 
   // State for availability saving
@@ -474,7 +472,7 @@ function App() {
   useEffect(() => {
     console.clear();
     console.log(
-      "🔧 Error Filtering: Active (Extension errors will be filtered)"
+      "🔧 Error Filtering: Active (Extension errors will be filtered)",
     );
     console.log("---");
 
@@ -522,7 +520,7 @@ function App() {
       // Check if click is outside the dropdown menu
       const dropdownMenus = document.querySelectorAll("[data-dropdown-menu]");
       const isClickInsideDropdown = Array.from(dropdownMenus).some((menu) =>
-        menu.contains(event.target)
+        menu.contains(event.target),
       );
 
       if (actionMenuOpen !== null && !isClickInsideDropdown) {
@@ -541,7 +539,7 @@ function App() {
     const fetchTimezones = async () => {
       try {
         const response = await fetch(
-          "https://live.jetlearn.com/api/get_timezones/"
+          "https://live.jetlearn.com/api/get_timezones/",
         );
 
         if (!response.ok) {
@@ -560,7 +558,7 @@ function App() {
               (tz) =>
                 tz === "CET" ||
                 tz === "(GMT+02:00) CET" ||
-                (tz.includes("CET") && tz.includes("GMT+"))
+                (tz.includes("CET") && tz.includes("GMT+")),
             );
             if (CETTimezone) {
               setSelectedTimezone(CETTimezone);
@@ -589,7 +587,7 @@ function App() {
         setTeachersError(null);
 
         const response = await fetch(
-          "https://live.jetlearn.com/athena/teachers/"
+          "https://live.jetlearn.com/athena/teachers/",
         );
 
         if (!response.ok) {
@@ -663,7 +661,7 @@ function App() {
 
         const response = await fetch(
           "https://live.jetlearn.com/hs/search-learner/",
-          { signal: ac.signal }
+          { signal: ac.signal },
         );
 
         if (!response.ok) {
@@ -706,8 +704,9 @@ function App() {
       };
       defer(() =>
         fetchStudents(true).catch((e) => {
-          if (e?.name !== "AbortError") console.error("❌ Background learners refresh:", e);
-        })
+          if (e?.name !== "AbortError")
+            console.error("❌ Background learners refresh:", e);
+        }),
       );
     } else {
       const scheduleFetch = () => {
@@ -715,16 +714,19 @@ function App() {
           requestIdleCallback(
             () =>
               fetchStudents(false).catch((e) => {
-                if (e?.name !== "AbortError") console.error("❌ Unhandled error in fetchStudents:", e);
+                if (e?.name !== "AbortError")
+                  console.error("❌ Unhandled error in fetchStudents:", e);
               }),
-            { timeout: 2000 }
+            { timeout: 2000 },
           );
         } else {
-          setTimeout(() =>
-            fetchStudents(false).catch((e) => {
-              if (e?.name !== "AbortError") console.error("❌ Unhandled error in fetchStudents:", e);
-            }),
-            0
+          setTimeout(
+            () =>
+              fetchStudents(false).catch((e) => {
+                if (e?.name !== "AbortError")
+                  console.error("❌ Unhandled error in fetchStudents:", e);
+              }),
+            0,
           );
         }
       };
@@ -742,7 +744,7 @@ function App() {
     return teachers.find(
       (teacher) =>
         teacher.uid === teacherId ||
-        teacher.id.toString() === teacherId.toString()
+        teacher.id.toString() === teacherId.toString(),
     );
   };
 
@@ -751,7 +753,7 @@ function App() {
     weekStartDate,
     teacherUid = null,
     jlid = null,
-    timezone = null
+    timezone = null,
   ) => {
     try {
       console.log("passed teacherUid param:", teacherUid);
@@ -807,7 +809,7 @@ function App() {
         formData.append("teacherid", teacherToUse.uid);
         formData.append("email", teacherToUse.email);
         console.log(
-          "🎯 Teacher filter applied - teacherid and email will appear in Network Tab payload"
+          "🎯 Teacher filter applied - teacherid and email will appear in Network Tab payload",
         );
       }
 
@@ -818,10 +820,10 @@ function App() {
         console.log("✅ JLID ADDED:", studentToUse.jetlearner_id);
         console.log(
           "👤 Student Name:",
-          studentToUse.deal_name || studentToUse.name
+          studentToUse.deal_name || studentToUse.name,
         );
         console.log(
-          "🎯 Student filter applied - jlid will appear in Network Tab payload"
+          "🎯 Student filter applied - jlid will appear in Network Tab payload",
         );
       }
 
@@ -841,7 +843,7 @@ function App() {
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body: formData.toString(),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -901,7 +903,7 @@ function App() {
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body: formData.toString(),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -918,15 +920,24 @@ function App() {
         //    - If end_time hours > 00:00, include that day
         //    - If end_time hours = 00:00, exclude that day (consider one day less)
         let processedLeaves = {};
-        
+
         // Check if we have top-level start_time and end_time (ISO with time: "2026-01-30T00:00:00")
-        const startMatchFull = result.start_time && result.start_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-        const endMatchFull = result.end_time && result.end_time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+        const startMatchFull =
+          result.start_time &&
+          result.start_time.match(
+            /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/,
+          );
+        const endMatchFull =
+          result.end_time &&
+          result.end_time.match(
+            /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/,
+          );
 
         if (startMatchFull && endMatchFull) {
           // Parse ISO datetime format
           const [, startYear, startMonth, startDay] = startMatchFull;
-          const [, endYear, endMonth, endDay, endHour, endMinute] = endMatchFull;
+          const [, endYear, endMonth, endDay, endHour, endMinute] =
+            endMatchFull;
 
           const startDateStr = `${startYear}-${startMonth}-${startDay}`;
           const endDateStr = `${endYear}-${endMonth}-${endDay}`;
@@ -954,11 +965,17 @@ function App() {
           // Use leaves as-is for date-only format ("2026-02-09") or when no start/end
           processedLeaves = { ...result.leaves };
         }
-        
+
         console.log("🍃 Processed leaves (filtered):", processedLeaves);
-        console.log("🍃 Original leaves count:", result.leaves ? Object.keys(result.leaves).length : 0);
-        console.log("🍃 Processed leaves count:", Object.keys(processedLeaves).length);
-        
+        console.log(
+          "🍃 Original leaves count:",
+          result.leaves ? Object.keys(result.leaves).length : 0,
+        );
+        console.log(
+          "🍃 Processed leaves count:",
+          Object.keys(processedLeaves).length,
+        );
+
         setTeacherLeaves({
           isLoading: false,
           success: true,
@@ -989,7 +1006,7 @@ function App() {
     startDate,
     endDate,
     reason,
-    teacherUid = null
+    teacherUid = null,
   ) => {
     try {
       // startDate and endDate are now arrays: ["YYYY-MM-DD", "HH:MM"]
@@ -1016,7 +1033,7 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(requestBody),
-        }
+        },
       );
 
       const result = await response.json();
@@ -1035,7 +1052,7 @@ function App() {
           await fetchTeacherLeaves(
             selectedTeacher.email,
             startDateStr,
-            endDateStr
+            endDateStr,
           );
         }
 
@@ -1054,7 +1071,7 @@ function App() {
         throw new Error(
           `HTTP error! status: ${response.status}, message: ${
             result.message || "Unknown error"
-          }`
+          }`,
         );
       }
     } catch (error) {
@@ -1083,7 +1100,7 @@ function App() {
         currentWeekStart,
         selectedTeacher?.uid,
         selectedStudent?.jetlearner_id,
-        selectedTimezone
+        selectedTimezone,
       );
       if (data) {
         setWeeklyApiData(data);
@@ -1110,16 +1127,33 @@ function App() {
       (currentView === "list" || currentView === "teacherCalendar") &&
       (selectedTeacher || selectedStudent)
     ) {
-      console.log("🔄 Fetching booking details for list/teacher calendar view...");
+      console.log(
+        "🔄 Fetching booking details for list/teacher calendar view...",
+      );
       fetchListViewBookingDetails().catch((error) => {
         console.error("❌ Failed to fetch booking details:", error);
       });
       if (currentView === "teacherCalendar" && selectedTeacher?.email) {
-        fetchWeeklyAvailabilityData(currentWeekStart, selectedTeacher?.uid, selectedStudent?.jetlearner_id, selectedTimezone)
-          .then((data) => { if (data) setWeeklyApiData(data); })
-          .catch((err) => console.error("❌ Weekly availability for teacher calendar:", err));
+        fetchWeeklyAvailabilityData(
+          currentWeekStart,
+          selectedTeacher?.uid,
+          selectedStudent?.jetlearner_id,
+          selectedTimezone,
+        )
+          .then((data) => {
+            if (data) setWeeklyApiData(data);
+          })
+          .catch((err) =>
+            console.error("❌ Weekly availability for teacher calendar:", err),
+          );
         const weekDates = getWeekDates(currentWeekStart);
-        fetchTeacherLeaves(selectedTeacher.email, formatDate(weekDates[0]), formatDate(weekDates[6])).catch((err) => console.error("❌ Teacher leaves for teacher calendar:", err));
+        fetchTeacherLeaves(
+          selectedTeacher.email,
+          formatDate(weekDates[0]),
+          formatDate(weekDates[6]),
+        ).catch((err) =>
+          console.error("❌ Teacher leaves for teacher calendar:", err),
+        );
       }
     }
   }, [
@@ -1139,7 +1173,7 @@ function App() {
       currentWeekStart,
       teacher.uid,
       selectedStudent?.jetlearner_id,
-      selectedTimezone
+      selectedTimezone,
     );
     if (data) {
       setWeeklyApiData(data);
@@ -1292,7 +1326,7 @@ function App() {
           bookingFormData.append("end_date", endDate);
           bookingFormData.append(
             "timezone",
-            formatTimezoneForAPI(selectedTimezone)
+            formatTimezoneForAPI(selectedTimezone),
           );
 
           if (teacherToUse) {
@@ -1312,7 +1346,7 @@ function App() {
                 "Content-Type": "application/x-www-form-urlencoded",
               },
               body: bookingFormData.toString(),
-            }
+            },
           );
 
           if (bookingResponse.ok) {
@@ -1332,7 +1366,7 @@ function App() {
         console.error("❌ Error in fetchFilteredData:", error);
       }
     },
-    [selectedTeacher, selectedStudent, selectedTimezone]
+    [selectedTeacher, selectedStudent, selectedTimezone],
   );
 
   // Initialize date range filter with current week's start and end dates
@@ -1407,7 +1441,7 @@ function App() {
             teacherid: teacherToUse.uid,
             email: teacherToUse.email,
             timezone: formatTimezoneForAPI(selectedTimezone),
-          }
+          },
         );
       } else {
         console.log(
@@ -1418,7 +1452,7 @@ function App() {
             type: "Bookings",
             teacherid: "all",
             time_slot: time,
-          }
+          },
         );
       }
 
@@ -1430,7 +1464,7 @@ function App() {
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body: formData.toString(),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1505,7 +1539,7 @@ function App() {
             teacherid: teacherToUse.uid,
             email: teacherToUse.email,
             timezone: formatTimezoneForAPI(selectedTimezone),
-          }
+          },
         );
       } else {
         // When fetching all teachers, include time_slot parameter
@@ -1520,7 +1554,7 @@ function App() {
             type: "Availability",
             time_slot: time,
             timezone: formatTimezoneForAPI(selectedTimezone),
-          }
+          },
         );
       }
 
@@ -1532,7 +1566,7 @@ function App() {
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body: formData.toString(),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1598,7 +1632,7 @@ function App() {
         formData.append("email", selectedTeacher.email);
         console.log(
           "🚀 Fetching booking details with teacher filter:",
-          selectedTeacher.full_name
+          selectedTeacher.full_name,
         );
       }
 
@@ -1607,13 +1641,13 @@ function App() {
         formData.append("jlid", selectedStudent.jetlearner_id);
         console.log(
           "🚀 Fetching booking details with student filter:",
-          selectedStudent.deal_name
+          selectedStudent.deal_name,
         );
       }
 
       console.log(
         "📤 List View Booking Details API Payload:",
-        Object.fromEntries(formData)
+        Object.fromEntries(formData),
       );
 
       const response = await fetch(
@@ -1624,7 +1658,7 @@ function App() {
             "Content-Type": "application/x-www-form-urlencoded",
           },
           body: formData.toString(),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1762,10 +1796,10 @@ function App() {
         const slot = dateSchedule[time];
         if (slot) {
           const isTeacherAvailable = slot.teachers.some(
-            (t) => t.id === teacherId
+            (t) => t.id === teacherId,
           );
           const studentsForTeacher = slot.students.filter(
-            (s) => s.teacherId === teacherId
+            (s) => s.teacherId === teacherId,
           );
 
           if (isTeacherAvailable) {
@@ -1812,7 +1846,7 @@ function App() {
       // const date = new Date();
       // date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
       const date = new Date(
-        Date.UTC(year, month, day, parseInt(hours), parseInt(minutes), 0)
+        Date.UTC(year, month, day, parseInt(hours), parseInt(minutes), 0),
       );
       return date.toLocaleTimeString("en-US", {
         timeZone: timezone,
@@ -1850,7 +1884,7 @@ function App() {
       // Adjust the date: add browser offset to get UTC, then add target offset
       // This creates a Date object that when displayed in UTC, shows the target timezone time
       const adjustedDate = new Date(
-        dateObj.getTime() + browserOffsetMs + targetOffsetMs
+        dateObj.getTime() + browserOffsetMs + targetOffsetMs,
       );
       return adjustedDate;
     } catch (error) {
@@ -1881,7 +1915,7 @@ function App() {
 
       // Adjust for the original timezone offset (subtract the offset to get UTC)
       const startUTC = new Date(
-        startDate.getTime() - (offsetHours * 60 + offsetMinutes) * 60000
+        startDate.getTime() - (offsetHours * 60 + offsetMinutes) * 60000,
       );
 
       // Convert UTC to IST (IST is UTC+5:30)
@@ -1894,7 +1928,7 @@ function App() {
 
       // Adjust for the original timezone offset
       const endUTC = new Date(
-        endDate.getTime() - (offsetHours * 60 + offsetMinutes) * 60000
+        endDate.getTime() - (offsetHours * 60 + offsetMinutes) * 60000,
       );
 
       // Convert UTC to IST
@@ -1916,7 +1950,7 @@ function App() {
       };
 
       return `${formatDate(startIST)}, ${formatTime(startIST)} - ${formatTime(
-        endIST
+        endIST,
       )}`;
     } catch (error) {
       console.error("Error converting time range to IST:", error);
@@ -1940,7 +1974,7 @@ function App() {
   const handleAddTeacher = (teacherId) => {
     if (!selectedSlot) return;
     const teacher = teachers.find(
-      (t) => t.id.toString() === teacherId.toString()
+      (t) => t.id.toString() === teacherId.toString(),
     );
     if (!teacher) return;
 
@@ -1980,7 +2014,7 @@ function App() {
   const handleBookStudent = async (
     studentName,
     selectedStudents,
-    bookingData
+    bookingData,
   ) => {
     if (!selectedSlot) return;
 
@@ -2019,8 +2053,8 @@ function App() {
           month - 1,
           day,
           hour - offsetHours,
-          minute - offsetMinutes
-        )
+          minute - offsetMinutes,
+        ),
       );
 
       // Convert to UTC string
@@ -2127,7 +2161,7 @@ function App() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify(apiPayload),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -2245,7 +2279,7 @@ function App() {
           currentWeekStart,
           teacher.uid,
           selectedStudent?.jetlearner_id,
-          selectedTimezone
+          selectedTimezone,
         );
         if (data) {
           setWeeklyApiData(data);
@@ -2292,7 +2326,7 @@ function App() {
           body: JSON.stringify({
             jetlearner_id: jetlearnerId,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -2331,7 +2365,7 @@ function App() {
           currentWeekStart,
           selectedTeacher?.uid,
           student.jetlearner_id,
-          selectedTimezone
+          selectedTimezone,
         );
         if (data) {
           setWeeklyApiData(data);
@@ -2363,32 +2397,32 @@ function App() {
       fetchListViewBookingDetails().catch((error) => {
         console.error(
           "❌ Error calling Summary API on timezone change:",
-          error
+          error,
         );
       });
     } else if (currentView === "week") {
       console.log(
-        "🔄 Timezone changed - calling Availability API for Week view..."
+        "🔄 Timezone changed - calling Availability API for Week view...",
       );
       setSelectedTimezone(timezone);
       fetchWeeklyAvailabilityData(
         currentWeekStart,
         selectedTeacher?.uid,
         selectedStudent?.jetlearner_id,
-        timezone
+        timezone,
       )
         .then((data) => {
           if (data) {
             setWeeklyApiData(data);
             console.log(
-              "✅ Availability API called successfully on timezone change"
+              "✅ Availability API called successfully on timezone change",
             );
           }
         })
         .catch((error) => {
           console.error(
             "❌ Error calling Availability API on timezone change:",
-            error
+            error,
           );
         });
     }
@@ -2398,7 +2432,7 @@ function App() {
   const handleScheduleManagementOpen = (
     selectedSchedule = null,
     teacherUid = null,
-    onScheduleUpdate = null
+    onScheduleUpdate = null,
   ) => {
     setScheduleManagementPopup({
       isOpen: true,
@@ -2488,7 +2522,7 @@ function App() {
       .filter(
         (domain) =>
           domain.includes(localPart.toLowerCase()) ||
-          localPart.toLowerCase().includes(domain.split(".")[0])
+          localPart.toLowerCase().includes(domain.split(".")[0]),
       )
       .slice(0, 3);
   };
@@ -2520,7 +2554,7 @@ function App() {
 
     if (
       attendeesList.some(
-        (item) => item.email.toLowerCase() === email.toLowerCase()
+        (item) => item.email.toLowerCase() === email.toLowerCase(),
       )
     ) {
       setAttendeesError("Email already exists in the list");
@@ -2613,8 +2647,8 @@ function App() {
             month - 1,
             day,
             hour - offsetHours,
-            minute - offsetMinutes
-          )
+            minute - offsetMinutes,
+          ),
         );
 
         // Convert to UTC string
@@ -2656,7 +2690,7 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(apiPayload),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -2712,7 +2746,7 @@ function App() {
         currentWeekStart,
         null,
         selectedStudent?.jetlearner_id,
-        selectedTimezone
+        selectedTimezone,
       );
       if (data) {
         setWeeklyApiData(data);
@@ -2743,7 +2777,7 @@ function App() {
         currentWeekStart,
         selectedTeacher?.uid,
         null,
-        selectedTimezone
+        selectedTimezone,
       );
       if (data) {
         setWeeklyApiData(data);
@@ -2773,7 +2807,7 @@ function App() {
       setApiDataLoading(true);
       console.log("🔄 API call to fetch ALL data (no filters)...");
       console.log(
-        "📋 This will fetch complete dataset for all teachers and students"
+        "📋 This will fetch complete dataset for all teachers and students",
       );
 
       try {
@@ -2797,7 +2831,7 @@ function App() {
               "Content-Type": "application/x-www-form-urlencoded",
             },
             body: formData.toString(),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -2878,7 +2912,7 @@ function App() {
     // Check if date is a locked holiday
     if (isLockedHoliday(dateObj)) {
       alert(
-        "This date is locked due to holiday. No actions can be performed on this date."
+        "This date is locked due to holiday. No actions can be performed on this date.",
       );
       return;
     }
@@ -2910,7 +2944,7 @@ function App() {
         // Week view with multiple teachers - fetch all availability for this time slot
         console.log(
           "🚀 Week view: Fetching all availability (multiple teachers detected):",
-          available
+          available,
         );
         await sendAvailabilityToAPI(date, time, null);
       } else if (teacherid) {
@@ -2919,12 +2953,12 @@ function App() {
       } else if (selectedTeacher && selectedTeacher.uid) {
         console.log(
           "🚀 Calling availability API with selected teacher:",
-          selectedTeacher.uid
+          selectedTeacher.uid,
         );
         await sendAvailabilityToAPI(date, time, selectedTeacher.uid);
       } else {
         console.log(
-          "🚀 Calling availability API without specific teacher (all teachers)"
+          "🚀 Calling availability API without specific teacher (all teachers)",
         );
         // Call API without teacher filter to get all availability data
         await sendAvailabilityToAPI(date, time, null);
@@ -2942,7 +2976,7 @@ function App() {
     // Check if date is a locked holiday
     if (isLockedHoliday(dateObj)) {
       alert(
-        "This date is locked due to holiday. No actions can be performed on this date."
+        "This date is locked due to holiday. No actions can be performed on this date.",
       );
       return;
     }
@@ -2975,12 +3009,12 @@ function App() {
       } else if (selectedTeacher && selectedTeacher.uid) {
         console.log(
           "🚀 Calling booking API with selected teacher:",
-          selectedTeacher.uid
+          selectedTeacher.uid,
         );
         await sendBookingToAPI(date, time, selectedTeacher.uid);
       } else {
         console.log(
-          "🚀 Calling booking API without specific teacher (all teachers)"
+          "🚀 Calling booking API without specific teacher (all teachers)",
         );
         // Call API without teacher filter to get all booking data
         await sendBookingToAPI(date, time, null);
@@ -3020,7 +3054,7 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       console.log("✅ Delete Class API Response:", response);
@@ -3066,7 +3100,7 @@ function App() {
     teacherId = null,
     reason = "",
     eventId = null,
-    upcomingEvents = false
+    upcomingEvents = false,
   ) => {
     try {
       // Set loading state
@@ -3100,7 +3134,7 @@ function App() {
         console.log("🎯 Using delete-class API for availability cancellation");
         const deleteResult = await handleDeleteClass(
           eventId,
-          upcomingEvents || false
+          upcomingEvents || false,
         );
 
         if (deleteResult.success) {
@@ -3141,7 +3175,7 @@ function App() {
     bookingData,
     reason = "",
     eventId = null,
-    classCount = 1
+    classCount = 1,
   ) => {
     try {
       // Set loading state
@@ -3193,7 +3227,7 @@ function App() {
             eventId: eventId, // Include event_id in API call
             class_count: classCount, // Include class count parameter
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -3262,7 +3296,7 @@ function App() {
       // Check if date is a locked holiday
       if (isLockedHoliday(dateObj)) {
         alert(
-          "This date is locked due to holiday. No booking can be rescheduled to this date."
+          "This date is locked due to holiday. No booking can be rescheduled to this date.",
         );
         return;
       }
@@ -3301,7 +3335,7 @@ function App() {
     const dateObj = date instanceof Date ? date : new Date(date);
     if (isLockedHoliday(dateObj)) {
       alert(
-        "This date is locked due to holiday. No availability can be added on this date."
+        "This date is locked due to holiday. No availability can be added on this date.",
       );
       return;
     }
@@ -3437,8 +3471,8 @@ function App() {
             month - 1,
             day,
             hour - offsetHours,
-            minute - offsetMinutes
-          )
+            minute - offsetMinutes,
+          ),
         );
 
         // Convert to UTC string
@@ -3460,12 +3494,12 @@ function App() {
       };
 
       console.log(
-        "📤 Sending add-teacher-availability API request for all toasters:"
+        "📤 Sending add-teacher-availability API request for all toasters:",
       );
       console.log("🚀 Payload:", payload);
       console.log("🔄 Repeat count:", globalRepeatOccurrence);
       console.log(
-        "🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/"
+        "🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/",
       );
 
       const response = await fetch(
@@ -3476,7 +3510,7 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -3547,7 +3581,7 @@ function App() {
       console.log("📤 Sending add-teacher-availability API request:");
       console.log("🚀 Payload:", payload);
       console.log(
-        "🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/"
+        "🌐 URL: https://live.jetlearn.com/api/add-teacher-availability/",
       );
 
       const response = await fetch(
@@ -3558,7 +3592,7 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -3658,7 +3692,8 @@ function App() {
     const uniqueData = [];
     const seen = new Set();
     filteredData.forEach((item) => {
-      const key = item.event_id || `${item.summary || ""}_${item.creator || ""}`;
+      const key =
+        item.event_id || `${item.summary || ""}_${item.creator || ""}`;
       if (!seen.has(key)) {
         seen.add(key);
         uniqueData.push(item);
@@ -3669,7 +3704,7 @@ function App() {
     // Apply count limit if specified
     if (maxCount !== null && filteredData.length > maxCount) {
       console.log(
-        `📊 Limiting results from ${filteredData.length} to ${maxCount} to match grid count`
+        `📊 Limiting results from ${filteredData.length} to ${maxCount} to match grid count`,
       );
       filteredData = filteredData.slice(0, maxCount);
     }
@@ -3721,19 +3756,19 @@ function App() {
         extractedAttendees = extractedData.attendees.join(", ");
         console.log(
           "📧 Extracted attendees from array:",
-          extractedData.attendees
+          extractedData.attendees,
         );
       } else {
         extractedAttendees = extractedData.attendees;
         console.log(
           "📧 Extracted attendees from string:",
-          extractedData.attendees
+          extractedData.attendees,
         );
       }
     } else {
       // Try to extract email addresses from summary
       const emailMatches = summary.match(
-        /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g
+        /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
       );
       if (emailMatches) {
         extractedAttendees = emailMatches.join(", ");
@@ -3895,6 +3930,7 @@ function App() {
         attendees: event.attendees || [], // Preserve attendees array from original event
         updated_by: event.updated_by || "", // Add updated_by field
         jet_guide: event.jet_guide || "", // Add jet_guide field
+        hubspot_teacher_manager: event.hubspot_teacher_manager || "", // TP Manager from get_booking_details
         attachments: event.attachments || [], // Preserve attachments from get-bookings-details
       };
     }
@@ -3949,7 +3985,7 @@ function App() {
   const selectedTimezoneLocaltime = formatTimeInTimezone(
     detailsPopup.date,
     detailsPopup.time,
-    selectedTimezone
+    selectedTimezone,
   );
 
   function addHoursToTimeRange(startTime, hoursToAdd) {
@@ -4074,8 +4110,8 @@ function App() {
               page === currentPage
                 ? "bg-blue-600 text-white"
                 : page === "..."
-                ? "bg-transparent text-gray-500 cursor-default"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                  ? "bg-transparent text-gray-500 cursor-default"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
             }`}
           >
             {page}
@@ -4327,10 +4363,11 @@ function App() {
 
     // Form initialization state
     const [isFormInitialized, setIsFormInitialized] = useState(false);
-    
+
     // State for availability hours for selected date
     const [availabilityHours, setAvailabilityHours] = useState([]);
-    const [isLoadingAvailabilityHours, setIsLoadingAvailabilityHours] = useState(false);
+    const [isLoadingAvailabilityHours, setIsLoadingAvailabilityHours] =
+      useState(false);
     const [availabilityHoursError, setAvailabilityHoursError] = useState(null);
 
     // Handle teacher search
@@ -4344,7 +4381,7 @@ function App() {
       const filteredTeachers = teachers.filter(
         (teacher) =>
           teacher.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          teacher.uid.toLowerCase().includes(searchTerm.toLowerCase())
+          teacher.uid.toLowerCase().includes(searchTerm.toLowerCase()),
       );
       setTeacherSearchResults(filteredTeachers.slice(0, 10));
     };
@@ -4374,7 +4411,7 @@ function App() {
             {
               expectedUid: teacher.uid,
               actualRefUid: newSelectedTeacherRef.current?.uid,
-            }
+            },
           );
           newSelectedTeacherRef.current = teacher;
         }
@@ -4415,7 +4452,7 @@ function App() {
                 "Content-Type": "application/x-www-form-urlencoded",
               },
               body: formData.toString(),
-            }
+            },
           );
 
           if (!response.ok) {
@@ -4485,7 +4522,7 @@ function App() {
           } else {
             console.warn(
               "⚠️ Availability data is not an object:",
-              availabilityData
+              availabilityData,
             );
           }
         } catch (error) {
@@ -4516,7 +4553,7 @@ function App() {
     const fetchBackendBookingData = async () => {
       // This function is no longer needed as we use extracted data from the calendar event
       console.log(
-        "ℹ️ Backend data fetching removed - using extracted data only"
+        "ℹ️ Backend data fetching removed - using extracted data only",
       );
       setIsFormInitialized(true);
     };
@@ -4541,7 +4578,7 @@ function App() {
             {
               stateTeacherUid: newSelectedTeacher.uid,
               stateTeacherName: newSelectedTeacher.full_name,
-            }
+            },
           );
           newSelectedTeacherRef.current = newSelectedTeacher;
         }
@@ -4602,26 +4639,33 @@ function App() {
           // Extract date and time directly from start_time string (e.g., "2026-01-27T00:00:00+01:00")
           // Parse directly from the string to avoid timezone conversion
           const startTimeStr = bookingData.start_time;
-          
+
           // Match pattern: YYYY-MM-DDTHH:MM:SS+TZ or YYYY-MM-DDTHH:MM:SS-TZ
-          const match = startTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-          
+          const match = startTimeStr.match(
+            /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/,
+          );
+
           if (match) {
             const [, year, month, day, hour, minute] = match;
             const date = `${year}-${month}-${day}`;
             const time = `${hour}:${minute}`;
-            
-            const formattedSchedule = [{
-              id: Date.now(),
-              date: date,
-              time: time,
-            }];
-            
+
+            const formattedSchedule = [
+              {
+                id: Date.now(),
+                date: date,
+                time: time,
+              },
+            ];
+
             setScheduleEntries(formattedSchedule);
             setSelectedScheduleDate(date);
             setSelectedScheduleTime(time);
           }
-        } else if (bookingData.schedule && Array.isArray(bookingData.schedule)) {
+        } else if (
+          bookingData.schedule &&
+          Array.isArray(bookingData.schedule)
+        ) {
           // Fallback: use schedule array if start_time is not available
           const formattedSchedule = bookingData.schedule.map((entry, index) => {
             const [date, time] = Array.isArray(entry)
@@ -4680,21 +4724,24 @@ function App() {
         // Parse date string directly to avoid timezone issues
         // selectedScheduleDate is in YYYY-MM-DD format from DatePickerCalendar
         let dateStr = selectedScheduleDate;
-        if (typeof selectedScheduleDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(selectedScheduleDate)) {
+        if (
+          typeof selectedScheduleDate === "string" &&
+          /^\d{4}-\d{2}-\d{2}$/.test(selectedScheduleDate)
+        ) {
           dateStr = selectedScheduleDate; // Use directly, already in correct format
         } else {
           // Fallback: parse as Date and format
           const dateObj = new Date(selectedScheduleDate);
           dateStr = formatDate(dateObj);
         }
-        
+
         // Check if date is in the future using local date components
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const [year, month, day] = dateStr.split("-").map(Number);
         const selectedDateLocal = new Date(year, month - 1, day);
         selectedDateLocal.setHours(0, 0, 0, 0);
-        
+
         // Only fetch for future dates
         if (selectedDateLocal <= today) {
           setAvailabilityHours([]);
@@ -4724,38 +4771,49 @@ function App() {
 
         try {
           const formattedTimezone = formatTimezoneForAPI(selectedTimezone);
-          
+
           // Calculate start_date as one day before the selected date
           const [year, month, day] = dateStr.split("-").map(Number);
           const selectedDateObj = new Date(year, month - 1, day);
           const previousDateObj = new Date(selectedDateObj);
           previousDateObj.setDate(previousDateObj.getDate() - 1);
-          
+
           // Format previous date as YYYY-MM-DD using local components
           const prevYear = previousDateObj.getFullYear();
-          const prevMonth = String(previousDateObj.getMonth() + 1).padStart(2, "0");
+          const prevMonth = String(previousDateObj.getMonth() + 1).padStart(
+            2,
+            "0",
+          );
           const prevDay = String(previousDateObj.getDate()).padStart(2, "0");
           const startDateStr = `${prevYear}-${prevMonth}-${prevDay}`;
-          
+
           // Fetch booking details: start_date = one day before, end_date = selected date
           const formData = new URLSearchParams();
           formData.append("start_date", startDateStr);
           formData.append("end_date", dateStr);
           formData.append("timezone", formattedTimezone);
-          
-          console.log("🔍 [Availability Fetch] Date range:", { start_date: startDateStr, end_date: dateStr });
-          
+
+          console.log("🔍 [Availability Fetch] Date range:", {
+            start_date: startDateStr,
+            end_date: dateStr,
+          });
+
           // Find teacher - check multiple sources to ensure we have both uid and email
-          const teacher = currentNewTeacher || 
-                         teachers.find(t => t.uid === teacherUid) || 
-                         selectedTeacher;
-          
+          const teacher =
+            currentNewTeacher ||
+            teachers.find((t) => t.uid === teacherUid) ||
+            selectedTeacher;
+
           // Only add teacherid if we also have email (API requires both together)
           if (teacher && teacher.uid && teacher.email) {
             formData.append("teacherid", teacher.uid);
             formData.append("email", teacher.email);
           } else if (teacherUid) {
-            console.warn("⚠️ Teacher email not found for teacherid:", teacherUid, "- Skipping teacher filter");
+            console.warn(
+              "⚠️ Teacher email not found for teacherid:",
+              teacherUid,
+              "- Skipping teacher filter",
+            );
           }
 
           // Skip fetch if user removed teacher (avoid race where effect already started)
@@ -4769,7 +4827,7 @@ function App() {
                 "Content-Type": "application/x-www-form-urlencoded",
               },
               body: formData.toString(),
-            }
+            },
           );
 
           if (!response.ok) {
@@ -4777,30 +4835,50 @@ function App() {
           }
 
           const result = await response.json();
-          
-          console.log("🔍 [Availability Fetch] API Response for date:", dateStr, result);
-          
+
+          console.log(
+            "🔍 [Availability Fetch] API Response for date:",
+            dateStr,
+            result,
+          );
+
           // Extract times from API response - handle both object format and parsed bookings
           const times = new Set();
-          
+
           // First, check newTeacherAvailabilityData (from get-bookings-availability-summary API)
           // This has availability slots with availability > 0
-          if (newTeacherAvailabilityData && typeof newTeacherAvailabilityData === "object") {
-            if (newTeacherAvailabilityData[dateStr] && typeof newTeacherAvailabilityData[dateStr] === "object") {
-              Object.keys(newTeacherAvailabilityData[dateStr]).forEach((timeKey) => {
-                const slotData = newTeacherAvailabilityData[dateStr][timeKey];
-                // Check if slot has availability > 0 and belongs to the correct teacher
-                if (slotData && (slotData.availability > 0 || slotData.available > 0)) {
-                  const slotTeacherId = slotData.teacherid || slotData.uid;
-                  if (slotTeacherId === teacherUid) {
-                    times.add(timeKey);
-                    console.log("🔍 [Availability Fetch] Added time from newTeacherAvailabilityData:", timeKey, "availability:", slotData.availability || slotData.available);
+          if (
+            newTeacherAvailabilityData &&
+            typeof newTeacherAvailabilityData === "object"
+          ) {
+            if (
+              newTeacherAvailabilityData[dateStr] &&
+              typeof newTeacherAvailabilityData[dateStr] === "object"
+            ) {
+              Object.keys(newTeacherAvailabilityData[dateStr]).forEach(
+                (timeKey) => {
+                  const slotData = newTeacherAvailabilityData[dateStr][timeKey];
+                  // Check if slot has availability > 0 and belongs to the correct teacher
+                  if (
+                    slotData &&
+                    (slotData.availability > 0 || slotData.available > 0)
+                  ) {
+                    const slotTeacherId = slotData.teacherid || slotData.uid;
+                    if (slotTeacherId === teacherUid) {
+                      times.add(timeKey);
+                      console.log(
+                        "🔍 [Availability Fetch] Added time from newTeacherAvailabilityData:",
+                        timeKey,
+                        "availability:",
+                        slotData.availability || slotData.available,
+                      );
+                    }
                   }
-                }
-              });
+                },
+              );
             }
           }
-          
+
           // Also check get-bookings-details response for availability events
           // First, check if result is in object format with date keys
           if (result && typeof result === "object" && !Array.isArray(result)) {
@@ -4809,15 +4887,21 @@ function App() {
               // Iterate through time slots for this date
               Object.keys(result[dateStr]).forEach((timeKey) => {
                 const slotData = result[dateStr][timeKey];
-                if (slotData && slotData.events && Array.isArray(slotData.events)) {
+                if (
+                  slotData &&
+                  slotData.events &&
+                  Array.isArray(slotData.events)
+                ) {
                   slotData.events.forEach((event) => {
                     const summary = (event.summary || "").toLowerCase();
                     const hasAvailability = summary.includes("availability");
-                    const hasHour = summary.includes("hour") || summary.includes("hours");
+                    const hasHour =
+                      summary.includes("hour") || summary.includes("hours");
                     if (!(hasAvailability && hasHour)) return;
                     const startTimeStr = (() => {
                       if (event.start_time) {
-                        const isoMatch = event.start_time.match(/T(\d{2}):(\d{2})/);
+                        const isoMatch =
+                          event.start_time.match(/T(\d{2}):(\d{2})/);
                         if (isoMatch) return `${isoMatch[1]}:${isoMatch[2]}`;
                         const dt = new Date(event.start_time);
                         return `${String(dt.getUTCHours()).padStart(2, "0")}:${String(dt.getUTCMinutes()).padStart(2, "0")}`;
@@ -4826,29 +4910,43 @@ function App() {
                       return timeKey;
                     })();
                     times.add(startTimeStr);
-                    console.log("🔍 [Availability Fetch] Added time from object format (event start):", startTimeStr, "for date", dateStr);
+                    console.log(
+                      "🔍 [Availability Fetch] Added time from object format (event start):",
+                      startTimeStr,
+                      "for date",
+                      dateStr,
+                    );
                   });
                 }
               });
             } else {
               // Date not found in response - log all available dates for debugging
-              console.log("🔍 [Availability Fetch] Date", dateStr, "not found in response. Available dates:", Object.keys(result));
+              console.log(
+                "🔍 [Availability Fetch] Date",
+                dateStr,
+                "not found in response. Available dates:",
+                Object.keys(result),
+              );
             }
           }
-          
+
           // Also parse bookings and check for availability events (fallback/alternative format)
           const bookings = parseBookingDetails(result);
           console.log("🔍 [Availability Fetch] Parsed bookings:", bookings);
-          
+
           // Filter for entries with summary containing both "availability" and "hour"/"hours" keywords
           const availabilityBookings = bookings.filter((booking) => {
             const summary = (booking.summary || "").toLowerCase();
             const hasAvailability = summary.includes("availability");
-            const hasHour = summary.includes("hour") || summary.includes("hours");
+            const hasHour =
+              summary.includes("hour") || summary.includes("hours");
             return hasAvailability && hasHour;
           });
-          
-          console.log("🔍 [Availability Fetch] Availability bookings:", availabilityBookings);
+
+          console.log(
+            "🔍 [Availability Fetch] Availability bookings:",
+            availabilityBookings,
+          );
 
           // Extract times from availability bookings - prefer actual start_time (e.g. 9:30) over slot key (e.g. 9:00)
           availabilityBookings.forEach((booking) => {
@@ -4857,22 +4955,39 @@ function App() {
               const isoMatch = booking.start_time.match(/T(\d{2}):(\d{2})/);
               if (isoMatch) {
                 timeStr = `${isoMatch[1]}:${isoMatch[2]}`;
-                console.log("🔍 [Availability Fetch] Added time from start_time (regex):", timeStr, "from", booking.start_time);
+                console.log(
+                  "🔍 [Availability Fetch] Added time from start_time (regex):",
+                  timeStr,
+                  "from",
+                  booking.start_time,
+                );
               } else {
                 const dateTime = new Date(booking.start_time);
                 timeStr = `${String(dateTime.getUTCHours()).padStart(2, "0")}:${String(dateTime.getUTCMinutes()).padStart(2, "0")}`;
-                console.log("🔍 [Availability Fetch] Added time from start_time (Date):", timeStr, "from", booking.start_time);
+                console.log(
+                  "🔍 [Availability Fetch] Added time from start_time (Date):",
+                  timeStr,
+                  "from",
+                  booking.start_time,
+                );
               }
             } else if (booking.time) {
               timeStr = booking.time.split(" - ")[0].trim();
-              if (timeStr) console.log("🔍 [Availability Fetch] Added time from booking.time:", timeStr);
+              if (timeStr)
+                console.log(
+                  "🔍 [Availability Fetch] Added time from booking.time:",
+                  timeStr,
+                );
             }
             if (timeStr) times.add(timeStr);
           });
-          
+
           // Convert Set to sorted array
           const sortedTimes = Array.from(times).sort();
-          console.log("🔍 [Availability Fetch] Final extracted times:", sortedTimes);
+          console.log(
+            "🔍 [Availability Fetch] Final extracted times:",
+            sortedTimes,
+          );
 
           if (sortedTimes.length === 0) {
             setAvailabilityHoursError("No availability found for this date");
@@ -4883,7 +4998,9 @@ function App() {
           }
         } catch (error) {
           console.error("❌ Error fetching availability hours:", error);
-          setAvailabilityHoursError("Failed to fetch availability for this date");
+          setAvailabilityHoursError(
+            "Failed to fetch availability for this date",
+          );
           setAvailabilityHours([]);
         } finally {
           setIsLoadingAvailabilityHours(false);
@@ -4891,7 +5008,15 @@ function App() {
       };
 
       fetchAvailabilityHoursForDate();
-    }, [selectedScheduleDate, newSelectedTeacher, selectedTeacher, teachers, selectedTimezone, newTeacherAvailabilityData, teacherRemovedByUser]);
+    }, [
+      selectedScheduleDate,
+      newSelectedTeacher,
+      selectedTeacher,
+      teachers,
+      selectedTimezone,
+      newTeacherAvailabilityData,
+      teacherRemovedByUser,
+    ]);
 
     // Additional useEffect to ensure teacher persists when availability data is set
     React.useEffect(() => {
@@ -4908,7 +5033,7 @@ function App() {
           stateTeacher: newSelectedTeacher?.uid,
           stateTeacherName: newSelectedTeacher?.full_name,
           timestamp: new Date().toISOString(),
-        }
+        },
       );
 
       // CRITICAL: Always restore from ref if it exists and doesn't match state
@@ -4939,7 +5064,7 @@ function App() {
             student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             student.jetlearner_id
               ?.toLowerCase()
-              .includes(searchTerm.toLowerCase())
+              .includes(searchTerm.toLowerCase()),
         );
         setStudentSearchResults(filtered.slice(0, 5));
         setShowStudentSearch(true);
@@ -5024,7 +5149,7 @@ function App() {
           } else {
             return entry.id !== entryId;
           }
-        })
+        }),
       );
     };
 
@@ -5080,12 +5205,23 @@ function App() {
       // Check if this is a Calibration class (summary contains "Calibration" keyword)
       // Get summary from form input, state, or existing data
       const summaryInput = document.getElementById("edit_summary");
-      const summaryText = summaryInput?.value || summary || editReschedulePopup.data?.summary || "";
-      const isCalibrationClass = summaryText.toLowerCase().includes("calibration");
+      const summaryText =
+        summaryInput?.value ||
+        summary ||
+        editReschedulePopup.data?.summary ||
+        "";
+      const isCalibrationClass = summaryText
+        .toLowerCase()
+        .includes("calibration");
       const hasTJLId = summaryText.match(/\bTJL[A-Za-z0-9]+\b/g);
 
       // Allow editing when user removed teacher (teacher_uid "") or Calibration without TJL ID
-      if (!teacher_uid && !teacherRemovedByUserRef.current && !teacherRemovedByUser && !(isCalibrationClass && !hasTJLId)) {
+      if (
+        !teacher_uid &&
+        !teacherRemovedByUserRef.current &&
+        !teacherRemovedByUser &&
+        !(isCalibrationClass && !hasTJLId)
+      ) {
         alert("Teacher UID not found. Please ensure a teacher is selected.");
         setEditReschedulePopup((prev) => ({ ...prev, isLoading: false }));
         setIsOperationLoading(false);
@@ -5098,7 +5234,7 @@ function App() {
       const hiddenStudentIds = getHiddenFieldValue("edit_student_ids");
       const hiddenClassType = getHiddenFieldValue("edit_class_type");
       const hiddenRecordingOptions = getHiddenFieldValue(
-        "edit_recording_options"
+        "edit_recording_options",
       );
       const hiddenBookingType = getHiddenFieldValue("edit_booking_type");
       const hiddenCourseInfo = getHiddenFieldValue("edit_course_info");
@@ -5113,7 +5249,10 @@ function App() {
       const apiPayload = {
         event_id: editReschedulePopup.data?.event_id || hiddenEventId || "",
         jl_uid: jl_uid,
-        teacher_uid: (teacherRemovedByUserRef.current || teacherRemovedByUser) ? "" : (teacher_uid || ""),
+        teacher_uid:
+          teacherRemovedByUserRef.current || teacherRemovedByUser
+            ? ""
+            : teacher_uid || "",
         platform_credentials: description || "",
         summary: summary || "",
         schedule: scheduleEntries.map((entry) => {
@@ -5138,8 +5277,8 @@ function App() {
               month - 1,
               day,
               hour - offsetHours,
-              minute - offsetMinutes
-            )
+              minute - offsetMinutes,
+            ),
           );
 
           // Convert to UTC string
@@ -5150,12 +5289,24 @@ function App() {
           const utcMinute = String(localDate.getUTCMinutes()).padStart(2, "0");
 
           console.log("🕐 [Update Booking] Date conversion:", {
-            input: { date, time: startTime, timezone: selectedTimezone, offsetHours, offsetMinutes },
-            output: [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`],
-            localDate: localDate.toISOString()
+            input: {
+              date,
+              time: startTime,
+              timezone: selectedTimezone,
+              offsetHours,
+              offsetMinutes,
+            },
+            output: [
+              `${utcYear}-${utcMonth}-${utcDay}`,
+              `${utcHour}:${utcMinute}`,
+            ],
+            localDate: localDate.toISOString(),
           });
 
-          return [`${utcYear}-${utcMonth}-${utcDay}`, `${utcHour}:${utcMinute}`];
+          return [
+            `${utcYear}-${utcMonth}-${utcDay}`,
+            `${utcHour}:${utcMinute}`,
+          ];
         }),
         class_type: selectedClassType || hiddenClassType || "1:1",
         booking_type: (() => {
@@ -5171,8 +5322,8 @@ function App() {
           selectedRecording.length > 0
             ? selectedRecording
             : hiddenRecordingOptions
-            ? JSON.parse(hiddenRecordingOptions)
-            : [],
+              ? JSON.parse(hiddenRecordingOptions)
+              : [],
         attendees: attendees
           .split(",")
           .filter((email) => email.trim())
@@ -5206,7 +5357,7 @@ function App() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify(apiPayload),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -5355,7 +5506,7 @@ function App() {
                       <input
                         type="hidden"
                         value={JSON.stringify(
-                          selectedStudents.map((s) => s.jetlearner_id)
+                          selectedStudents.map((s) => s.jetlearner_id),
                         )}
                         id="edit_student_ids"
                         name="student_ids"
@@ -5381,7 +5532,7 @@ function App() {
                       <input
                         type="hidden"
                         value={JSON.stringify(
-                          editReschedulePopup.data.course_info || []
+                          editReschedulePopup.data.course_info || [],
                         )}
                         id="edit_course_info"
                         name="course_info"
@@ -5420,7 +5571,7 @@ function App() {
                     {editReschedulePopup.data.course_info &&
                     editReschedulePopup.data.course_info.length > 0
                       ? editReschedulePopup.data.course_info[0].includes(
-                          "Coding"
+                          "Coding",
                         )
                         ? "Coding"
                         : "Maths"
@@ -5431,7 +5582,10 @@ function App() {
                       <strong>Teacher:</strong>{" "}
                       {(() => {
                         // When user has removed teacher, show blank (ref + state so it updates reliably)
-                        if (teacherRemovedByUserRef.current || teacherRemovedByUser) {
+                        if (
+                          teacherRemovedByUserRef.current ||
+                          teacherRemovedByUser
+                        ) {
                           return "—";
                         }
 
@@ -5448,7 +5602,7 @@ function App() {
                         // Extract TJ (Teacher/Job) code from summary
                         const tlMatch =
                           editReschedulePopup.data.summary?.match(
-                            /\bTJ[A-Za-z0-9]+\b/
+                            /\bTJ[A-Za-z0-9]+\b/,
                           );
                         const teacherUid = tlMatch
                           ? tlMatch[0]
@@ -5456,7 +5610,7 @@ function App() {
 
                         if (teacherUid) {
                           const teacher = teachers.find(
-                            (t) => t.uid === teacherUid
+                            (t) => t.uid === teacherUid,
                           );
                           return teacher
                             ? `${teacher.uid} (${teacher.full_name || " "})`
@@ -5476,7 +5630,7 @@ function App() {
                         onClick={() => {
                           if (
                             window.confirm(
-                              "Are you sure you want to remove the teacher?"
+                              "Are you sure you want to remove the teacher?",
                             )
                           ) {
                             teacherRemovedByUserRef.current = true;
@@ -5718,7 +5872,10 @@ function App() {
                               <li key={idx}>
                                 <a
                                   href={
-                                    att.file_url || att.fileUrl || att.url || "#"
+                                    att.file_url ||
+                                    att.fileUrl ||
+                                    att.url ||
+                                    "#"
                                   }
                                   target="_blank"
                                   rel="noopener noreferrer"
@@ -5734,7 +5891,7 @@ function App() {
                                   />
                                 </a>
                               </li>
-                            )
+                            ),
                           )}
                         </ul>
                       </div>
@@ -5826,24 +5983,22 @@ function App() {
                           setSelectedScheduleDate(dateStr);
                           setSelectedScheduleTime("");
                         }}
-                        teacherUid={
-                          (() => {
-                            const currentNewTeacher =
-                              newSelectedTeacherRef.current || newSelectedTeacher;
-                            return (
-                              currentNewTeacher?.uid ||
-                              (() => {
-                                const tlMatch =
-                                  editReschedulePopup.data?.summary?.match(
-                                    /\bTJ[A-Za-z0-9]+\b/
-                                  );
-                                return tlMatch
-                                  ? tlMatch[0]
-                                  : selectedTeacher?.uid;
-                              })()
-                            );
-                          })()
-                        }
+                        teacherUid={(() => {
+                          const currentNewTeacher =
+                            newSelectedTeacherRef.current || newSelectedTeacher;
+                          return (
+                            currentNewTeacher?.uid ||
+                            (() => {
+                              const tlMatch =
+                                editReschedulePopup.data?.summary?.match(
+                                  /\bTJ[A-Za-z0-9]+\b/,
+                                );
+                              return tlMatch
+                                ? tlMatch[0]
+                                : selectedTeacher?.uid;
+                            })()
+                          );
+                        })()}
                         getSlotCounts={getSlotCounts}
                         getNewTeacherSlotCounts={getNewTeacherSlotCounts}
                         currentNewTeacher={
@@ -5881,7 +6036,7 @@ function App() {
                             (() => {
                               const tlMatch =
                                 editReschedulePopup.data?.summary?.match(
-                                  /\bTJ[A-Za-z0-9]+\b/
+                                  /\bTJ[A-Za-z0-9]+\b/,
                                 );
                               return tlMatch
                                 ? tlMatch[0]
@@ -5896,7 +6051,8 @@ function App() {
                             : null;
                           const isPastDate =
                             selectedDate && selectedDate < today;
-                          const isFutureDate = selectedDate && selectedDate > today;
+                          const isFutureDate =
+                            selectedDate && selectedDate > today;
 
                           // Check if selected date is yesterday or today
                           const now = new Date();
@@ -5911,11 +6067,13 @@ function App() {
                           }
                           const isYesterday =
                             selectedDateNormalized &&
-                            selectedDateNormalized.getTime() === yesterday.getTime();
+                            selectedDateNormalized.getTime() ===
+                              yesterday.getTime();
                           const isToday =
                             selectedDateNormalized &&
-                            selectedDateNormalized.getTime() === today.getTime();
-                          
+                            selectedDateNormalized.getTime() ===
+                              today.getTime();
+
                           // Get current time in HH:MM format for filtering
                           // Round up to next 30-minute slot (e.g., 14:35 -> 15:00, 14:15 -> 14:30)
                           const currentHour = now.getHours();
@@ -5940,9 +6098,9 @@ function App() {
                               const hour = Math.floor(i / 2);
                               const minute = (i % 2) * 30;
                               return `${String(hour).padStart(2, "0")}:${String(
-                                minute
+                                minute,
                               ).padStart(2, "0")}`;
-                            }
+                            },
                           );
 
                           // If no date selected, no teacher, or teacher UID is 102: show all time slots (no current-time filter)
@@ -6045,7 +6203,7 @@ function App() {
                                 slotCounts = getNewTeacherSlotCounts(
                                   dateObj,
                                   timeString,
-                                  currentNewTeacher.uid
+                                  currentNewTeacher.uid,
                                 );
 
                                 // Only show slots where availability > bookings (slots remaining)
@@ -6071,13 +6229,13 @@ function App() {
                                 (slotCounts.teacherid === teacherUid ||
                                   slotCounts.uid === teacherUid);
                               return isAvailable;
-                            }
+                            },
                           );
 
                           console.log(
                             "📋 Available slots found:",
                             availableSlots.length,
-                            availableSlots
+                            availableSlots,
                           );
 
                           // Render only available slots
@@ -6095,7 +6253,8 @@ function App() {
                         const selectedDate = selectedScheduleDate
                           ? new Date(selectedScheduleDate)
                           : null;
-                        const isFutureDate = selectedDate && selectedDate > today;
+                        const isFutureDate =
+                          selectedDate && selectedDate > today;
                         const currentNewTeacher =
                           newSelectedTeacherRef.current || newSelectedTeacher;
                         const teacherUid =
@@ -6103,11 +6262,9 @@ function App() {
                           (() => {
                             const tlMatch =
                               editReschedulePopup.data?.summary?.match(
-                                /\bTJ[A-Za-z0-9]+\b/
+                                /\bTJ[A-Za-z0-9]+\b/,
                               );
-                            return tlMatch
-                              ? tlMatch[0]
-                              : selectedTeacher?.uid;
+                            return tlMatch ? tlMatch[0] : selectedTeacher?.uid;
                           })();
 
                         if (isFutureDate && teacherUid) {
@@ -6128,7 +6285,8 @@ function App() {
                           if (availabilityHours.length > 0) {
                             return (
                               <div className="mt-1 text-[10px] text-green-600">
-                                {availabilityHours.length} availability hour(s) found
+                                {availabilityHours.length} availability hour(s)
+                                found
                               </div>
                             );
                           }
@@ -6187,18 +6345,31 @@ function App() {
                         // Format date for display - use the actual selected date string directly
                         // Parse YYYY-MM-DD format to avoid any timezone conversion issues
                         let displayDate, displayDayName;
-                        if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                        if (
+                          typeof date === "string" &&
+                          /^\d{4}-\d{2}-\d{2}$/.test(date)
+                        ) {
                           // Date is in YYYY-MM-DD format - parse directly using local components
-                          const [year, month, day] = date.split("-").map(Number);
+                          const [year, month, day] = date
+                            .split("-")
+                            .map(Number);
                           const formattedDay = day.toString().padStart(2, "0");
-                          const formattedMonth = month.toString().padStart(2, "0");
+                          const formattedMonth = month
+                            .toString()
+                            .padStart(2, "0");
                           displayDate = `${formattedDay}-${formattedMonth}-${year}`;
                           displayDayName = getDayName(date);
                         } else {
                           // Fallback for other formats
-                          const dateObj = date instanceof Date ? date : new Date(date);
-                          const day = dateObj.getDate().toString().padStart(2, "0");
-                          const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+                          const dateObj =
+                            date instanceof Date ? date : new Date(date);
+                          const day = dateObj
+                            .getDate()
+                            .toString()
+                            .padStart(2, "0");
+                          const month = (dateObj.getMonth() + 1)
+                            .toString()
+                            .padStart(2, "0");
                           const year = dateObj.getFullYear();
                           displayDate = `${day}-${month}-${year}`;
                           displayDayName = getDayName(dateObj);
@@ -6211,7 +6382,7 @@ function App() {
                           (() => {
                             const tlMatch =
                               editReschedulePopup.data?.summary?.match(
-                                /\bTJ[A-Za-z0-9]+\b/
+                                /\bTJ[A-Za-z0-9]+\b/,
                               );
                             return tlMatch ? tlMatch[0] : selectedTeacher?.uid;
                           })();
@@ -6238,10 +6409,10 @@ function App() {
                               isPastDate
                                 ? "border-red-300 bg-red-50"
                                 : availabilityStatus === false
-                                ? "border-orange-300 bg-orange-50"
-                                : availabilityStatus === true
-                                ? "border-green-300 bg-green-50"
-                                : "border-gray-200"
+                                  ? "border-orange-300 bg-orange-50"
+                                  : availabilityStatus === true
+                                    ? "border-green-300 bg-green-50"
+                                    : "border-gray-200"
                             }`}
                           >
                             <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -6251,10 +6422,10 @@ function App() {
                                   isPastDate
                                     ? "text-red-600"
                                     : availabilityStatus === false
-                                    ? "text-orange-600"
-                                    : availabilityStatus === true
-                                    ? "text-green-600"
-                                    : "text-gray-600"
+                                      ? "text-orange-600"
+                                      : availabilityStatus === true
+                                        ? "text-green-600"
+                                        : "text-gray-600"
                                 }
                               />
                               <span className="text-xs font-medium text-gray-900 truncate">
@@ -6310,7 +6481,7 @@ function App() {
                               if (
                                 !selectedStudents.find(
                                   (s) =>
-                                    s.jetlearner_id === student.jetlearner_id
+                                    s.jetlearner_id === student.jetlearner_id,
                                 )
                               ) {
                                 setSelectedStudents([
@@ -6360,8 +6531,8 @@ function App() {
                               setSelectedStudents(
                                 selectedStudents.filter(
                                   (s) =>
-                                    s.jetlearner_id !== student.jetlearner_id
-                                )
+                                    s.jetlearner_id !== student.jetlearner_id,
+                                ),
                               )
                             }
                             className="text-red-500 hover:text-red-700 p-1"
@@ -6414,7 +6585,7 @@ function App() {
                           if (validation.needsCorrection) {
                             setAttendeeInput(validation.correctedEmail);
                             alert(
-                              `Email corrected to: ${validation.correctedEmail}`
+                              `Email corrected to: ${validation.correctedEmail}`,
                             );
                             return;
                           }
@@ -6456,7 +6627,7 @@ function App() {
                         if (validation.needsCorrection) {
                           setAttendeeInput(validation.correctedEmail);
                           alert(
-                            `Email corrected to: ${validation.correctedEmail}`
+                            `Email corrected to: ${validation.correctedEmail}`,
                           );
                           return;
                         }
@@ -6569,8 +6740,8 @@ function App() {
                               } else {
                                 setSelectedRecording(
                                   selectedRecording.filter(
-                                    (item) => item !== option
-                                  )
+                                    (item) => item !== option,
+                                  ),
                                 );
                               }
                             }}
@@ -6741,7 +6912,7 @@ function App() {
       ? filterDataByTime(
           availabilityAPI.response,
           detailsPopup.time,
-          null // Don't limit results - show all availability records
+          null, // Don't limit results - show all availability records
         )
       : [];
 
@@ -6749,7 +6920,7 @@ function App() {
       ? filterDataByTime(
           bookingApiResponse.data,
           detailsPopup.time,
-          gridBookedCount
+          gridBookedCount,
         )
       : [];
 
@@ -6759,23 +6930,23 @@ function App() {
         ? getPaginatedData(
             filteredAvailabilityData,
             popupPagination.currentPage,
-            popupPagination.itemsPerPage
+            popupPagination.itemsPerPage,
           )
         : getPaginatedData(
             filteredBookingData,
             popupPagination.currentPage,
-            popupPagination.itemsPerPage
+            popupPagination.itemsPerPage,
           );
 
     const totalPages =
       detailsPopup.type === "availability"
         ? getTotalPages(
             filteredAvailabilityData.length,
-            popupPagination.itemsPerPage
+            popupPagination.itemsPerPage,
           )
         : getTotalPages(
             filteredBookingData.length,
-            popupPagination.itemsPerPage
+            popupPagination.itemsPerPage,
           );
 
     return (
@@ -6909,7 +7080,7 @@ function App() {
                                   {currentData.map((record, index) => {
                                     const extractedData = extractEventFields(
                                       record,
-                                      "availability"
+                                      "availability",
                                     );
                                     return (
                                       <tr
@@ -7072,7 +7243,7 @@ function App() {
                                   {currentData.map((record, index) => {
                                     const extractedData = extractEventFields(
                                       record,
-                                      "booking"
+                                      "booking",
                                     );
                                     return (
                                       <tr
@@ -7172,12 +7343,30 @@ function App() {
 
   // Teacher Calendar View: event details popup (date, time, slot, summary, description, class type, etc.)
   const TeacherCalendarEventDetailsPopup = () => {
-    if (!teacherCalendarEventDetails.isOpen || !teacherCalendarEventDetails.event) return null;
+    if (
+      !teacherCalendarEventDetails.isOpen ||
+      !teacherCalendarEventDetails.event
+    )
+      return null;
     const ev = teacherCalendarEventDetails.event;
-    const dateStr = ev.date || (ev.start_time ? ev.start_time.slice(0, 10) : null);
+    const dateStr =
+      ev.date || (ev.start_time ? ev.start_time.slice(0, 10) : null);
     const tzLabel = selectedTimezone.replace(/^.*\)\s*/, "").trim() || "UTC";
     const pad = (n) => String(n).padStart(2, "0");
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
     const formatInIST = (isoStr) => {
       if (!isoStr) return "—";
@@ -7187,39 +7376,91 @@ function App() {
     const formatInSelectedTzTimeOnly = (isoStr) => {
       if (!isoStr) return null;
       const match = selectedTimezone.match(/GMT([+-])(\d{2}):(\d{2})/);
-      if (!match) return pad(new Date(isoStr).getUTCHours()) + ":" + pad(new Date(isoStr).getUTCMinutes());
+      if (!match)
+        return (
+          pad(new Date(isoStr).getUTCHours()) +
+          ":" +
+          pad(new Date(isoStr).getUTCMinutes())
+        );
       const sign = match[1] === "+" ? 1 : -1;
-      const offsetMs = sign * (parseInt(match[2], 10) * 60 + parseInt(match[3], 10)) * 60 * 1000;
+      const offsetMs =
+        sign *
+        (parseInt(match[2], 10) * 60 + parseInt(match[3], 10)) *
+        60 *
+        1000;
       const d = new Date(new Date(isoStr).getTime() + offsetMs);
       return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
     };
-    const startTimeOnly = ev.start_time ? formatInSelectedTzTimeOnly(ev.start_time) : null;
-    const endTimeOnly = ev.end_time ? formatInSelectedTzTimeOnly(ev.end_time) : null;
-    const timeStr = (startTimeOnly && endTimeOnly) ? `${startTimeOnly} - ${endTimeOnly} ${tzLabel}` : (startTimeOnly ? `${startTimeOnly} ${tzLabel}` : (ev.time ? `${ev.time} ${tzLabel}` : "—"));
+    const startTimeOnly = ev.start_time
+      ? formatInSelectedTzTimeOnly(ev.start_time)
+      : null;
+    const endTimeOnly = ev.end_time
+      ? formatInSelectedTzTimeOnly(ev.end_time)
+      : null;
+    const timeStr =
+      startTimeOnly && endTimeOnly
+        ? `${startTimeOnly} - ${endTimeOnly} ${tzLabel}`
+        : startTimeOnly
+          ? `${startTimeOnly} ${tzLabel}`
+          : ev.time
+            ? `${ev.time} ${tzLabel}`
+            : "—";
     const startStr = ev.start_time ? formatInIST(ev.start_time) : "—";
     const endStr = ev.end_time ? formatInIST(ev.end_time) : "—";
-    const displayDateFormatted = dateStr ? formatDateDDMMMYYYY(new Date(dateStr + "T12:00:00")) : "—";
+    const displayDateFormatted = dateStr
+      ? formatDateDDMMMYYYY(new Date(dateStr + "T12:00:00"))
+      : "—";
     const classType = ev.class_type ?? ev.classType ?? "—";
     const teacherId = ev.teacher_id ?? ev.teacherId ?? "—";
     const vertical = ev.vertical ?? "—";
     const jetGuide = ev.jet_guide ?? ev.jetGuide ?? "—";
-    const attendees = Array.isArray(ev.attendees) ? ev.attendees : (ev.attendees ? [ev.attendees] : []);
-    const attachments = Array.isArray(ev.attachments) ? ev.attachments : (ev.attachments ? [ev.attachments] : []);
+    const attendees = Array.isArray(ev.attendees)
+      ? ev.attendees
+      : ev.attendees
+        ? [ev.attendees]
+        : [];
+    const attachments = Array.isArray(ev.attachments)
+      ? ev.attachments
+      : ev.attachments
+        ? [ev.attachments]
+        : [];
 
     const DetailRow = ({ label, value, fullWidth }) => (
-      <div className={fullWidth ? "space-y-1" : "flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-3 py-2 border-b border-gray-100 last:border-0"}>
-        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 shrink-0 sm:w-28">{label}</dt>
-        <dd className={`text-sm text-gray-900 break-words ${fullWidth ? "whitespace-pre-wrap" : ""}`}>{value}</dd>
+      <div
+        className={
+          fullWidth
+            ? "space-y-1"
+            : "flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-3 py-2 border-b border-gray-100 last:border-0"
+        }
+      >
+        <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 shrink-0 sm:w-28">
+          {label}
+        </dt>
+        <dd
+          className={`text-sm text-gray-900 break-words ${fullWidth ? "whitespace-pre-wrap" : ""}`}
+        >
+          {value}
+        </dd>
       </div>
     );
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setTeacherCalendarEventDetails({ isOpen: false, event: null })}>
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        onClick={() =>
+          setTeacherCalendarEventDetails({ isOpen: false, event: null })
+        }
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 border-b border-indigo-500">
             <h2 className="text-lg font-bold text-white">Event Details</h2>
             <button
-              onClick={() => setTeacherCalendarEventDetails({ isOpen: false, event: null })}
+              onClick={() =>
+                setTeacherCalendarEventDetails({ isOpen: false, event: null })
+              }
               className="p-2 rounded-full hover:bg-white/20 text-white transition-colors"
             >
               <FaTimes size={20} />
@@ -7236,19 +7477,29 @@ function App() {
             </section>
 
             <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Summary</h3>
-              <p className="text-sm text-gray-900 leading-relaxed">{ev.summary || "—"}</p>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                Summary
+              </h3>
+              <p className="text-sm text-gray-900 leading-relaxed">
+                {ev.summary || "—"}
+              </p>
             </section>
 
             {ev.description && (
               <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Description</h3>
-                <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">{ev.description}</p>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                  Description
+                </h3>
+                <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
+                  {ev.description}
+                </p>
               </section>
             )}
 
             <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Details</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                Details
+              </h3>
               <dl className="space-y-0 text-sm">
                 <DetailRow label="Class type" value={classType} />
                 <DetailRow label="Teacher id" value={teacherId} />
@@ -7258,11 +7509,15 @@ function App() {
             </section>
 
             <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Attendees</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                Attendees
+              </h3>
               {attendees.length > 0 ? (
                 <ul className="text-sm text-gray-900 space-y-1 list-disc list-inside break-all">
                   {attendees.map((email, i) => (
-                    <li key={i}>{typeof email === "string" ? email : String(email)}</li>
+                    <li key={i}>
+                      {typeof email === "string" ? email : String(email)}
+                    </li>
                   ))}
                 </ul>
               ) : (
@@ -7271,11 +7526,17 @@ function App() {
             </section>
 
             <section className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-0">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Attachments</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                Attachments
+              </h3>
               {attachments.length > 0 ? (
                 <ul className="text-sm text-gray-900 space-y-1 list-disc list-inside break-all">
                   {attachments.map((item, i) => (
-                    <li key={i}>{typeof item === "object" && item != null ? JSON.stringify(item) : String(item)}</li>
+                    <li key={i}>
+                      {typeof item === "object" && item != null
+                        ? JSON.stringify(item)
+                        : String(item)}
+                    </li>
                   ))}
                 </ul>
               ) : (
@@ -7311,7 +7572,7 @@ function App() {
             cancelPopup.teacherDetails?.uid,
             cancelPopup.reason,
             cancelPopup.data?.event_id || null,
-            cancelPopup.upcomingEvents || false
+            cancelPopup.upcomingEvents || false,
           );
         } else if (cancelPopup.type === "booking") {
           await handleCancelBooking(
@@ -7320,7 +7581,7 @@ function App() {
             cancelPopup.data,
             cancelPopup.reason,
             cancelPopup.data?.event_id || null,
-            cancelPopup.classCount || 1
+            cancelPopup.classCount || 1,
           );
         }
 
@@ -7667,7 +7928,7 @@ function App() {
                                 setPdfFileName("");
                                 window.scheduleManagementPdfBase64 = "";
                                 document.getElementById(
-                                  "pdf-upload-schedule"
+                                  "pdf-upload-schedule",
                                 ).value = "";
                               }}
                               className="text-red-500 hover:text-red-700"
@@ -7735,7 +7996,7 @@ function App() {
                                     </span>
                                   </div>
                                 </div>
-                              )
+                              ),
                             )}
                             {getDomainSuggestions(attendees).length === 0 && (
                               <div className="p-2 text-gray-500">
@@ -7839,16 +8100,16 @@ function App() {
                               minDate.setDate(minDate.getDate() - 1);
                               minDate.setHours(0, 0, 0, 0);
                               dateObj.setHours(0, 0, 0, 0);
-                              
+
                               if (dateObj < minDate) {
                                 alert(
-                                  "Please select a date from yesterday onwards. Dates before yesterday are not allowed."
+                                  "Please select a date from yesterday onwards. Dates before yesterday are not allowed.",
                                 );
                                 return;
                               }
                               if (isLockedHoliday(dateObj)) {
                                 alert(
-                                  "This date is locked due to holiday. Please select another date."
+                                  "This date is locked due to holiday. Please select another date.",
                                 );
                                 return;
                               }
@@ -7895,9 +8156,9 @@ function App() {
                                 const minute = (i % 2) * 30;
                                 return `${String(hour).padStart(
                                   2,
-                                  "0"
+                                  "0",
                                 )}:${String(minute).padStart(2, "0")}`;
-                              }
+                              },
                             );
 
                             // Check if date is yesterday or in the future
@@ -7913,9 +8174,10 @@ function App() {
                             }
                             const isYesterday =
                               selectedDateNormalized &&
-                              selectedDateNormalized.getTime() === yesterday.getTime();
+                              selectedDateNormalized.getTime() ===
+                                yesterday.getTime();
                             const isFutureDate = dateObj > today;
-                            
+
                             // If no date selected or no teacher, show all slots enabled
                             if (
                               !selectedScheduleDate ||
@@ -7937,7 +8199,9 @@ function App() {
 
                             // Check if there's any availability data for this date
                             const dateStr = formatDate(dateObj);
-                            const hasAvailabilityData = weeklyApiData[dateStr] && Object.keys(weeklyApiData[dateStr]).length > 0;
+                            const hasAvailabilityData =
+                              weeklyApiData[dateStr] &&
+                              Object.keys(weeklyApiData[dateStr]).length > 0;
 
                             // Filter to only show available slots
                             // When teacher UID exists, only show slots available for that teacher
@@ -7948,21 +8212,21 @@ function App() {
                                 if (isPastDate) {
                                   return true;
                                 }
-                                
+
                                 const slotCounts = getSlotCounts(
                                   dateObj,
-                                  timeString
+                                  timeString,
                                 );
                                 const teacherUid =
                                   scheduleManagementPopup.teacherUid;
-                                
+
                                 // Filter by availability - only show slots where availability > bookings
                                 return (
                                   slotCounts.available > slotCounts.booked &&
                                   (slotCounts.teacherid === teacherUid ||
                                     slotCounts.uid === teacherUid)
                                 );
-                              }
+                              },
                             );
 
                             // Render only available slots
@@ -8039,10 +8303,10 @@ function App() {
                               isPastDate
                                 ? "border-red-300 bg-red-50"
                                 : availabilityStatus === false
-                                ? "border-orange-300 bg-orange-50"
-                                : availabilityStatus === true
-                                ? "border-green-300 bg-green-50"
-                                : "border-blue-200"
+                                  ? "border-orange-300 bg-orange-50"
+                                  : availabilityStatus === true
+                                    ? "border-green-300 bg-green-50"
+                                    : "border-blue-200"
                             }`}
                           >
                             <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -8052,10 +8316,10 @@ function App() {
                                   isPastDate
                                     ? "text-red-600"
                                     : availabilityStatus === false
-                                    ? "text-orange-600"
-                                    : availabilityStatus === true
-                                    ? "text-green-600"
-                                    : "text-blue-600"
+                                      ? "text-orange-600"
+                                      : availabilityStatus === true
+                                        ? "text-green-600"
+                                        : "text-blue-600"
                                 }
                               />
                               <span className="text-xs font-medium text-gray-900 truncate">
@@ -8153,7 +8417,7 @@ function App() {
 
   const totalCalendarPages = getTotalPages(
     TIME_SLOTS.length,
-    calendarPagination.itemsPerPage
+    calendarPagination.itemsPerPage,
   );
 
   // Handle calendar page change
@@ -8453,8 +8717,8 @@ function App() {
                   !selectedTeacher && !selectedStudent
                     ? "opacity-50 cursor-not-allowed text-gray-400"
                     : currentView === "list"
-                    ? "bg-blue-500 text-white shadow-sm"
-                    : "text-blue-100 hover:text-white"
+                      ? "bg-blue-500 text-white shadow-sm"
+                      : "text-blue-100 hover:text-white"
                 }`}
                 title={
                   !selectedTeacher && !selectedStudent
@@ -8477,20 +8741,20 @@ function App() {
                     currentWeekStart,
                     selectedTeacher?.uid,
                     selectedStudent?.jetlearner_id,
-                    selectedTimezone
+                    selectedTimezone,
                   )
                     .then(async (data) => {
                       if (data) {
                         setWeeklyApiData(data);
                         console.log(
-                          "✅ Availability summary API called successfully"
+                          "✅ Availability summary API called successfully",
                         );
                       }
 
                       // Also fetch teacher leaves if teacher is selected
                       if (selectedTeacher?.email) {
                         console.log(
-                          "🍃 Fetching teacher leaves for week view switch..."
+                          "🍃 Fetching teacher leaves for week view switch...",
                         );
                         const weekDates = getWeekDates(currentWeekStart);
                         const startDate = formatDate(weekDates[0]);
@@ -8498,14 +8762,14 @@ function App() {
                         await fetchTeacherLeaves(
                           selectedTeacher.email,
                           startDate,
-                          endDate
+                          endDate,
                         );
                       }
                     })
                     .catch((error) => {
                       console.error(
                         "❌ Error calling availability summary API:",
-                        error
+                        error,
                       );
                     });
 
@@ -8514,7 +8778,7 @@ function App() {
                     fetchListViewBookingDetails().catch((error) => {
                       console.error(
                         "❌ Error calling booking details API:",
-                        error
+                        error,
                       );
                     });
                   }
@@ -8534,7 +8798,7 @@ function App() {
                   if (selectedTeacher) setCurrentView("teacherCalendar");
                   if (currentView === "teacherCalendar" && selectedTeacher) {
                     fetchListViewBookingDetails().catch((e) =>
-                      console.error(e)
+                      console.error(e),
                     );
                   }
                 }}
@@ -8574,7 +8838,7 @@ function App() {
                         const dateObj = new Date(newStartDate);
                         if (isLockedHoliday(dateObj)) {
                           alert(
-                            "This date is locked due to holiday. Please select another date."
+                            "This date is locked due to holiday. Please select another date.",
                           );
                           return;
                         }
@@ -8597,7 +8861,7 @@ function App() {
                         const dateObj = new Date(newEndDate);
                         if (isLockedHoliday(dateObj)) {
                           alert(
-                            "This date is locked due to holiday. Please select another date."
+                            "This date is locked due to holiday. Please select another date.",
                           );
                           return;
                         }
@@ -8653,23 +8917,23 @@ function App() {
                   <span className="hidden sm:inline">
                     {dateRangeFilter.isActive && filteredWeekDates.length > 0
                       ? `${formatDisplayDate(
-                          filteredWeekDates[0]
+                          filteredWeekDates[0],
                         )} - ${formatDisplayDate(
-                          filteredWeekDates[filteredWeekDates.length - 1]
+                          filteredWeekDates[filteredWeekDates.length - 1],
                         )}`
                       : `${formatDisplayDate(
-                          weekDates[0]
+                          weekDates[0],
                         )} - ${formatDisplayDate(weekDates[6])}`}
                   </span>
                   <span className="sm:hidden">
                     {dateRangeFilter.isActive && filteredWeekDates.length > 0
                       ? `${formatShortDate(
-                          filteredWeekDates[0]
+                          filteredWeekDates[0],
                         )} - ${formatShortDate(
-                          filteredWeekDates[filteredWeekDates.length - 1]
+                          filteredWeekDates[filteredWeekDates.length - 1],
                         )}`
                       : `${formatShortDate(weekDates[0])} - ${formatShortDate(
-                          weekDates[6]
+                          weekDates[6],
                         )}`}
                   </span>
                 </span>
@@ -8825,7 +9089,7 @@ function App() {
                           <div className="text-blue-600 font-semibold text-sm">
                             {selectedStudent.current_subscription_start_date
                               ? new Date(
-                                  selectedStudent.current_subscription_start_date
+                                  selectedStudent.current_subscription_start_date,
                                 )
                                   .toLocaleDateString("en-GB", {
                                     day: "2-digit",
@@ -8862,7 +9126,7 @@ function App() {
                           <div className="text-orange-600 font-semibold text-sm">
                             {selectedStudent.current_subscription_end_date
                               ? new Date(
-                                  selectedStudent.current_subscription_end_date
+                                  selectedStudent.current_subscription_end_date,
                                 )
                                   .toLocaleDateString("en-GB", {
                                     day: "2-digit",
@@ -8985,7 +9249,7 @@ function App() {
                                     </div>
                                     <div className="text-blue-600 font-semibold text-sm">
                                       {new Date(
-                                        learnerCalendarStats.min_start_time
+                                        learnerCalendarStats.min_start_time,
                                       ).toLocaleDateString("en-GB", {
                                         day: "2-digit",
                                         month: "short",
@@ -9020,7 +9284,7 @@ function App() {
                                     </div>
                                     <div className="text-orange-600 font-semibold text-sm">
                                       {new Date(
-                                        learnerCalendarStats.max_start_time
+                                        learnerCalendarStats.max_start_time,
                                       ).toLocaleDateString("en-GB", {
                                         day: "2-digit",
                                         month: "short",
@@ -9169,7 +9433,7 @@ function App() {
                             <div className="text-xs font-bold text-blue-600">
                               {(() => {
                                 const parsedBookings = parseBookingDetails(
-                                  listViewBookingDetails.data
+                                  listViewBookingDetails.data,
                                 );
                                 // Count availability and jetlearn bookings
                                 const availabilityCount = parsedBookings.filter(
@@ -9177,7 +9441,7 @@ function App() {
                                     booking.summary &&
                                     booking.summary
                                       .toLowerCase()
-                                      .includes("availability hour")
+                                      .includes("availability hour"),
                                 ).length;
 
                                 const bookingCount = parsedBookings.filter(
@@ -9185,7 +9449,7 @@ function App() {
                                     booking.summary &&
                                     booking.summary
                                       .toLowerCase()
-                                      .includes("jetlearn")
+                                      .includes("jetlearn"),
                                 ).length;
                                 return ` (Availability ${availabilityCount}, Bookinhgs ${bookingCount})`;
                               })()}
@@ -9215,7 +9479,7 @@ function App() {
                                 Summary
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Teacher Name
+                                JG/TP/Teacher
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
@@ -9225,7 +9489,7 @@ function App() {
                           <tbody className="bg-white divide-y divide-gray-200">
                             {(() => {
                               const parsedBookings = parseBookingDetails(
-                                listViewBookingDetails.data
+                                listViewBookingDetails.data,
                               );
 
                               if (parsedBookings.length === 0) {
@@ -9252,13 +9516,13 @@ function App() {
                               const paginatedBookings = getPaginatedData(
                                 parsedBookings,
                                 pagination.currentPage,
-                                pagination.itemsPerPage
+                                pagination.itemsPerPage,
                               );
 
                               return paginatedBookings.map((booking, index) => {
                                 const extractedData = extractEventFields(
                                   booking,
-                                  "booking"
+                                  "booking",
                                 );
 
                                 // Extract date directly from start_time string before timezone conversion
@@ -9269,7 +9533,7 @@ function App() {
                                 // Try extractedData.start_time first
                                 if (extractedData.start_time) {
                                   const dateStr = String(
-                                    extractedData.start_time
+                                    extractedData.start_time,
                                   );
                                   // Extract YYYY-MM-DD from ISO datetime string (e.g., "2025-12-24T20:00:00+01:00")
                                   const dateMatch =
@@ -9326,7 +9590,7 @@ function App() {
                                 const dateInTimezone =
                                   convertDateTimeToTimezone(
                                     extractedData.start_time,
-                                    selectedTimezone
+                                    selectedTimezone,
                                   );
 
                                 const bookingDate =
@@ -9339,21 +9603,21 @@ function App() {
                                   try {
                                     console.log(
                                       "dateTimeString in formatTimeFromAPI",
-                                      dateTimeString
+                                      dateTimeString,
                                     );
                                     const formattedTime = dateTimeString.slice(
                                       11,
-                                      16
+                                      16,
                                     ); // "04:00"
                                     console.log(
                                       "formattedTime in formatTimeFromAPI",
-                                      formattedTime
+                                      formattedTime,
                                     );
                                     return formattedTime;
                                   } catch (error) {
                                     console.error(
                                       "Error formatting time:",
-                                      error
+                                      error,
                                     );
                                     return "N/A";
                                   }
@@ -9363,10 +9627,10 @@ function App() {
                                 let timeRange = "N/A";
                                 // Priority 2: Calculate time range from start_time and end_time
                                 const startTime = formatTimeFromAPI(
-                                  extractedData.start_time
+                                  extractedData.start_time,
                                 );
                                 const endTime = formatTimeFromAPI(
-                                  extractedData.end_time
+                                  extractedData.end_time,
                                 );
                                 timeRange = `${startTime} - ${endTime}`;
 
@@ -9374,14 +9638,14 @@ function App() {
                                 const teacherEmail = getTeacherEmailFromEvent(
                                   extractedData,
                                   selectedTeacher,
-                                  teachers
+                                  teachers,
                                 );
                                 const teacherOnLeave =
                                   teacherEmail &&
                                   isTeacherOnLeave(
                                     teacherEmail,
                                     bookingDate,
-                                    teacherLeaves
+                                    teacherLeaves,
                                   );
 
                                 // Debug logging (can be removed in production)
@@ -9403,8 +9667,8 @@ function App() {
                                       hasMigrationOrFutureSlot
                                         ? "bg-blue-100"
                                         : teacherOnLeave
-                                        ? "bg-orange-50"
-                                        : ""
+                                          ? "bg-orange-50"
+                                          : ""
                                     }`}
                                   >
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -9425,62 +9689,62 @@ function App() {
                                             isLockedHoliday(bookingDateForCheck)
                                               ? "bg-gray-700"
                                               : extractedData.summary &&
-                                                (extractedData.summary
-                                                  .toLowerCase()
-                                                  .includes("availability") ||
-                                                  extractedData.summary
+                                                  (extractedData.summary
                                                     .toLowerCase()
-                                                    .includes("hours"))
-                                              ? "bg-green-500"
-                                              : extractedData.summary &&
-                                                (extractedData.summary
-                                                  .toLowerCase()
-                                                  .includes("leave") ||
-                                                  extractedData.summary
-                                                    .toLowerCase()
-                                                    .includes("training") ||
-                                                  extractedData.summary
-                                                    .toLowerCase()
-                                                    .includes("week off") ||
-                                                  extractedData.summary
-                                                    .toLowerCase()
-                                                    .includes("jloh") ||
-                                                  extractedData.summary
-                                                    .toLowerCase()
-                                                    .includes(
-                                                      "non available hour"
-                                                    ) ||
-                                                  extractedData.summary
-                                                    .toLowerCase()
-                                                    .includes("off"))
-                                              ? "bg-yellow-500"
-                                              : extractedData.summary &&
-                                                (extractedData.summary.includes(
-                                                  "B&R"
-                                                ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBT/PL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBT/UL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBP/PL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBP/UL"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "CBO"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "NO SHOW - LR"
-                                                  ) ||
-                                                  extractedData.summary.includes(
-                                                    "NO SHOW - TR"
-                                                  ))
-                                              ? "bg-black"
-                                              : "bg-red-500"
+                                                    .includes("availability") ||
+                                                    extractedData.summary
+                                                      .toLowerCase()
+                                                      .includes("hours"))
+                                                ? "bg-green-500"
+                                                : extractedData.summary &&
+                                                    (extractedData.summary
+                                                      .toLowerCase()
+                                                      .includes("leave") ||
+                                                      extractedData.summary
+                                                        .toLowerCase()
+                                                        .includes("training") ||
+                                                      extractedData.summary
+                                                        .toLowerCase()
+                                                        .includes("week off") ||
+                                                      extractedData.summary
+                                                        .toLowerCase()
+                                                        .includes("jloh") ||
+                                                      extractedData.summary
+                                                        .toLowerCase()
+                                                        .includes(
+                                                          "non available hour",
+                                                        ) ||
+                                                      extractedData.summary
+                                                        .toLowerCase()
+                                                        .includes("off"))
+                                                  ? "bg-yellow-500"
+                                                  : extractedData.summary &&
+                                                      (extractedData.summary.includes(
+                                                        "B&R",
+                                                      ) ||
+                                                        extractedData.summary.includes(
+                                                          "CBT/PL",
+                                                        ) ||
+                                                        extractedData.summary.includes(
+                                                          "CBT/UL",
+                                                        ) ||
+                                                        extractedData.summary.includes(
+                                                          "CBP/PL",
+                                                        ) ||
+                                                        extractedData.summary.includes(
+                                                          "CBP/UL",
+                                                        ) ||
+                                                        extractedData.summary.includes(
+                                                          "CBO",
+                                                        ) ||
+                                                        extractedData.summary.includes(
+                                                          "NO SHOW - LR",
+                                                        ) ||
+                                                        extractedData.summary.includes(
+                                                          "NO SHOW - TR",
+                                                        ))
+                                                    ? "bg-black"
+                                                    : "bg-red-500"
                                           }`}
                                         ></div>
                                         <div className="flex-1">
@@ -9516,7 +9780,7 @@ function App() {
                                             convertTimeRangeToIST(
                                               timeRange,
                                               bookingDate,
-                                              selectedTimezone
+                                              selectedTimezone,
                                             )
                                           ) : (
                                             <span className="text-red-500">
@@ -9538,10 +9802,10 @@ function App() {
                                         <div className="text-sm text-gray-900 break-words">
                                           {extractedData.summary || "N/A"}
                                           {(extractedData.summary?.includes(
-                                            "Reserved"
+                                            "Reserved",
                                           ) ||
                                             extractedData.summary?.includes(
-                                              "Future"
+                                              "Future",
                                             )) &&
                                             extractedData.updated_by && (
                                               <div className="text-xs text-gray-600 mt-1">
@@ -9558,45 +9822,47 @@ function App() {
                                           // Extract TJ (Teacher/Job) code from summary
                                           const tlMatch =
                                             extractedData.summary?.match(
-                                              /\bTJ[A-Za-z0-9]+\b/
+                                              /\bTJ[A-Za-z0-9]+\b/,
                                             );
                                           console.log(
                                             "🔍 Teacher UID:",
-                                            tlMatch
+                                            tlMatch,
                                           );
                                           if (tlMatch) {
                                             const teacherUid = tlMatch[0];
 
                                             // Find teacher in teachers array
                                             const teacher = teachers.find(
-                                              (t) => t.uid === teacherUid
+                                              (t) => t.uid === teacherUid,
                                             );
                                             if (teacher) {
                                               return (
                                                 console.log(
                                                   "🔍 Teacher:",
-                                                  teacher
+                                                  teacher,
                                                 ),
                                                 (
                                                   <div>
-                                                    <div
-                                                      className={`text-xs text-gray-500 ${
-                                                        extractedData.jet_guide
-                                                          ? "font-bold"
-                                                          : ""
-                                                      }`}
-                                                    >
-                                                      {extractedData.jet_guide
-                                                        ? `Jet Guide -> ${extractedData.jet_guide}`
-                                                        : teacher.full_name ||
-                                                          selectedTeacher?.full_name}
-                                                    </div>
                                                     {extractedData.jet_guide && (
-                                                      <div className="text-xs text-gray-500 mt-1">
-                                                        {teacher.full_name ||
-                                                          selectedTeacher?.full_name}
+                                                      <div className="text-xs text-gray-500 font-bold">
+                                                        Jet Guide {"->"}{" "}
+                                                        {
+                                                          extractedData.jet_guide
+                                                        }
                                                       </div>
                                                     )}
+                                                    {extractedData.hubspot_teacher_manager && (
+                                                      <div className="text-xs text-gray-500 font-bold mt-1">
+                                                        TP Manager {"->"}{" "}
+                                                        {
+                                                          extractedData.hubspot_teacher_manager
+                                                        }
+                                                      </div>
+                                                    )}
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                      {teacher.full_name ||
+                                                        selectedTeacher?.full_name}
+                                                    </div>
                                                     <div className="text-xs text-gray-500">
                                                       {teacher.email ||
                                                         selectedTeacher?.email}
@@ -9613,7 +9879,15 @@ function App() {
                                                     {extractedData.jet_guide}
                                                   </div>
                                                 )}
-                                                <span className="text-gray-500">
+                                                {extractedData.hubspot_teacher_manager && (
+                                                  <div className="text-xs text-gray-500 font-bold mt-1">
+                                                    TP Manager {"->"}{" "}
+                                                    {
+                                                      extractedData.hubspot_teacher_manager
+                                                    }
+                                                  </div>
+                                                )}
+                                                <span className="text-xs text-gray-500 mt-1 block">
                                                   {teacherUid}
                                                 </span>
                                               </div>
@@ -9622,22 +9896,23 @@ function App() {
                                           return (
                                             <span className="text-gray-400">
                                               <div>
-                                                <div
-                                                  className={`text-xs text-gray-500 ${
-                                                    extractedData.jet_guide
-                                                      ? "font-bold"
-                                                      : ""
-                                                  }`}
-                                                >
-                                                  {extractedData.jet_guide
-                                                    ? `Jet Guide -> ${extractedData.jet_guide}`
-                                                    : selectedTeacher?.full_name}
-                                                </div>
                                                 {extractedData.jet_guide && (
-                                                  <div className="text-xs text-gray-500 mt-1">
-                                                    {selectedTeacher?.full_name}
+                                                  <div className="text-xs text-gray-500 font-bold">
+                                                    Jet Guide {"->"}{" "}
+                                                    {extractedData.jet_guide}
                                                   </div>
                                                 )}
+                                                {extractedData.hubspot_teacher_manager && (
+                                                  <div className="text-xs text-gray-500 font-bold mt-1">
+                                                    TP Manager {"->"}{" "}
+                                                    {
+                                                      extractedData.hubspot_teacher_manager
+                                                    }
+                                                  </div>
+                                                )}
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                  {selectedTeacher?.full_name}
+                                                </div>
                                                 <div className="text-xs text-gray-500">
                                                   {selectedTeacher?.email}
                                                 </div>
@@ -9656,7 +9931,7 @@ function App() {
                                             const isLocked =
                                               bookingDateForCheck &&
                                               isLockedHoliday(
-                                                bookingDateForCheck
+                                                bookingDateForCheck,
                                               );
 
                                             // If locked, only show the locked holiday message and return early
@@ -9712,7 +9987,7 @@ function App() {
                                                             actionMenuOpen ===
                                                               index
                                                               ? null
-                                                              : index
+                                                              : index,
                                                           );
                                                         }}
                                                         className="flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
@@ -9746,14 +10021,14 @@ function App() {
                                                                   if (
                                                                     bookingDateForCheck &&
                                                                     isLockedHoliday(
-                                                                      bookingDateForCheck
+                                                                      bookingDateForCheck,
                                                                     )
                                                                   ) {
                                                                     alert(
-                                                                      "This date is locked due to holiday. No actions can be performed on this date."
+                                                                      "This date is locked due to holiday. No actions can be performed on this date.",
                                                                     );
                                                                     setActionMenuOpen(
-                                                                      null
+                                                                      null,
                                                                     );
                                                                     return;
                                                                   }
@@ -9763,7 +10038,7 @@ function App() {
                                                                   const slotData =
                                                                     getSlotCounts(
                                                                       bookingDate,
-                                                                      timeSlot
+                                                                      timeSlot,
                                                                     );
                                                                   setSelectedSlot(
                                                                     {
@@ -9778,10 +10053,10 @@ function App() {
                                                                       isFromAPI:
                                                                         slotData.isFromAPI ||
                                                                         true,
-                                                                    }
+                                                                    },
                                                                   );
                                                                   setModalOpen(
-                                                                    true
+                                                                    true,
                                                                   );
 
                                                                   // Then, execute the new functionality - Freeze slot API call
@@ -9793,7 +10068,7 @@ function App() {
                                                                     !teacherUid
                                                                   ) {
                                                                     console.warn(
-                                                                      "Teacher UID not found for freeze slot API"
+                                                                      "Teacher UID not found for freeze slot API",
                                                                     );
                                                                     // Don't return here, still allow modal to open
                                                                   } else {
@@ -9802,14 +10077,14 @@ function App() {
                                                                       formatDateTimeToUTC(
                                                                         bookingDate,
                                                                         timeRange,
-                                                                        selectedTimezone
+                                                                        selectedTimezone,
                                                                       );
 
                                                                     if (
                                                                       !slotDateTime
                                                                     ) {
                                                                       console.warn(
-                                                                        "Error formatting slot datetime for freeze slot API"
+                                                                        "Error formatting slot datetime for freeze slot API",
                                                                       );
                                                                     } else {
                                                                       // Get user info from auth context
@@ -9824,7 +10099,7 @@ function App() {
                                                                         !sessionId
                                                                       ) {
                                                                         console.warn(
-                                                                          "User authentication information not found for freeze slot API"
+                                                                          "User authentication information not found for freeze slot API",
                                                                         );
                                                                       } else {
                                                                         // Call freeze slot API in background
@@ -9834,7 +10109,7 @@ function App() {
                                                                               teacherUid,
                                                                               slotDateTime,
                                                                               userId,
-                                                                              sessionId
+                                                                              sessionId,
                                                                             );
 
                                                                           if (
@@ -9842,7 +10117,7 @@ function App() {
                                                                           ) {
                                                                             console.log(
                                                                               "Slot frozen successfully:",
-                                                                              result.data
+                                                                              result.data,
                                                                             );
                                                                             // Optional: Show a subtle success notification
                                                                           } else if (
@@ -9851,24 +10126,24 @@ function App() {
                                                                             // Slot is held by another user - close modal and show error
                                                                             console.warn(
                                                                               "Slot is held:",
-                                                                              result.message
+                                                                              result.message,
                                                                             );
                                                                             setModalOpen(
-                                                                              false
+                                                                              false,
                                                                             );
                                                                             alert(
-                                                                              result.message
+                                                                              result.message,
                                                                             );
                                                                           } else {
                                                                             console.error(
                                                                               "Failed to freeze slot:",
-                                                                              result.error
+                                                                              result.error,
                                                                             );
                                                                           }
                                                                         } catch (apiError) {
                                                                           console.error(
                                                                             "Error calling freeze slot API:",
-                                                                            apiError
+                                                                            apiError,
                                                                           );
                                                                         }
                                                                       }
@@ -9877,11 +10152,11 @@ function App() {
                                                                 } catch (error) {
                                                                   console.error(
                                                                     "Error in manage booking:",
-                                                                    error
+                                                                    error,
                                                                   );
                                                                 } finally {
                                                                   setActionMenuOpen(
-                                                                    null
+                                                                    null,
                                                                   );
                                                                 }
                                                               }}
@@ -9901,14 +10176,14 @@ function App() {
                                                                     if (
                                                                       bookingDateForCheck &&
                                                                       isLockedHoliday(
-                                                                        bookingDateForCheck
+                                                                        bookingDateForCheck,
                                                                       )
                                                                     ) {
                                                                       alert(
-                                                                        "This date is locked due to holiday. No actions can be performed on this date."
+                                                                        "This date is locked due to holiday. No actions can be performed on this date.",
                                                                       );
                                                                       setActionMenuOpen(
-                                                                        null
+                                                                        null,
                                                                       );
                                                                       return;
                                                                     }
@@ -9916,7 +10191,7 @@ function App() {
                                                                     // Get teacher information
                                                                     const tlMatch =
                                                                       extractedData.summary?.match(
-                                                                        /\bTJ[A-Za-z0-9]+\b/
+                                                                        /\bTJ[A-Za-z0-9]+\b/,
                                                                       );
                                                                     const teacherUid =
                                                                       tlMatch
@@ -9929,7 +10204,7 @@ function App() {
                                                                       teachers.find(
                                                                         (t) =>
                                                                           t.uid ===
-                                                                          teacherUid
+                                                                          teacherUid,
                                                                       ) ||
                                                                       selectedTeacher;
 
@@ -9938,10 +10213,10 @@ function App() {
                                                                       !teacher.email
                                                                     ) {
                                                                       alert(
-                                                                        "Teacher email not found. Cannot delete availability."
+                                                                        "Teacher email not found. Cannot delete availability.",
                                                                       );
                                                                       setActionMenuOpen(
-                                                                        null
+                                                                        null,
                                                                       );
                                                                       return;
                                                                     }
@@ -9950,10 +10225,10 @@ function App() {
                                                                       !extractedData.event_id
                                                                     ) {
                                                                       alert(
-                                                                        "Event ID not found. Cannot delete availability."
+                                                                        "Event ID not found. Cannot delete availability.",
                                                                       );
                                                                       setActionMenuOpen(
-                                                                        null
+                                                                        null,
                                                                       );
                                                                       return;
                                                                     }
@@ -9961,12 +10236,14 @@ function App() {
                                                                     // Confirm deletion
                                                                     const confirmed =
                                                                       window.confirm(
-                                                                        `Are you sure you want to delete this availability for ${teacher.full_name}?`
+                                                                        `Are you sure you want to delete this availability for ${teacher.full_name}?`,
                                                                       );
 
-                                                                    if (!confirmed) {
+                                                                    if (
+                                                                      !confirmed
+                                                                    ) {
                                                                       setActionMenuOpen(
-                                                                        null
+                                                                        null,
                                                                       );
                                                                       return;
                                                                     }
@@ -9974,7 +10251,9 @@ function App() {
                                                                     // Call reject-availability API
                                                                     const updatedBy =
                                                                       user?.email ||
-                                                                      user?.fullUser?.email ||
+                                                                      user
+                                                                        ?.fullUser
+                                                                        ?.email ||
                                                                       user?.username ||
                                                                       "";
                                                                     const result =
@@ -9982,7 +10261,7 @@ function App() {
                                                                         teacher.email,
                                                                         teacherUid,
                                                                         extractedData.event_id,
-                                                                        updatedBy
+                                                                        updatedBy,
                                                                       );
 
                                                                     if (
@@ -9990,7 +10269,7 @@ function App() {
                                                                     ) {
                                                                       console.log(
                                                                         "✅ Availability rejected successfully:",
-                                                                        result.data
+                                                                        result.data,
                                                                       );
                                                                       // Show success message
                                                                       setSuccessMessage(
@@ -9999,26 +10278,26 @@ function App() {
                                                                           message:
                                                                             "Availability deleted successfully!",
                                                                           type: "availability",
-                                                                        }
+                                                                        },
                                                                       );
                                                                       // Refresh booking details
                                                                       await fetchListViewBookingDetails();
                                                                     } else {
                                                                       alert(
-                                                                        `Failed to delete availability: ${result.error}`
+                                                                        `Failed to delete availability: ${result.error}`,
                                                                       );
                                                                     }
                                                                   } catch (error) {
                                                                     console.error(
                                                                       "Error deleting availability:",
-                                                                      error
+                                                                      error,
                                                                     );
                                                                     alert(
-                                                                      "Failed to delete availability. Please try again."
+                                                                      "Failed to delete availability. Please try again.",
                                                                     );
                                                                   } finally {
                                                                     setActionMenuOpen(
-                                                                      null
+                                                                      null,
                                                                     );
                                                                   }
                                                                 }}
@@ -10045,7 +10324,7 @@ function App() {
                                             const isLocked =
                                               bookingDateForCheck &&
                                               isLockedHoliday(
-                                                bookingDateForCheck
+                                                bookingDateForCheck,
                                               );
 
                                             if (isLocked) {
@@ -10078,7 +10357,7 @@ function App() {
                                                 extractedData.summary
                                                   .toLowerCase()
                                                   .includes(
-                                                    "non available hour"
+                                                    "non available hour",
                                                   ) ||
                                                 extractedData.summary
                                                   .toLowerCase()
@@ -10086,28 +10365,28 @@ function App() {
                                               ) &&
                                               !(
                                                 extractedData.summary.includes(
-                                                  "B&R"
+                                                  "B&R",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBT/PL"
+                                                  "CBT/PL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBT/UL"
+                                                  "CBT/UL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBP/PL"
+                                                  "CBP/PL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBP/UL"
+                                                  "CBP/UL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBO"
+                                                  "CBO",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "NO SHOW - LR"
+                                                  "NO SHOW - LR",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "NO SHOW - TR"
+                                                  "NO SHOW - TR",
                                                 )
                                               ) &&
                                               canEditDeleteBooking()
@@ -10120,7 +10399,7 @@ function App() {
                                                       setActionMenuOpen(
                                                         actionMenuOpen === index
                                                           ? null
-                                                          : index
+                                                          : index,
                                                       );
                                                     }}
                                                     className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
@@ -10151,14 +10430,14 @@ function App() {
                                                             if (
                                                               bookingDateForCheck &&
                                                               isLockedHoliday(
-                                                                bookingDateForCheck
+                                                                bookingDateForCheck,
                                                               )
                                                             ) {
                                                               alert(
-                                                                "This date is locked due to holiday. No actions can be performed on this date."
+                                                                "This date is locked due to holiday. No actions can be performed on this date.",
                                                               );
                                                               setActionMenuOpen(
-                                                                null
+                                                                null,
                                                               );
                                                               return;
                                                             }
@@ -10171,7 +10450,7 @@ function App() {
                                                             ) {
                                                               const timeMatch =
                                                                 extractedData.summary.match(
-                                                                  /(\d{1,2}:\d{2})/
+                                                                  /(\d{1,2}:\d{2})/,
                                                                 );
                                                               if (timeMatch) {
                                                                 timeSlot =
@@ -10185,7 +10464,7 @@ function App() {
                                                             ) {
                                                               const timeFromStart =
                                                                 extractedData.start_time.match(
-                                                                  /(\d{2}:\d{2})/
+                                                                  /(\d{2}:\d{2})/,
                                                                 );
                                                               if (
                                                                 timeFromStart
@@ -10219,7 +10498,7 @@ function App() {
                                                               },
                                                               teacherDetails:
                                                                 getTeacherByTeacherId(
-                                                                  extractedData.teacherid
+                                                                  extractedData.teacherid,
                                                                 ) ||
                                                                 selectedTeacher,
                                                               upcomingEvents: false,
@@ -10227,7 +10506,7 @@ function App() {
                                                               isLoading: false,
                                                             });
                                                             setActionMenuOpen(
-                                                              null
+                                                              null,
                                                             );
                                                           }}
                                                           className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
@@ -10242,12 +10521,12 @@ function App() {
                                                               processBookingDataForEdit(
                                                                 extractedData,
                                                                 bookingDate,
-                                                                timeRange
+                                                                timeRange,
                                                               );
 
                                                             console.log(
                                                               "📝 Edit button clicked - Processed data:",
-                                                              processedData
+                                                              processedData,
                                                             );
 
                                                             // Open Edit/Reschedule popup with processed data
@@ -10259,10 +10538,10 @@ function App() {
                                                                 date: bookingDate,
                                                                 time: timeRange,
                                                                 isLoading: false,
-                                                              }
+                                                              },
                                                             );
                                                             setActionMenuOpen(
-                                                              null
+                                                              null,
                                                             );
                                                           }}
                                                           className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
@@ -10293,27 +10572,27 @@ function App() {
                                                                 upcomingEvents: false,
                                                                 onConfirm:
                                                                   async (
-                                                                    upcomingEvents
+                                                                    upcomingEvents,
                                                                   ) => {
                                                                     try {
                                                                       // Call delete-class API
                                                                       console.log(
-                                                                        "🚀 Calling delete-class API for booking deletion"
+                                                                        "🚀 Calling delete-class API for booking deletion",
                                                                       );
                                                                       console.log(
                                                                         "📊 Event ID:",
-                                                                        extractedData.event_id
+                                                                        extractedData.event_id,
                                                                       );
                                                                       console.log(
                                                                         "📊 Upcoming events:",
-                                                                        upcomingEvents
+                                                                        upcomingEvents,
                                                                       );
 
                                                                       if (
                                                                         !extractedData.event_id
                                                                       ) {
                                                                         throw new Error(
-                                                                          "No event_id available for deletion"
+                                                                          "No event_id available for deletion",
                                                                         );
                                                                       }
 
@@ -10321,7 +10600,7 @@ function App() {
                                                                         await handleDeleteClass(
                                                                           extractedData.event_id,
                                                                           upcomingEvents ||
-                                                                            false
+                                                                            false,
                                                                         );
 
                                                                       if (
@@ -10330,7 +10609,7 @@ function App() {
                                                                       ) {
                                                                         // Close the action menu
                                                                         setActionMenuOpen(
-                                                                          null
+                                                                          null,
                                                                         );
 
                                                                         // Show success message
@@ -10340,7 +10619,7 @@ function App() {
                                                                             message:
                                                                               "Booking Successfully Deleted !!",
                                                                             type: "delete",
-                                                                          }
+                                                                          },
                                                                         );
 
                                                                         // Close success message after delay
@@ -10352,10 +10631,10 @@ function App() {
                                                                                 message:
                                                                                   "",
                                                                                 type: "",
-                                                                              }
+                                                                              },
                                                                             );
                                                                           },
-                                                                          2000
+                                                                          2000,
                                                                         );
 
                                                                         // Refresh the data after deletion
@@ -10364,17 +10643,17 @@ function App() {
                                                                     } catch (error) {
                                                                       console.error(
                                                                         "Error deleting booking:",
-                                                                        error
+                                                                        error,
                                                                       );
                                                                       alert(
-                                                                        `Failed to delete booking: ${error.message}`
+                                                                        `Failed to delete booking: ${error.message}`,
                                                                       );
                                                                     }
                                                                   },
-                                                              }
+                                                              },
                                                             );
                                                             setActionMenuOpen(
-                                                              null
+                                                              null,
                                                             );
                                                           }}
                                                           className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
@@ -10397,7 +10676,7 @@ function App() {
                                             const isLocked =
                                               bookingDateForCheck &&
                                               isLockedHoliday(
-                                                bookingDateForCheck
+                                                bookingDateForCheck,
                                               );
 
                                             if (isLocked) {
@@ -10407,28 +10686,28 @@ function App() {
                                             if (
                                               extractedData.summary &&
                                               (extractedData.summary.includes(
-                                                "B&R"
+                                                "B&R",
                                               ) ||
                                                 extractedData.summary.includes(
-                                                  "CBT/PL"
+                                                  "CBT/PL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBT/UL"
+                                                  "CBT/UL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBP/PL"
+                                                  "CBP/PL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBP/UL"
+                                                  "CBP/UL",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "CBO"
+                                                  "CBO",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "NO SHOW - LR"
+                                                  "NO SHOW - LR",
                                                 ) ||
                                                 extractedData.summary.includes(
-                                                  "NO SHOW - TR"
+                                                  "NO SHOW - TR",
                                                 )) &&
                                               canEditDeleteBooking()
                                             ) {
@@ -10440,7 +10719,7 @@ function App() {
                                                       setActionMenuOpen(
                                                         actionMenuOpen === index
                                                           ? null
-                                                          : index
+                                                          : index,
                                                       );
                                                     }}
                                                     className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-all duration-200 hover:shadow-sm cursor-pointer"
@@ -10485,27 +10764,27 @@ function App() {
                                                                 upcomingEvents: false,
                                                                 onConfirm:
                                                                   async (
-                                                                    upcomingEvents
+                                                                    upcomingEvents,
                                                                   ) => {
                                                                     try {
                                                                       // Call delete-class API for event deletion
                                                                       console.log(
-                                                                        "🚀 Calling delete-class API for event deletion"
+                                                                        "🚀 Calling delete-class API for event deletion",
                                                                       );
                                                                       console.log(
                                                                         "📊 Event ID:",
-                                                                        extractedData.event_id
+                                                                        extractedData.event_id,
                                                                       );
                                                                       console.log(
                                                                         "📊 Upcoming events:",
-                                                                        upcomingEvents
+                                                                        upcomingEvents,
                                                                       );
 
                                                                       if (
                                                                         !extractedData.event_id
                                                                       ) {
                                                                         throw new Error(
-                                                                          "No event_id available for deletion"
+                                                                          "No event_id available for deletion",
                                                                         );
                                                                       }
 
@@ -10513,7 +10792,7 @@ function App() {
                                                                         await handleDeleteClass(
                                                                           extractedData.event_id,
                                                                           upcomingEvents ||
-                                                                            false
+                                                                            false,
                                                                         );
 
                                                                       if (
@@ -10522,7 +10801,7 @@ function App() {
                                                                       ) {
                                                                         // Close the action menu
                                                                         setActionMenuOpen(
-                                                                          null
+                                                                          null,
                                                                         );
 
                                                                         // Show success message
@@ -10532,7 +10811,7 @@ function App() {
                                                                             message:
                                                                               "Event Successfully Deleted !!",
                                                                             type: "delete",
-                                                                          }
+                                                                          },
                                                                         );
 
                                                                         // Close success message after delay
@@ -10544,10 +10823,10 @@ function App() {
                                                                                 message:
                                                                                   "",
                                                                                 type: "",
-                                                                              }
+                                                                              },
                                                                             );
                                                                           },
-                                                                          2000
+                                                                          2000,
                                                                         );
 
                                                                         // Refresh the data after deletion
@@ -10556,17 +10835,17 @@ function App() {
                                                                     } catch (error) {
                                                                       console.error(
                                                                         "Error deleting event:",
-                                                                        error
+                                                                        error,
                                                                       );
                                                                       alert(
-                                                                        `Failed to delete event: ${error.message}`
+                                                                        `Failed to delete event: ${error.message}`,
                                                                       );
                                                                     }
                                                                   },
-                                                              }
+                                                              },
                                                             );
                                                             setActionMenuOpen(
-                                                              null
+                                                              null,
                                                             );
                                                           }}
                                                           className="w-full text-left px-3 py-2 text-xs hover:bg-red-50 text-red-600 flex items-center gap-2"
@@ -10581,12 +10860,12 @@ function App() {
                                                               processBookingDataForEdit(
                                                                 extractedData,
                                                                 bookingDate,
-                                                                timeRange
+                                                                timeRange,
                                                               );
 
                                                             console.log(
                                                               "📝 Edit button clicked - Processed data:",
-                                                              processedData
+                                                              processedData,
                                                             );
 
                                                             // Open Edit/Reschedule popup with processed data
@@ -10598,10 +10877,10 @@ function App() {
                                                                 date: bookingDate,
                                                                 time: timeRange,
                                                                 isLoading: false,
-                                                              }
+                                                              },
                                                             );
                                                             setActionMenuOpen(
-                                                              null
+                                                              null,
                                                             );
                                                           }}
                                                           className="w-full text-left px-3 py-2 text-xs hover:bg-yellow-50 text-yellow-600 flex items-center gap-2"
@@ -10636,11 +10915,11 @@ function App() {
                     {/* List View Pagination */}
                     {(() => {
                       const parsedBookings = parseBookingDetails(
-                        listViewBookingDetails.data
+                        listViewBookingDetails.data,
                       );
                       const totalPages = getTotalPages(
                         parsedBookings.length,
-                        pagination.itemsPerPage
+                        pagination.itemsPerPage,
                       );
 
                       if (totalPages > 1) {
@@ -10656,7 +10935,7 @@ function App() {
                                 {Math.min(
                                   pagination.currentPage *
                                     pagination.itemsPerPage,
-                                  parsedBookings.length
+                                  parsedBookings.length,
                                 )}{" "}
                                 of {parsedBookings.length} bookings
                               </div>
@@ -10692,26 +10971,26 @@ function App() {
                           setCurrentView("week");
                           // Call availability summary API when switching to Week view
                           console.log(
-                            "🔄 Switching to Week view - calling availability summary API..."
+                            "🔄 Switching to Week view - calling availability summary API...",
                           );
                           fetchWeeklyAvailabilityData(
                             currentWeekStart,
                             selectedTeacher?.uid,
                             selectedStudent?.jetlearner_id,
-                            selectedTimezone
+                            selectedTimezone,
                           )
                             .then((data) => {
                               if (data) {
                                 setWeeklyApiData(data);
                                 console.log(
-                                  "✅ Availability summary API called successfully"
+                                  "✅ Availability summary API called successfully",
                                 );
                               }
                             })
                             .catch((error) => {
                               console.error(
                                 "❌ Error calling availability summary API:",
-                                error
+                                error,
                               );
                             });
                         }}
@@ -10744,26 +11023,26 @@ function App() {
                     setCurrentView("week");
                     // Call availability summary API when switching to Week view
                     console.log(
-                      "🔄 Switching to Week view - calling availability summary API..."
+                      "🔄 Switching to Week view - calling availability summary API...",
                     );
                     fetchWeeklyAvailabilityData(
                       currentWeekStart,
                       selectedTeacher?.uid,
                       selectedStudent?.jetlearner_id,
-                      selectedTimezone
+                      selectedTimezone,
                     )
                       .then((data) => {
                         if (data) {
                           setWeeklyApiData(data);
                           console.log(
-                            "✅ Availability summary API called successfully"
+                            "✅ Availability summary API called successfully",
                           );
                         }
                       })
                       .catch((error) => {
                         console.error(
                           "❌ Error calling availability summary API:",
-                          error
+                          error,
                         );
                       });
                   }}
@@ -10776,10 +11055,21 @@ function App() {
           ) : currentView === "teacherCalendar" && !selectedTeacher ? (
             <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6">
               <div className="text-center py-8 text-gray-500">
-                <FaCalendarAlt size={32} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-sm sm:text-base mb-4">Teacher Calendar View requires a Teacher selection</p>
-                <p className="text-xs text-gray-400 mb-4">Please select a Teacher from the filters above to see their calendar.</p>
-                <button onClick={() => setCurrentView("week")} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                <FaCalendarAlt
+                  size={32}
+                  className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-300"
+                />
+                <p className="text-sm sm:text-base mb-4">
+                  Teacher Calendar View requires a Teacher selection
+                </p>
+                <p className="text-xs text-gray-400 mb-4">
+                  Please select a Teacher from the filters above to see their
+                  calendar.
+                </p>
+                <button
+                  onClick={() => setCurrentView("week")}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
                   Switch to Week View
                 </button>
               </div>
@@ -10787,12 +11077,18 @@ function App() {
           ) : currentView === "teacherCalendar" && selectedTeacher ? (
             (() => {
               const weekDatesForCal = getWeekDates(currentWeekStart);
-              const parsedBookings = listViewBookingDetails?.data ? parseBookingDetails(listViewBookingDetails.data) : [];
+              const parsedBookings = listViewBookingDetails?.data
+                ? parseBookingDetails(listViewBookingDetails.data)
+                : [];
               const weekStartStr = formatDate(weekDatesForCal[0]);
               const weekEndStr = formatDate(weekDatesForCal[6]);
               const eventsInWeek = parsedBookings.filter((ev) => {
-                const dateStr = ev.date || (ev.start_time ? ev.start_time.slice(0, 10) : null);
-                return dateStr && dateStr >= weekStartStr && dateStr <= weekEndStr;
+                const dateStr =
+                  ev.date ||
+                  (ev.start_time ? ev.start_time.slice(0, 10) : null);
+                return (
+                  dateStr && dateStr >= weekStartStr && dateStr <= weekEndStr
+                );
               });
               const SLOTS_PER_HOUR = 2;
               const TOTAL_SLOTS = 24 * SLOTS_PER_HOUR;
@@ -10801,34 +11097,75 @@ function App() {
               const getEventType = (ev) => {
                 const s = (ev.summary || "").toLowerCase();
                 if (/availability|hours/.test(s)) return "availability";
-                if (/\b(cbp|cbt|b&r|b and r)\b/i.test(ev.summary || "")) return "cbp_cbt_br";
+                if (/\b(cbp|cbt|b&r|b and r)\b/i.test(ev.summary || ""))
+                  return "cbp_cbt_br";
                 if (/week off|leave|jloh/.test(s)) return "weekoff_leave_jloh";
-                if (/lesson|class|jetlearn|:\s*\(?jl\d+/i.test(ev.summary || "") || (ev.summary && ev.summary.includes(":"))) return "booked";
+                if (
+                  /lesson|class|jetlearn|:\s*\(?jl\d+/i.test(
+                    ev.summary || "",
+                  ) ||
+                  (ev.summary && ev.summary.includes(":"))
+                )
+                  return "booked";
                 return "other";
               };
               const getEventStyle = (type) => {
                 switch (type) {
-                  case "availability": return "bg-green-100 border-green-400 hover:bg-green-200 text-gray-900";
-                  case "booked": return "bg-blue-100 border-blue-400 hover:bg-blue-200 text-gray-900";
-                  case "cbp_cbt_br": return "bg-red-100 border-red-400 hover:bg-red-200 text-gray-900";
-                  case "weekoff_leave_jloh": return "bg-orange-100 border-orange-400 hover:bg-orange-200 text-gray-900";
-                  default: return "bg-yellow-100 border-yellow-400 hover:bg-yellow-200 text-gray-900";
+                  case "availability":
+                    return "bg-green-100 border-green-400 hover:bg-green-200 text-gray-900";
+                  case "booked":
+                    return "bg-blue-100 border-blue-400 hover:bg-blue-200 text-gray-900";
+                  case "cbp_cbt_br":
+                    return "bg-red-100 border-red-400 hover:bg-red-200 text-gray-900";
+                  case "weekoff_leave_jloh":
+                    return "bg-orange-100 border-orange-400 hover:bg-orange-200 text-gray-900";
+                  default:
+                    return "bg-yellow-100 border-yellow-400 hover:bg-yellow-200 text-gray-900";
                 }
               };
               const getEventLayout = (ev) => {
-                const start = ev.start_time ? new Date(ev.start_time) : (ev.date && ev.time ? new Date(`${ev.date}T${(ev.time || "00:00").split(" - ")[0].trim()}:00`) : null);
-                const end = ev.end_time ? new Date(ev.end_time) : (start ? new Date(start.getTime() + 60 * 60 * 1000) : null);
+                const start = ev.start_time
+                  ? new Date(ev.start_time)
+                  : ev.date && ev.time
+                    ? new Date(
+                        `${ev.date}T${(ev.time || "00:00").split(" - ")[0].trim()}:00`,
+                      )
+                    : null;
+                const end = ev.end_time
+                  ? new Date(ev.end_time)
+                  : start
+                    ? new Date(start.getTime() + 60 * 60 * 1000)
+                    : null;
                 if (!start) return null;
                 const dateStr = ev.date || start.toISOString().slice(0, 10);
-                const dayIndex = weekDatesForCal.findIndex((d) => formatDate(d) === dateStr);
+                const dayIndex = weekDatesForCal.findIndex(
+                  (d) => formatDate(d) === dateStr,
+                );
                 if (dayIndex < 0) return null;
                 const startM = start.getHours() * 60 + start.getMinutes();
-                const endM = end ? end.getHours() * 60 + end.getMinutes() : startM + 60;
+                const endM = end
+                  ? end.getHours() * 60 + end.getMinutes()
+                  : startM + 60;
                 const topPct = (startM / (24 * 60)) * 100;
-                const heightPct = Math.max(((endM - startM) / (24 * 60)) * 100, 3);
-                return { dayIndex, topPct, heightPct, summary: ev.summary || "Event", time: ev.time };
+                const heightPct = Math.max(
+                  ((endM - startM) / (24 * 60)) * 100,
+                  3,
+                );
+                return {
+                  dayIndex,
+                  topPct,
+                  heightPct,
+                  summary: ev.summary || "Event",
+                  time: ev.time,
+                };
               };
-              const eventsWithPos = eventsInWeek.map((ev) => ({ ev, pos: getEventLayout(ev), eventType: getEventType(ev) })).filter((x) => x.pos !== null);
+              const eventsWithPos = eventsInWeek
+                .map((ev) => ({
+                  ev,
+                  pos: getEventLayout(ev),
+                  eventType: getEventType(ev),
+                }))
+                .filter((x) => x.pos !== null);
               const byCell = {};
               eventsWithPos.forEach(({ ev, pos }) => {
                 const slotIdx = Math.floor((pos.topPct / 100) * TOTAL_SLOTS);
@@ -10837,85 +11174,194 @@ function App() {
                 byCell[key].push({ ev, pos, eventType: getEventType(ev) });
               });
               const dayColMinWidth = 130;
-              const minTotalWidth = 72 + weekDatesForCal.length * dayColMinWidth;
+              const minTotalWidth =
+                72 + weekDatesForCal.length * dayColMinWidth;
               return (
                 <div className="bg-gray-100 rounded-lg shadow-lg overflow-hidden min-h-screen relative">
                   <div className="p-2 sm:p-3 border-b border-gray-300 bg-gray-100 space-y-2">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <h2 className="text-sm sm:text-base font-bold text-gray-800">Teacher Calendar View — {selectedTeacher.full_name || selectedTeacher.uid}</h2>
-                      <span className="text-xs text-gray-500">{formatDisplayDate(weekDatesForCal[0])} – {formatDisplayDate(weekDatesForCal[6])}</span>
+                      <h2 className="text-sm sm:text-base font-bold text-gray-800">
+                        Teacher Calendar View —{" "}
+                        {selectedTeacher.full_name || selectedTeacher.uid}
+                      </h2>
+                      <span className="text-xs text-gray-500">
+                        {formatDisplayDate(weekDatesForCal[0])} –{" "}
+                        {formatDisplayDate(weekDatesForCal[6])}
+                      </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-[10px] sm:text-xs">
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-green-100 border border-green-400" /> Availability</span>
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-100 border border-blue-400" /> Booked</span>
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-100 border border-red-400" /> CBP/CBT/B&amp;R</span>
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-orange-100 border border-orange-400" /> Week off/Leave/JLOH</span>
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-yellow-100 border border-yellow-400" /> Other</span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-green-100 border border-green-400" />{" "}
+                        Availability
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-blue-100 border border-blue-400" />{" "}
+                        Booked
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-red-100 border border-red-400" />{" "}
+                        CBP/CBT/B&amp;R
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-orange-100 border border-orange-400" />{" "}
+                        Week off/Leave/JLOH
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded bg-yellow-100 border border-yellow-400" />{" "}
+                        Other
+                      </span>
                     </div>
                   </div>
                   <div className="overflow-x-auto p-2 bg-gray-100">
-                    <div className="flex border-b border-gray-300 mb-0 rounded-t-lg bg-gray-200" style={{ minWidth: minTotalWidth }}>
+                    <div
+                      className="flex border-b border-gray-300 mb-0 rounded-t-lg bg-gray-200"
+                      style={{ minWidth: minTotalWidth }}
+                    >
                       <div className="w-14 flex-shrink-0 py-2 text-xs font-semibold text-gray-600" />
                       {weekDatesForCal.map((date, i) => (
-                        <div key={i} className="flex-1 border-r border-gray-300 last:border-r-0 py-2 text-center text-xs font-semibold text-gray-700" style={{ minWidth: dayColMinWidth }}>
+                        <div
+                          key={i}
+                          className="flex-1 border-r border-gray-300 last:border-r-0 py-2 text-center text-xs font-semibold text-gray-700"
+                          style={{ minWidth: dayColMinWidth }}
+                        >
                           {getDayName(date)} {date.getDate()}
                         </div>
                       ))}
                     </div>
-                    <div className="flex border border-gray-300 border-t-0 rounded-b-lg bg-gray-100" style={{ height: GRID_HEIGHT_PX, minWidth: minTotalWidth }}>
-                      <div className="w-14 flex-shrink-0 border-r border-gray-300 bg-gray-200 py-0.5 text-xs text-gray-600" style={{ height: GRID_HEIGHT_PX }}>
+                    <div
+                      className="flex border border-gray-300 border-t-0 rounded-b-lg bg-gray-100"
+                      style={{
+                        height: GRID_HEIGHT_PX,
+                        minWidth: minTotalWidth,
+                      }}
+                    >
+                      <div
+                        className="w-14 flex-shrink-0 border-r border-gray-300 bg-gray-200 py-0.5 text-xs text-gray-600"
+                        style={{ height: GRID_HEIGHT_PX }}
+                      >
                         {Array.from({ length: TOTAL_SLOTS }).map((_, i) => {
                           const hour = Math.floor(i / SLOTS_PER_HOUR);
                           const min = (i % SLOTS_PER_HOUR) * 30;
                           return (
-                            <div key={i} className="text-right pr-1" style={{ height: ROW_HEIGHT_PX }}>{String(hour).padStart(2, "0")}:{String(min).padStart(2, "0")}</div>
+                            <div
+                              key={i}
+                              className="text-right pr-1"
+                              style={{ height: ROW_HEIGHT_PX }}
+                            >
+                              {String(hour).padStart(2, "0")}:
+                              {String(min).padStart(2, "0")}
+                            </div>
                           );
                         })}
                       </div>
                       {weekDatesForCal.map((date, dayIndex) => {
-                        const isWeekOff = selectedTeacher?.email && isTeacherWeekOff(selectedTeacher.email, date, weeklyApiData);
-                        const isOnLeave = selectedTeacher?.email && isTeacherOnLeave(selectedTeacher.email, date, teacherLeaves);
+                        const isWeekOff =
+                          selectedTeacher?.email &&
+                          isTeacherWeekOff(
+                            selectedTeacher.email,
+                            date,
+                            weeklyApiData,
+                          );
+                        const isOnLeave =
+                          selectedTeacher?.email &&
+                          isTeacherOnLeave(
+                            selectedTeacher.email,
+                            date,
+                            teacherLeaves,
+                          );
                         const showFullDayBlock = isWeekOff || isOnLeave;
-                        const fullDayLabel = [isWeekOff && "Week off", isOnLeave && "Leave"].filter(Boolean).join(" / ");
+                        const fullDayLabel = [
+                          isWeekOff && "Week off",
+                          isOnLeave && "Leave",
+                        ]
+                          .filter(Boolean)
+                          .join(" / ");
                         return (
-                        <div key={dayIndex} className="flex-1 border-r border-gray-200 last:border-r-0 relative bg-gray-100" style={{ height: GRID_HEIGHT_PX, minWidth: dayColMinWidth }}>
-                          {Array.from({ length: TOTAL_SLOTS }).map((_, i) => (
-                            <div key={i} className="border-b border-gray-200" style={{ height: ROW_HEIGHT_PX }} />
-                          ))}
-                          {showFullDayBlock && (
-                            <div
-                              className="absolute left-[2%] w-[96%] top-0 rounded border-2 border-orange-400 bg-orange-100 opacity-90 pointer-events-none flex items-center justify-center text-orange-800 font-semibold text-xs"
-                              style={{ height: "100%", zIndex: 0 }}
-                            >
-                              {fullDayLabel}
-                            </div>
-                          )}
-                          {eventsWithPos.filter((x) => x.pos.dayIndex === dayIndex).map(({ ev, pos, eventType }, idx) => {
-                            const slotIdx = Math.floor((pos.topPct / 100) * TOTAL_SLOTS);
-                            const key = `${pos.dayIndex}-${slotIdx}`;
-                            const group = byCell[key] || [{ ev, pos, eventType }];
-                            const gi = group.findIndex((g) => g.ev === ev);
-                            const n = group.length;
-                            const gap = 2;
-                            const w = (100 - gap * 2) / n;
-                            const left = gap + gi * w;
-                            return (
+                          <div
+                            key={dayIndex}
+                            className="flex-1 border-r border-gray-200 last:border-r-0 relative bg-gray-100"
+                            style={{
+                              height: GRID_HEIGHT_PX,
+                              minWidth: dayColMinWidth,
+                            }}
+                          >
+                            {Array.from({ length: TOTAL_SLOTS }).map((_, i) => (
                               <div
-                                key={ev.event_id || `${ev.summary}-${idx}`}
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => setTeacherCalendarEventDetails({ isOpen: true, event: ev })}
-                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setTeacherCalendarEventDetails({ isOpen: true, event: ev }); } }}
-                                className={`absolute rounded border shadow-sm overflow-hidden cursor-pointer ${getEventStyle(eventType)}`}
-                                style={{ left: `${left}%`, width: `${w}%`, top: `${pos.topPct}%`, height: `${pos.heightPct}%`, minHeight: "18px", fontSize: "10px", zIndex: 1 }}
-                                title="Click for more details"
+                                key={i}
+                                className="border-b border-gray-200"
+                                style={{ height: ROW_HEIGHT_PX }}
+                              />
+                            ))}
+                            {showFullDayBlock && (
+                              <div
+                                className="absolute left-[2%] w-[96%] top-0 rounded border-2 border-orange-400 bg-orange-100 opacity-90 pointer-events-none flex items-center justify-center text-orange-800 font-semibold text-xs"
+                                style={{ height: "100%", zIndex: 0 }}
                               >
-                                <div className="p-0.5 truncate font-medium">{(ev.summary || "Event").slice(0, 28)}{(ev.summary || "").length > 28 ? "…" : ""}</div>
-                                {pos.heightPct > 8 && pos.time && <div className="p-0.5 text-gray-600 truncate text-[9px]">{pos.time}</div>}
+                                {fullDayLabel}
                               </div>
-                            );
-                          })}
-                        </div>
+                            )}
+                            {eventsWithPos
+                              .filter((x) => x.pos.dayIndex === dayIndex)
+                              .map(({ ev, pos, eventType }, idx) => {
+                                const slotIdx = Math.floor(
+                                  (pos.topPct / 100) * TOTAL_SLOTS,
+                                );
+                                const key = `${pos.dayIndex}-${slotIdx}`;
+                                const group = byCell[key] || [
+                                  { ev, pos, eventType },
+                                ];
+                                const gi = group.findIndex((g) => g.ev === ev);
+                                const n = group.length;
+                                const gap = 2;
+                                const w = (100 - gap * 2) / n;
+                                const left = gap + gi * w;
+                                return (
+                                  <div
+                                    key={ev.event_id || `${ev.summary}-${idx}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() =>
+                                      setTeacherCalendarEventDetails({
+                                        isOpen: true,
+                                        event: ev,
+                                      })
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setTeacherCalendarEventDetails({
+                                          isOpen: true,
+                                          event: ev,
+                                        });
+                                      }
+                                    }}
+                                    className={`absolute rounded border shadow-sm overflow-hidden cursor-pointer ${getEventStyle(eventType)}`}
+                                    style={{
+                                      left: `${left}%`,
+                                      width: `${w}%`,
+                                      top: `${pos.topPct}%`,
+                                      height: `${pos.heightPct}%`,
+                                      minHeight: "18px",
+                                      fontSize: "10px",
+                                      zIndex: 1,
+                                    }}
+                                    title="Click for more details"
+                                  >
+                                    <div className="p-0.5 truncate font-medium">
+                                      {(ev.summary || "Event").slice(0, 28)}
+                                      {(ev.summary || "").length > 28
+                                        ? "…"
+                                        : ""}
+                                    </div>
+                                    {pos.heightPct > 8 && pos.time && (
+                                      <div className="p-0.5 text-gray-600 truncate text-[9px]">
+                                        {pos.time}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                          </div>
                         );
                       })}
                     </div>
@@ -10982,11 +11428,11 @@ function App() {
                   style={{
                     gridTemplateColumns: `80px repeat(${Math.max(
                       1,
-                      filteredWeekDates.length
+                      filteredWeekDates.length,
                     )}, minmax(100px, 1fr))`,
                     minWidth: `${Math.max(
                       600,
-                      Math.max(1, filteredWeekDates.length) * 100 + 80
+                      Math.max(1, filteredWeekDates.length) * 100 + 80,
                     )}px`,
                   }}
                 >
@@ -11129,7 +11575,7 @@ function App() {
                                 booked === 0 &&
                                 selectedTeacher &&
                                 !clickedSlots.has(
-                                  `${formatDate(date)}-${time}`
+                                  `${formatDate(date)}-${time}`,
                                 ) &&
                                 !isLockedHolidayDate &&
                                 canAddTeacherAvailability();
@@ -11148,14 +11594,14 @@ function App() {
                                     selectedTeacher: selectedTeacher?.uid,
                                     slotKey: `${formatDate(date)}-${time}`,
                                     clickedSlots: clickedSlots.has(
-                                      `${formatDate(date)}-${time}`
+                                      `${formatDate(date)}-${time}`,
                                     ),
                                     canAddTeacherAvailability:
                                       canAddTeacherAvailability(),
                                     shouldShow,
                                     isOnLeave,
                                     isWeekOff,
-                                  }
+                                  },
                                 );
                               }
 
@@ -11189,19 +11635,19 @@ function App() {
                                 available > 0 && !isLockedHolidayDate
                                   ? "cursor-pointer hover:text-blue-600 hover:underline"
                                   : isLockedHolidayDate
-                                  ? "text-gray-400 cursor-not-allowed"
-                                  : ""
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : ""
                               }`}
                               onClick={() => {
                                 if (available > 0 && !isLockedHolidayDate) {
                                   handleAvailabilityClick(
                                     date,
                                     time,
-                                    slot.teachers
+                                    slot.teachers,
                                   );
                                 } else if (isLockedHolidayDate) {
                                   alert(
-                                    "This date is locked due to holiday. No actions can be performed."
+                                    "This date is locked due to holiday. No actions can be performed.",
                                   );
                                 }
                               }}
@@ -11218,8 +11664,8 @@ function App() {
                                 booked > 0 && !isLockedHolidayDate
                                   ? "cursor-pointer hover:text-green-600 hover:underline"
                                   : isLockedHolidayDate
-                                  ? "text-gray-400 cursor-not-allowed"
-                                  : ""
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : ""
                               }`}
                               onClick={() => {
                                 console.log("🖱️ Booking div clicked:", {
@@ -11231,7 +11677,7 @@ function App() {
                                   handleBookingClick(date, time, slot.students);
                                 } else if (isLockedHolidayDate) {
                                   alert(
-                                    "This date is locked due to holiday. No actions can be performed."
+                                    "This date is locked due to holiday. No actions can be performed.",
                                   );
                                 }
                               }}

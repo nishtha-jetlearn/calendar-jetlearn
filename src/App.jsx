@@ -280,6 +280,9 @@ function App() {
     data: null,
   });
 
+  // In-progress update-class jobs (when upcoming_events=true, API returns accepted + job_id)
+  const [inProgressUpdateJobs, setInProgressUpdateJobs] = useState([]);
+
   // State for schedule management popup
   const [scheduleManagementPopup, setScheduleManagementPopup] = useState({
     isOpen: false,
@@ -1163,6 +1166,78 @@ function App() {
     currentWeekStart,
     selectedTimezone,
   ]);
+
+  // Keep a ref of in-progress jobs so the polling interval can read current list without re-creating the interval
+  const inProgressUpdateJobsRef = React.useRef(inProgressUpdateJobs);
+  inProgressUpdateJobsRef.current = inProgressUpdateJobs;
+
+  // Poll in-progress update-class jobs every 15 seconds
+  useEffect(() => {
+    const normalizeStatus = (data) => {
+      const raw =
+        data.status ?? data.job_status ?? data.state ?? data.result ?? "";
+      const s = String(raw).toLowerCase();
+      if (
+        s === "completed" ||
+        s === "done" ||
+        s === "success" ||
+        s === "complete" ||
+        s === "finished" ||
+        s === "succeeded"
+      )
+        return "completed";
+      if (
+        s === "failed" ||
+        s === "error" ||
+        s === "failure" ||
+        s === "cancelled" ||
+        s === "canceled"
+      )
+        return "failed";
+      return "in_progress";
+    };
+
+    const pollJob = async (job) => {
+      try {
+        const res = await fetch(job.pollUrl, {
+          method: "GET",
+          credentials: "same-origin",
+        });
+        const data = await res.json().catch(() => ({}));
+        const status = normalizeStatus(data);
+        setInProgressUpdateJobs((prev) =>
+          prev.map((j) =>
+            j.id === job.id
+              ? {
+                  ...j,
+                  status,
+                  message: data.message || data.detail || j.message,
+                  ...(data.total != null && { total: data.total }),
+                }
+              : j,
+          ),
+        );
+      } catch {
+        setInProgressUpdateJobs((prev) =>
+          prev.map((j) =>
+            j.id === job.id
+              ? { ...j, status: "failed", message: "Poll failed" }
+              : j,
+          ),
+        );
+      }
+    };
+
+    const interval = setInterval(() => {
+      const jobs = inProgressUpdateJobsRef.current;
+      const inProgress = jobs.filter(
+        (j) => j.status === "in_progress" || j.status === "pending",
+      );
+      inProgress.forEach(pollJob);
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Function to refresh weekly data with specific teacher
   const refreshWeeklyDataForTeacher = async (teacher) => {
@@ -5406,6 +5481,61 @@ function App() {
 
           // Refresh the data after successful update
           await fetchListViewBookingDetails();
+        } else if (
+          result.status === "accepted" &&
+          (result.job_id || result.poll_url)
+        ) {
+          // Upcoming events: API accepted the request and started async updates
+          const baseUrl = "https://live.jetlearn.com";
+          const pollPath =
+            result.poll_url || `/api/update-class-status/${result.job_id}/`;
+          const pollUrl = pollPath.startsWith("http")
+            ? pollPath
+            : `${baseUrl}${pollPath}`;
+
+          setInProgressUpdateJobs((prev) => [
+            ...prev,
+            {
+              id: result.job_id,
+              job_id: result.job_id,
+              pollUrl,
+              status: "in_progress",
+              message: result.message || "Updates started",
+              total: result.total,
+              summary:
+                apiPayload.summary || editReschedulePopup.data?.summary || "",
+              startedAt: new Date().toISOString(),
+            },
+          ]);
+
+          setSuccessMessage({
+            show: true,
+            message: `Success, Updating Events in Progress. Please check here -> ${pollUrl}`,
+            type: "booking",
+          });
+
+          setTimeout(() => {
+            setEditReschedulePopup({
+              isOpen: false,
+              data: null,
+              date: null,
+              time: null,
+              isLoading: false,
+            });
+            setSuccessMessage({
+              show: false,
+              message: "",
+              type: "",
+            });
+            setNewSelectedTeacher(null);
+            newSelectedTeacherRef.current = null;
+            setNewTeacherAvailabilityData({});
+            setShowTeacherChange(false);
+            setTeacherSearchTerm("");
+            setTeacherSearchResults([]);
+          }, 5000);
+
+          await fetchListViewBookingDetails();
         } else {
           throw new Error(result.message || "Update failed");
         }
@@ -8611,6 +8741,82 @@ function App() {
               loading={studentsLoading}
               error={studentsError}
             />
+          </div>
+
+          {/* Update Events Status (below Learner section; auto-refreshes every 15s) */}
+          <div className="mb-4 bg-white rounded border border-orange-300 p-2 sm:p-3 text-xs sm:text-sm">
+            <h2 className="text-sm sm:text-base font-semibold text-black mb-2 flex items-center gap-2">
+              <FaSync size={14} className="flex-shrink-0" />
+              <span className="truncate">Update Events Status</span>
+            </h2>
+            <p className="text-gray-600 text-xs mb-2">Refreshes every 15s</p>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {inProgressUpdateJobs.length === 0 ? (
+                <p className="text-gray-500 text-xs italic">
+                  No updates in progress
+                </p>
+              ) : (
+                inProgressUpdateJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="rounded-lg border p-2 text-xs border-gray-300 bg-transparent"
+                  >
+                    <p className="text-gray-700 mb-1">
+                      <span className="font-medium text-gray-800">Job ID:</span>{" "}
+                      <span className="break-all">{job.job_id || job.id}</span>
+                    </p>
+                    <p className="text-gray-700 mb-1">
+                      <span className="font-medium text-gray-800">Status:</span>{" "}
+                      <span className="capitalize">
+                        {job.status.replace("_", " ")}
+                      </span>
+                      {job.total != null && (
+                        <> → Total tasks to be updated: {job.total}</>
+                      )}
+                    </p>
+                    {job.summary && (
+                      <p
+                        className="text-gray-600 mb-1 truncate"
+                        title={job.summary}
+                      >
+                        <span className="font-medium text-gray-800">
+                          Summary:
+                        </span>{" "}
+                        {job.summary}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {job.status === "in_progress" ||
+                      job.status === "pending" ? (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"
+                          title="In progress"
+                        />
+                      ) : job.status === "completed" ? (
+                        <FaCheckCircle
+                          className="text-green-400 flex-shrink-0"
+                          size={12}
+                        />
+                      ) : (
+                        <FaExclamationTriangle
+                          className="text-red-400 flex-shrink-0"
+                          size={12}
+                        />
+                      )}
+                      <a
+                        href={job.pollUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline break-all flex items-center gap-0.5"
+                      >
+                        <FaExternalLinkAlt size={10} />
+                        Check status
+                      </a>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Teacher and Student Details */}

@@ -1059,12 +1059,62 @@ function App() {
     );
   };
 
+  // Last chronological leave key only: naive 00:00:00 → 23:59:00 same date = full calendar day
+  // in *selected timezone* (do not use raw UTC end, or it bleeds into next day e.g. Mar 22 00:xx CET).
+  const isLastNodeFullDayNaivePattern = (leaf) => {
+    if (!leaf?.start_time || !leaf?.end_time) return false;
+    const a = String(leaf.start_time).trim();
+    const b = String(leaf.end_time).trim();
+    if (/(Z|[+-]\d{2}:\d{2})$/.test(a) || /(Z|[+-]\d{2}:\d{2})$/.test(b)) {
+      return false;
+    }
+    if (a.slice(0, 10) !== b.slice(0, 10)) return false;
+    const ts = a.slice(11);
+    const te = b.slice(11);
+    const startOk = /^00:00:00(\.\d+)?$/.test(ts);
+    const endOk =
+      /^23:59:00(\.\d+)?$/.test(te) || /^23:59:59(\.\d+)?$/.test(te);
+    return startOk && endOk;
+  };
+
   const getLeaveIntervalsUtcFromState = () => {
     const map = teacherLeaves?.leaves;
     if (!map || typeof map !== "object") return [];
-    return Object.values(map)
-      .map((leaf) => {
+    const keys = Object.keys(map).sort();
+    const lastKey = keys[keys.length - 1];
+
+    return keys
+      .map((dateKey) => {
+        const leaf = map[dateKey];
         if (!leaf || typeof leaf !== "object") return null;
+
+        if (dateKey === lastKey && isLastNodeFullDayNaivePattern(leaf)) {
+          const parts = dateKey.split("-").map(Number);
+          const [y, mo, d] = parts;
+          if (!y || !mo || !d) return null;
+          const dayStart = wallDateTimeInSelectedTimezoneToUtc(
+            y,
+            mo,
+            d,
+            0,
+            0,
+            selectedTimezone,
+          );
+          const cd = new Date(y, mo - 1, d);
+          cd.setDate(cd.getDate() + 1);
+          const nextMid = wallDateTimeInSelectedTimezoneToUtc(
+            cd.getFullYear(),
+            cd.getMonth() + 1,
+            cd.getDate(),
+            0,
+            0,
+            selectedTimezone,
+          );
+          if (!dayStart || !nextMid) return null;
+          const endInclusive = new Date(nextMid.getTime() - 1);
+          return { start: dayStart, end: endInclusive };
+        }
+
         const start = parseInstantAsUtcIfNaive(leaf.start_time);
         const end = parseInstantAsUtcIfNaive(leaf.end_time);
         if (!start || !end) return null;

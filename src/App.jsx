@@ -64,11 +64,7 @@ import {
   isLockedHoliday,
 } from "./utils/dateUtils";
 import { rejectAvailability, freezeSlot } from "./utils/apiUtils";
-import {
-  isTeacherOnLeave,
-  isTeacherWeekOff,
-  getTeacherEmailFromEvent,
-} from "./utils/teacherUtils";
+import { isTeacherWeekOff, getTeacherEmailFromEvent } from "./utils/teacherUtils";
 import { TIME_SLOTS } from "./constants";
 import { safeErrorLog } from "./utils/safeErrorLog";
 import { formatDateTimeToUTC, formatTimezoneForAPI } from "./utils/formatUtils";
@@ -339,6 +335,9 @@ function App() {
     error: null,
     data: null,
     leaves: {}, // Will store dates as keys with leave details
+    leaveStartTime: null, // ISO/local datetime from API response
+    leaveEndTime: null, // ISO/local datetime from API response
+    isFullDayLeave: false, // true only when start=00:00 and end=23:59 on same day
   });
 
   // Add pagination state
@@ -985,6 +984,17 @@ function App() {
           error: null,
           data: result,
           leaves: processedLeaves,
+          leaveStartTime: result.start_time || null,
+          leaveEndTime: result.end_time || null,
+          // Per-node leave windows use leaves[date].start_time / end_time (UTC if naive).
+          isFullDayLeave:
+            !!(startMatchFull && endMatchFull) &&
+            `${startMatchFull[1]}-${startMatchFull[2]}-${startMatchFull[3]}` ===
+              `${endMatchFull[1]}-${endMatchFull[2]}-${endMatchFull[3]}` &&
+            startMatchFull[4] === "00" &&
+            startMatchFull[5] === "00" &&
+            endMatchFull[4] === "23" &&
+            endMatchFull[5] === "59",
         });
         return result;
       } else {
@@ -998,9 +1008,142 @@ function App() {
         error: error.message,
         data: null,
         leaves: {},
+        leaveStartTime: null,
+        leaveEndTime: null,
+        isFullDayLeave: false,
       });
       return null;
     }
+  };
+
+  // Leave/event ISO without Z or ±offset is interpreted as UTC (matches Google export style).
+  const parseInstantAsUtcIfNaive = (isoStr) => {
+    if (!isoStr || typeof isoStr !== "string") return null;
+    const s = isoStr.trim();
+    if (/(Z|[+-]\d{2}:\d{2})$/.test(s)) {
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const m = s.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?$/,
+    );
+    if (!m) return null;
+    return new Date(
+      Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6] || 0),
+    );
+  };
+
+  // Wall clock (calendar column Y-M-D + slot label) in selected timezone → UTC instant (same as booking).
+  const wallDateTimeInSelectedTimezoneToUtc = (
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    timezoneStr,
+  ) => {
+    const match = String(timezoneStr || "").match(/GMT([+-]\d{2}):(\d{2})/);
+    if (!match) return null;
+    const offsetHours = parseInt(match[1], 10);
+    const offsetMinutes =
+      parseInt(match[2], 10) * (offsetHours >= 0 ? 1 : -1);
+    return new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day,
+        hour - offsetHours,
+        minute - offsetMinutes,
+        0,
+      ),
+    );
+  };
+
+  const getLeaveIntervalsUtcFromState = () => {
+    const map = teacherLeaves?.leaves;
+    if (!map || typeof map !== "object") return [];
+    return Object.values(map)
+      .map((leaf) => {
+        if (!leaf || typeof leaf !== "object") return null;
+        const start = parseInstantAsUtcIfNaive(leaf.start_time);
+        const end = parseInstantAsUtcIfNaive(leaf.end_time);
+        if (!start || !end) return null;
+        return { start, end };
+      })
+      .filter(Boolean);
+  };
+
+  const intervalsOverlapUtc = (a0, a1, b0, b1) =>
+    a0.getTime() < b1.getTime() && a1.getTime() > b0.getTime();
+
+  // Week grid: slot in selected timezone vs each leave node (UTC naive → UTC).
+  const isLeaveForSlot = (dateObj, slotTime) => {
+    if (!teacherLeaves?.success) return false;
+    const intervals = getLeaveIntervalsUtcFromState();
+    if (intervals.length === 0) return false;
+
+    const y = dateObj.getFullYear();
+    const m = dateObj.getMonth() + 1;
+    const d = dateObj.getDate();
+
+    const [slotStartTime = "00:00", slotEndTime = "23:59"] = String(slotTime)
+      .split(" - ")
+      .map((s) => s.trim());
+    const [sh = 0, sm = 0] = slotStartTime.split(":").map(Number);
+    const [eh = 23, em = 59] = slotEndTime.split(":").map(Number);
+
+    const slotStartUtc = wallDateTimeInSelectedTimezoneToUtc(
+      y,
+      m,
+      d,
+      sh,
+      sm,
+      selectedTimezone,
+    );
+    const slotEndUtc = wallDateTimeInSelectedTimezoneToUtc(
+      y,
+      m,
+      d,
+      eh,
+      em,
+      selectedTimezone,
+    );
+    if (!slotStartUtc || !slotEndUtc) return false;
+
+    return intervals.some(({ start, end }) =>
+      intervalsOverlapUtc(slotStartUtc, slotEndUtc, start, end),
+    );
+  };
+
+  const hasLeaveOnCalendarDate = (dateObj) =>
+    TIME_SLOTS.some((t) => isLeaveForSlot(dateObj, t));
+
+  const parseEventInstant = (isoStr) => {
+    if (!isoStr) return null;
+    const t = String(isoStr).trim();
+    if (/(Z|[+-]\d{2}:\d{2})$/.test(t)) {
+      const d = new Date(t);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    return parseInstantAsUtcIfNaive(t);
+  };
+
+  // List view: tag row only if event interval overlaps any leave node (UTC).
+  const isTeacherOnLeaveForEvent = (eventStart, eventEnd) => {
+    if (!teacherLeaves?.success) return false;
+    const intervals = getLeaveIntervalsUtcFromState();
+    if (intervals.length === 0) return false;
+
+    const evStart = parseEventInstant(eventStart);
+    if (!evStart) return false;
+    const evEnd =
+      parseEventInstant(eventEnd) ||
+      new Date(evStart.getTime() + 60 * 60000);
+    if (!evEnd || Number.isNaN(evEnd.getTime())) return false;
+
+    return intervals.some(({ start, end }) =>
+      intervalsOverlapUtc(evStart, evEnd, start, end),
+    );
   };
 
   // Function to apply teacher leave
@@ -9848,10 +9991,9 @@ function App() {
                                 );
                                 const teacherOnLeave =
                                   teacherEmail &&
-                                  isTeacherOnLeave(
-                                    teacherEmail,
-                                    bookingDate,
-                                    teacherLeaves,
+                                  isTeacherOnLeaveForEvent(
+                                    extractedData.start_time,
+                                    extractedData.end_time,
                                   );
 
                                 // Debug logging (can be removed in production)
@@ -11468,17 +11610,14 @@ function App() {
                             date,
                             weeklyApiData,
                           );
-                        const isOnLeave =
-                          selectedTeacher?.email &&
-                          isTeacherOnLeave(
-                            selectedTeacher.email,
-                            date,
-                            teacherLeaves,
-                          );
-                        const showFullDayBlock = isWeekOff || isOnLeave;
+                        const allSlotsOnLeave =
+                          teacherLeaves?.success &&
+                          TIME_SLOTS.length > 0 &&
+                          TIME_SLOTS.every((t) => isLeaveForSlot(date, t));
+                        const showFullDayBlock = isWeekOff || allSlotsOnLeave;
                         const fullDayLabel = [
                           isWeekOff && "Week off",
-                          isOnLeave && "Leave",
+                          allSlotsOnLeave && "Leave",
                         ]
                           .filter(Boolean)
                           .join(" / ");
@@ -11647,8 +11786,7 @@ function App() {
                   </div>
                   {filteredWeekDates.map((date) => {
                     const dateStr = formatDateLocal(date);
-                    const isOnLeave =
-                      teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
+                    const isOnLeave = hasLeaveOnCalendarDate(date);
 
                     // Check if teacher has week off for this date
                     const teacherEmail = selectedTeacher?.email;
@@ -11724,9 +11862,7 @@ function App() {
                         const slot = dateSchedule[time];
                         const { available, booked, teacherid, apiData } =
                           getSlotCounts(date, time);
-                        const dateStr = formatDateLocal(date);
-                        const isOnLeave =
-                          teacherLeaves.leaves && teacherLeaves.leaves[dateStr];
+                        const isOnLeave = isLeaveForSlot(date, time);
 
                         // Check if teacher has week off for this date
                         const teacherEmail = selectedTeacher?.email;

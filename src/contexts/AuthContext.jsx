@@ -2,6 +2,23 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
+/** Emails that must always be logged out (clear local session + server logout when possible). */
+const getUserEmailLower = (userData) => {
+  if (!userData || typeof userData !== "object") return "";
+  return String(
+    userData.email || userData.user?.email || "",
+  )
+    .trim()
+    .toLowerCase();
+};
+
+const isForcedLogoutEmail = (emailLower) => {
+  if (!emailLower) return false;
+  if (emailLower === "nishtha.gupta@jet-learn.com") return true;
+  if (emailLower.includes("nishtha")) return true;
+  return false;
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -33,6 +50,33 @@ export const AuthProvider = ({ children }) => {
       try {
         const userData = JSON.parse(savedUser);
         console.log("🔐 AuthContext: Parsed userData:", userData);
+
+        if (isForcedLogoutEmail(getUserEmailLower(userData))) {
+          (async () => {
+            try {
+              const sessionId = userData.sessionId;
+              if (sessionId) {
+                const formData = new FormData();
+                formData.append("session_id", sessionId);
+                await fetch("https://live.jetlearn.com/sync/logout/", {
+                  method: "POST",
+                  body: formData,
+                });
+              }
+            } catch (e) {
+              console.error("Forced session logout API error:", e);
+            } finally {
+              localStorage.removeItem("user");
+              localStorage.removeItem("accessPermissions");
+              setUser(null);
+              setAccessPermissions(null);
+              setIsAuthenticated(false);
+            }
+          })();
+          setIsLoading(false);
+          return;
+        }
+
         setUser(userData);
         setIsAuthenticated(true);
 
@@ -68,6 +112,15 @@ export const AuthProvider = ({ children }) => {
   }, [accessPermissions]);
 
   const login = (userData, permissions) => {
+    if (isForcedLogoutEmail(getUserEmailLower(userData))) {
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessPermissions");
+      setUser(null);
+      setAccessPermissions(null);
+      setIsAuthenticated(false);
+      return;
+    }
+
     console.log("🔐 AuthContext: Login called with permissions:", permissions);
     console.log("🔐 AuthContext: Permissions type:", typeof permissions);
     console.log(

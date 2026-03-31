@@ -64,7 +64,10 @@ import {
   isLockedHoliday,
 } from "./utils/dateUtils";
 import { rejectAvailability, freezeSlot } from "./utils/apiUtils";
-import { isTeacherWeekOff, getTeacherEmailFromEvent } from "./utils/teacherUtils";
+import {
+  isTeacherWeekOff,
+  getTeacherEmailFromEvent,
+} from "./utils/teacherUtils";
 import { TIME_SLOTS } from "./constants";
 import { safeErrorLog } from "./utils/safeErrorLog";
 import { formatDateTimeToUTC, formatTimezoneForAPI } from "./utils/formatUtils";
@@ -1045,8 +1048,7 @@ function App() {
     const match = String(timezoneStr || "").match(/GMT([+-]\d{2}):(\d{2})/);
     if (!match) return null;
     const offsetHours = parseInt(match[1], 10);
-    const offsetMinutes =
-      parseInt(match[2], 10) * (offsetHours >= 0 ? 1 : -1);
+    const offsetMinutes = parseInt(match[2], 10) * (offsetHours >= 0 ? 1 : -1);
     return new Date(
       Date.UTC(
         year,
@@ -1187,8 +1189,7 @@ function App() {
     const evStart = parseEventInstant(eventStart);
     if (!evStart) return false;
     const evEnd =
-      parseEventInstant(eventEnd) ||
-      new Date(evStart.getTime() + 60 * 60000);
+      parseEventInstant(eventEnd) || new Date(evStart.getTime() + 60 * 60000);
     if (!evEnd || Number.isNaN(evEnd.getTime())) return false;
 
     return intervals.some(({ start, end }) =>

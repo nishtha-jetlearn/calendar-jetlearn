@@ -3989,11 +3989,8 @@ function App() {
     // Extract recording keywords from summary
     const recordingKeywords = [];
     if (summary.includes("DNREC")) recordingKeywords.push("DNREC");
-    // "MAKE UP - S" must be checked FIRST — it contains "MAKE UP" as a
-    // substring, so the plain check would misclassify every substitute
-    // make-up as a regular make-up.
+    if (summary.includes("MAKE UP")) recordingKeywords.push("MAKE UP");
     if (summary.includes("MAKE UP - S")) recordingKeywords.push("MAKE UP - S");
-    else if (summary.includes("MAKE UP")) recordingKeywords.push("MAKE UP");
     if (summary.includes("Reserved")) recordingKeywords.push("Reserved");
     if (summary.includes("Migration")) recordingKeywords.push("Migration");
     if (summary.toLowerCase().includes("gmeet"))
